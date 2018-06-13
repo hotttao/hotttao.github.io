@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="python 标准库,译文," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 使用代理对象和工厂函数创建装饰器">
+<meta name="keywords" content="python 标准库,译文">
+<meta property="og:type" content="article">
+<meta property="og:title" content="03 Implementing a factory for creating decorators">
+<meta property="og:url" content="http://yoursite.com/2018/05/12/wrapt/03-implementing-a-factory-for-creating-decorators/index.html">
+<meta property="og:site_name" content="song tao blogs">
+<meta property="og:description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 使用代理对象和工厂函数创建装饰器">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-05-24T01:48:38.871Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="03 Implementing a factory for creating decorators">
+<meta name="twitter:description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 使用代理对象和工厂函数创建装饰器">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/05/12/wrapt/03-implementing-a-factory-for-creating-decorators/"/>
+
+
+
+
+
+  <title>03 Implementing a factory for creating decorators | song tao blogs</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">song tao blogs</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">漫步在大陆上的海龟</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/12/wrapt/03-implementing-a-factory-for-creating-decorators/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="song tao">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="song tao blogs">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">03 Implementing a factory for creating decorators</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-12T13:54:03+08:00">
+                2018-05-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/" itemprop="url" rel="index">
+                    <span itemprop="name">函数装饰器</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/猴子补订/" itemprop="url" rel="index">
+                    <span itemprop="name">猴子补订</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/猴子补订/wrapt/" itemprop="url" rel="index">
+                    <span itemprop="name">wrapt</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，<br>翻译于 <a href="https://github.com/GrahamDumpleton/wrapt/tree/master/blog" target="_blank" rel="external">https://github.com/GrahamDumpleton/wrapt/tree/master/blog</a></p>
+</blockquote>
+<p>本篇内容: 使用代理对象和工厂函数创建装饰器<br><a id="more"></a></p>
+<h3 id="Implementing-a-factory-for-creating-decorators"><a href="#Implementing-a-factory-for-creating-decorators" class="headerlink" title="Implementing a factory for creating decorators"></a>Implementing a factory for creating decorators</h3><p>This is the third post in my series of blog posts about Python decorators and how I believe they are generally poorly implemented. It follows on from the previous post titled The interaction between decorators and descriptors, with the very first post in the series being How you implemented your Python decorator is wrong.<br><strong>这是Python 装饰器系列博客中的第二篇。</strong></p>
+<p>In the very first post I described a number of ways in which the traditional way that Python decorators are implemented is lacking. These were:<br><strong>在第一篇文章中，我描述了一些 Python decorator 传统实现方式存在的缺陷:</strong></p>
+<ul>
+<li>Preservation of function __name__ and __doc__.<strong>(无法保留函数的自省属性)</strong></li>
+<li>Preservation of function argument specification.<strong>(无法获取函数签名信息)</strong></li>
+<li>Preservation of ability to get function source code.<strong>(无法获取函数源代码)</strong></li>
+<li>Ability to apply decorators on top of other decorators that are implemented as descriptors.<strong>(无法将装饰器应用于另一个为实现描述符的装饰器之上)</strong></li>
+</ul>
+<p>In the followup post I described a pattern for implementing a decorator which built on top of what is called an object proxy, with the object proxy solving the first three issues. The final issue was dealt with by creating a function wrapper using the object proxy, which was implemented as a descriptor, and which performed object binding when a wrapper was used on class methods. This combination of the object proxy and a descriptor ensured that introspection continued to work properly and that the execution model of the Python object model was also respected.<br><strong>在接下来的博客中，我将描述一种基于对象代理创建装饰器的模式，使用代理对象将解决前三个问题。将使用代理对象的装饰器实现为一个描述符将解决最后一个问题，当包装器被用于类方法时，它将执行对象绑定。对象代理和描述符的这种组合确保了内省继续正常工作，并确保Python对象模型的执行模型也得到了维护。</strong></p>
+<p>The issue at this point was how to make the solution more usable, eliminating the boiler plate and minimising the amount of code that someone implementing a decorator would need to write.<br><strong>现在的问题是如何使解决方案更有用，消除了样本代码，并最小化了执行装饰器的人需要编写的代码量。</strong></p>
+<p>In this post I will describe one such approach to simplifying the task of creating a decorator based on this pattern. This will be done by using a decorator as a factory to create decorators, requiring a user to only have to supply a single wrapper function which does the actual work of invoking the wrapped function, inserting any extra work that the specific decorator is intended to carry out as necessary.<br><strong>在本文中，我将描述一种方法，以简化创建decorator的任务。通过使用装饰工厂函数,用户只需提供一个执行实际工作的包装函数，按需插入执行所需功能的代码即可</strong></p>
+<h3 id="Pattern-for-implementing-the-decorator"><a href="#Pattern-for-implementing-the-decorator" class="headerlink" title="Pattern for implementing the decorator"></a>Pattern for implementing the decorator</h3><p>Just to refresh where we got to last time, we had an implementation of an object proxy as:<br><strong>如前所述，我们有一个代理对象的实现，如下</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">class object_proxy(object):</div><div class="line"></div><div class="line">    def __init__(self, wrapped):</div><div class="line">        self.wrapped = wrapped</div><div class="line">        try:</div><div class="line">            self.__name__= wrapped.__name__</div><div class="line">        except AttributeError:</div><div class="line">            pass</div><div class="line"></div><div class="line">    @property</div><div class="line">    def __class__(self):</div><div class="line">        return self.wrapped.__class__  </div><div class="line"></div><div class="line">    def __getattr__(self, name):</div><div class="line">        return getattr(self.wrapped, name)</div></pre></td></tr></table></figure></p>
+<p>As pointed out the last time, this is a minimal representation of what it does. In practice it actually needs to do a lot more than this if it is to serve as a general purpose object proxy usable in the more generic use case of monkey patching.<br><strong>正如最后一次指出的那样，这是对它所做事情的最小表示。实际上，如果它是一个通用的对象代理，可以在猴子补丁的更通用的用例中使用，实际上它需要做更多的工作。</strong></p>
+<p>The decorator itself would then be implemented per the pattern:<br><strong>描述符本身将按照如下模式实现</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">class bound_function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped):</div><div class="line">        super(bound_function_wrapper, self).__init__(wrapped)</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapped(*args, **kwargs)</div><div class="line"></div><div class="line">class function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped):</div><div class="line">       super(function_wrapper, self).__init__(wrapped)</div><div class="line"></div><div class="line">    def __get__(self, instance, owner):</div><div class="line">        wrapped = self.wrapped.__get__(instance, owner)</div><div class="line">        return bound_function_wrapper(wrapped)</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapped(*args, **kwargs)</div></pre></td></tr></table></figure></p>
+<p>When the wrapper is applied to a normal function, the __call__() method of the wrapper is used. If the wrapper is applied to a method of a class, the __get__() method is called when the attribute is accessed, which returns a new bound wrapper and the __call__() method of that is invoked instead when a call is made. This allows our wrapper to be used around descriptors as it propagates the descriptor protocol, also binding the wrapped object as necessary.<br><strong>当将包装器应用于一个正常的函数时，将使用包装器的 __call__()方法。如果将包装器应用于类的方法，则在属性访问时调用__get__()方法，返回一个新的绑定包装器，并在被调用时使用新绑定包装器的__call__()方法。这使得我们的包装器能用作描述符来传递描述符协议，以根据需要对包装的对象进行绑定。</strong></p>
+<h3 id="A-decorator-for-creating-decorators"><a href="#A-decorator-for-creating-decorators" class="headerlink" title="A decorator for creating decorators"></a>A decorator for creating decorators</h3><p>So we have a pattern for implementing a decorator that appears to work correctly, but as already mentioned, needing to do all that each time is more work than we really want. What we can do therefore is create a decorator to help us create decorators. This would reduce the code we need to write for each decorator to a single function, allowing us to simplify the code to just:<br><strong>因此，我们有一个模式来实现一个看起来正常工作的decorator，但是正如前面提到的，每次都需要做的事情比我们真正想要的要多。因此，我们可以做的是创建一个decorator来帮助我们创建decorator。这将减少我们为每个decorator编写单个函数所需的代码，从而简化了代码:</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">@decorator</div><div class="line">def my_function_wrapper(wrapped, args, kwargs):</div><div class="line">    return wrapped(*args, **kwargs)</div><div class="line"></div><div class="line">@my_function_wrapper</div><div class="line">def function():</div><div class="line">    pass</div></pre></td></tr></table></figure></p>
+<p>What would this decorator factory need to look like?<br><strong>这个装饰器工厂函数应该怎么实现呢？</strong></p>
+<p>As it turns out, our decorator factory is quite simple and isn’t really much different to using a partial(), combining our new wrapper argument from when the decorator is defined, with the wrapped function when the decorator is used and passing them into our function wrapper object.<br><strong>就像表现的一样，我们的装饰器工厂函数是非常简单的，与partial()函数并没有很大不同，在装饰器定义时接收装饰函数，在装饰器应用时接收被包装函数，并将他们传递到function wrapper对象中</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">def decorator(wrapper):</div><div class="line">    @functools.wraps(wrapper)</div><div class="line">    def _decorator(wrapped):</div><div class="line">        return function_wrapper(wrapped, wrapper)</div><div class="line">    return _decorator</div></pre></td></tr></table></figure></p>
+<p>We now just need to amend our function wrapper implementation to delegate the actual execution of the wrapped object to the user supplied decorator wrapper function.<br><strong>我们现在只需要修改我们的函数包装器实现，将包装对象的实际执行委托给用户提供的装饰器包装器函数。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">class bound_function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped, wrapper):</div><div class="line">        super(bound_function_wrapper, self).__init__(wrapped)</div><div class="line">        self.wrapper = wrapper</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapper(self.wrapped, args, kwargs)</div><div class="line"></div><div class="line">class function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped, wrapper):</div><div class="line">        super(function_wrapper, self).__init__(wrapped)</div><div class="line">        self.wrapper = wrapper</div><div class="line"></div><div class="line">    def __get__(self, instance, owner):</div><div class="line">        wrapped = self.wrapped.__get__(instance, owner)</div><div class="line">        return bound_function_wrapper(wrapped, self.wrapper)</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapper(self.wrapped, args, kwargs)</div></pre></td></tr></table></figure></p>
+<p>The __call__() method of our function wrapper, for when it is used around a normal function, now just calls the user supplied decorator wrapper function with the wrapped function and arguments, leaving the calling of the wrapped function up to the user supplied decorator wrapper function.<br><strong>function wrapper 的__call__ 方法,作为一个正常函数调用时，仅仅使用被包装函数和参数调用用户提供的包装函数。将被包装函数的调用留给用户的包装函数来调用</strong></p>
+<p>In the case where binding a function, the wrapper is also passed to the bound wrapper. The bound wrapper is more or less the same, with the __call__() method delegating to the user supplied decorator wrapper function.<br><strong>在绑定函数的情况下，包装器也传递给 bound wrapper对象。bound wrapper或多或少是相同的，使用__call__()方法将其委托给用户提供的包装器函数。</strong></p>
+<p>So we can make creating decorators easier using a factory. Lets now check that this will in fact work in all cases in which it could be applied and also see what other problems we can find and whether we can improve on those situations as well.<br><strong>因此，我们可以使用工厂来简化创建decorator的过程。现在让我们来检查一下，在所有的情况下，这将在实际工作中发挥作用，并且看看我们还能找到什么其他的问题，以及我们是否能在这些情况下改进。</strong></p>
+<h3 id="Decorating-methods-of-classes"><a href="#Decorating-methods-of-classes" class="headerlink" title="Decorating methods of classes"></a>Decorating methods of classes</h3><p>The first such area which can cause problems is creating a single decorator that can work on both normal functions and instance methods of classes.<br><strong>第一个可能导致问题的领域是创建一个单独的decorator，它可以同时处理类的正常函数和实例方法。</strong></p>
+<p>To test out how our new decorator works, we can print out the args passed to the wrapper when the wrapped function is called and can compare the results.<br><strong>为了测试我们的新decorator是如何工作的，我们可以在调用包装函数时打印传递给包装器的args，并可以比较结果。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">@decorator</div><div class="line">def my_function_wrapper(wrapped, args, kwargs):</div><div class="line">    print(&apos;ARGS&apos;, args)</div><div class="line">    return wrapped(*args, **kwargs)</div></pre></td></tr></table></figure></p>
+<p>First up lets try wrapping a normal function:<br><strong>首先让我们尝试包装一个普通函数:</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">@my_function_wrapper</div><div class="line">def function(a, b):</div><div class="line">    pass</div><div class="line"></div><div class="line">&gt;&gt;&gt; function(1, 2)</div><div class="line">ARGS (1, 2)</div></pre></td></tr></table></figure>
+<p>As would be expected, just the two arguments passed when the function is called are output.<br><strong>正如所期望的那样，在函数被调用时，只有两个参数被输出</strong></p>
+<p>What about when wrapping an instance method?<br><strong>包装一个实例方法会如何？</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">class Class(object):</div><div class="line">    @my_function_wrapper</div><div class="line">    def function_im(self, a, b):</div><div class="line">        pass</div><div class="line"></div><div class="line">c = Class()</div><div class="line"></div><div class="line">&gt;&gt;&gt; c.function_im()</div><div class="line">ARGS (1, 2)</div></pre></td></tr></table></figure>
+<p>Once again just the two arguments passed when the instance method is called are displayed. How the decorator works for both the normal function and the instance method is therefore the same.<br><strong>同样，当调用实例方法时传入的两个参数被输出。因此，装饰器对正常函数和实例方法的工作方式是相同的。</strong></p>
+<p>The problem here is what if the user within their decorator wrapper function wanted to know what the actual instance of the class was. We have lost that information when the function was bound to the instance of the class as it is now associated with the bound function passed in, rather than the argument list.<br><strong>这里的问题是，用户如何在他们的decorator包装器函数中获取类的实例。当函数被绑定到类的实例时，我们丢失了这个信息，因为类实例现在与传入的绑定函数关联，而不是参数列表。</strong></p>
+<p>To solve this problem we can remember what the instance was that was passed to the __get__() method when it was called to bind the function. This can then be passed through to the bound wrapper when it is created.<br><strong>要解决这个问题，我们可以记住在调用绑定函数时传递给__get__()方法的实例是什么。在 bound wrapper被创建，作为参数传递给bound wrapper。</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">class bound_function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped, instance, wrapper):</div><div class="line">        super(bound_function_wrapper, self).__init__(wrapped)</div><div class="line">        self.instance = instance</div><div class="line">        self.wrapper = wrapper</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapper(self.wrapped, self.instance, args, kwargs)</div><div class="line"></div><div class="line">class function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped, wrapper):</div><div class="line">        super(function_wrapper, self).__init__(wrapped)</div><div class="line">        self.wrapper = wrapper</div><div class="line"></div><div class="line">    def __get__(self, instance, owner):</div><div class="line">        wrapped = self.wrapped.__get__( instance, owner)</div><div class="line">        return bound_function_wrapper(wrapped, instance, self.wrapper)</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapper(self.wrapped, None, args, kwargs)</div></pre></td></tr></table></figure>
+<p>In the bound wrapper, the instance pointer can then be passed through to the decorator wrapper function as an extra argument. To be uniform for the case of a normal function, in the top level wrapper we pass None for this new instance argument.<br><strong>在bound wrapper中，类实例作为额外的参数传给用户创建的包装函数。对于普通函数，在顶级包装器中，对于这个新的实例参数，我们没有传递任何内容</strong><br>We can now modify our wrapper function for the decorator to output both the instance and the arguments passed.<br><strong>现在，我们可以修用户的包装函数，以输出实例和传递的参数。</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">@decorator</div><div class="line">def my_function_wrapper(wrapped, instance, args, kwargs):</div><div class="line">    print(&apos;INSTANCE&apos;, instance)</div><div class="line">    print(&apos;ARGS&apos;, args)</div><div class="line">    return wrapped(*args, **kwargs)</div><div class="line"></div><div class="line">&gt;&gt;&gt; function(1, 2)</div><div class="line">INSTANCE None</div><div class="line">ARGS (1, 2)</div><div class="line"></div><div class="line">&gt;&gt;&gt; c.function_im(1, 2)</div><div class="line">INSTANCE &lt;__main__.Class object at 0x1085ca9d0&gt;</div><div class="line">ARGS (1, 2)</div></pre></td></tr></table></figure>
+<p>This change therefore allows us to be able to distinguish between a normal function call and an instance method call within the one decorator wrapper function. The reference to the instance is even passed separately so we don’t have to juggle with the arguments to move it out of the way for an instance method when calling the original wrapped function.<br><strong>因此，这种变化能让我们在包装器函数中区分出一个普通函数调用和一个的实例方法调用。对实例的引用甚至是单独传递的，在调用原始被包装函数时，我们不必为一个实例方法去判断并移除额外的类实例参数<br>(读者注: 对于类，原始的被包装函数已经是绑定对象，所以不能在传入类实例对象)</strong></p>
+<p>Now there is one final scenario in which an instance method can be called which we still need to check. This is calling an instance method by calling the function on the class and passing the object instance explicitly as the first argument.<br><strong>最后一种调用实例方法的情况，我们仍然需要检查它。即通过类并显示传递类实例的方式调用实例方法。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">&gt;&gt;&gt; Class.function_im(c, 1, 2)</div><div class="line">INSTANCE None</div><div class="line">ARGS (&lt;__main__.Class object at 0x1085ca9d0&gt;, 1, 2)</div></pre></td></tr></table></figure></p>
+<p>Unfortunately passing in the instance explicitly as an argument against the function from the class, results in the instance passed to the decorator wrapper function being None, with the reference to the instance getting passed through as the first argument instead. This isn’t really a desirable outcome.<br><strong>不幸的是，将实例显式地传递给类中的函数作为参数时，类实例没有通过 instance 传递给包装函数，而是作为 arg 的第一个参数被传递。这并不是一个理想的结果</strong></p>
+<p>To deal with this variation, we can check for instance being None before calling the decorator wrapper function and pop the instance off the start of the argument list. We then use a partial to bind the instance to the wrapped function ourselves and call the decorator wrapper function.<br><strong>为了处理这种变化，我们可以在调用decorator包装器函数之前检查实例，并从参数列表的开头弹出实例。然后使用 partcial 函数将实例绑定到被包装函数上，并调用用户的包装器函数。(读者注:看下面的代码更清晰)</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">class bound_function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        if self.instance is None:</div><div class="line">            instance, args = args[0], args[1:]</div><div class="line">            wrapped = functools.partial(self.wrapped, instance)</div><div class="line">            return self.wrapper(wrapped, instance, args, kwargs)</div><div class="line">        return self.wrapper(self.wrapped, self.instance, args, kwargs)</div><div class="line">We then get the same result no matter whether the instance method is called via the class or not.</div><div class="line"></div><div class="line">&gt;&gt;&gt; Class.function_im(c, 1, 2)</div><div class="line">INSTANCE &lt;__main__.Class object at 0x1085ca9d0&gt;</div><div class="line">ARGS (1, 2)</div></pre></td></tr></table></figure></p>
+<p>So everything works okay for instance methods, with the argument list seen by the decorator wrapper function being the same as if a normal function had been wrapped. At the same time though, by virtue of the new instance argument, we can if need be act on the instance of a class where the decorator was applied to an instance method of a class.<br><strong>对于实例方法，一切都可以正常执行，被包装函数无论是实例方法和还是普通函数接收参数完全相同。得益与 instance 参数，在将装饰器应用于实例方法时，我们可以按需调用类方法</strong></p>
+<p>What about other method types that a class can have, specifically class method and static methods.<br><strong>对于类可以拥有的其他方法类型，特别是类方法和静态方法会怎样。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">class Class(object):</div><div class="line"></div><div class="line">    @my_function_wrapper</div><div class="line">    @classmethod</div><div class="line">    def function_cm(cls, a, b):</div><div class="line">        pass</div><div class="line"></div><div class="line">&gt;&gt;&gt; Class.function_cm(1, 2)</div><div class="line">INSTANCE 1</div><div class="line">ARGS (2,)</div></pre></td></tr></table></figure></p>
+<p>As can be seen, this fiddle has though upset things for when we have a class method, also causing the same issue for a static method. In both those cases the instance would initially have been passed as None when the function was bound. The result is that the real first argument ends up as the instance, which is obviously going to be quite wrong.<br><strong>正如所看见得，装饰器对类方法和静态方法有非常严重得问题。这两种情况下，在函数被绑定时，instance 参数将为空。arg 中第一个位置参数包含了，本应该由 instance 传递的参数。这显然是不正确的。</strong></p>
+<p>What to do?<br><strong>应该怎么做</strong></p>
+<h3 id="A-universal-decorator"><a href="#A-universal-decorator" class="headerlink" title="A universal decorator"></a>A universal decorator</h3><p>So we aren’t quite there yet, but what are we trying to achieve in even trying to do this? What was wrong with our initial pattern for the decorator?<br><strong>所以我们并没有完成一个通用的装饰器，但我们到底想要达到什么目的呢?我们最初的装饰模式有什么问题?</strong></p>
+<p>The ultimate goal here is what I call a universal decorator. A single decorator that can be applied to a normal function, an instance method, a class method, a static method or even a class, with the decorator being able to determine at the point it was called the context in which it was used.<br><strong>这里的终极目标是我所说的“宇宙装饰者”。一个可以应用于普通函数、实例方法、类方法、静态方法甚至是类的修饰符，修饰符能够在指定的时候确定它被使用的上下文。</strong></p>
+<p>Right now with the way that decorators are normally implemented this is not possible. Instead different decorators are provided to be used in the different contexts, meaning duplication of the code into each, or the use of hacks to try and convert decorators created for one purpose so they can be used in a different context.<br><strong>目前为止，实现装饰器的所有方法想达到上述目标是不可能了。只能通过复制代码，或者通过某种技巧转换装饰器，以便装饰器能在不同的上下文中使用</strong></p>
+<p>What I am instead aiming for is the ability to do:<br><strong>我的目标是能实现如下功能</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">@decorator</div><div class="line">def universal(wrapped, instance, args, kwargs):</div><div class="line">    if instance is None:</div><div class="line">        if inspect.isclass(wrapped):</div><div class="line">            # class.</div><div class="line">        else:</div><div class="line">            # function or staticmethod.</div><div class="line">    else:</div><div class="line">        if inspect.isclass(instance):</div><div class="line">            # classmethod.</div><div class="line">        else:</div><div class="line">            # instancemethod.</div></pre></td></tr></table></figure></p>
+<p>At this point we have got things working for normal functions and instance methods, we just now need to work out how to handle class methods, static methods and the scenario where a decorator is applied to a class.<br><strong>本文中，我们已经实现了让装饰器在普通函数和实例方法上正确执行，我们现在需要了解如何处理类方法、静态方法以及将decorator应用于类的场景。</strong></p>
+<p>The next post in this series will continue to pursue this goal and describe how our decorator can be tweaked further to get there.<br><strong>本系列的下一篇文章将继续追求这个目标，并描述如何进一步调整我们的decorator。</strong></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/python-标准库/" rel="tag"># python 标准库</a>
+          
+            <a href="/tags/译文/" rel="tag"># 译文</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/08/wrapt/02-the-interaction-between-decorators-and-descriptors/" rel="next" title="02 The interaction between decorators and descriptors">
+                <i class="fa fa-chevron-left"></i> 02 The interaction between decorators and descriptors
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/05/22/wrapt/04-Implementing a universal decorator/" rel="prev" title="04 Implementing a universal decorator">
+                04 Implementing a universal decorator <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.jpg"
+               alt="song tao" />
+          <p class="site-author-name" itemprop="name">song tao</p>
+           
+              <p class="site-description motion-element" itemprop="description">有些东西写下来是想告诉自己，别太着急</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">22</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/hotttao" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                    
+                      GitHub
+                    
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://weibo.com/2622065365/profile" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-weibo"></i>
+                  
+                    
+                      微博
+                    
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Implementing-a-factory-for-creating-decorators"><span class="nav-number">1.</span> <span class="nav-text">Implementing a factory for creating decorators</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Pattern-for-implementing-the-decorator"><span class="nav-number">2.</span> <span class="nav-text">Pattern for implementing the decorator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#A-decorator-for-creating-decorators"><span class="nav-number">3.</span> <span class="nav-text">A decorator for creating decorators</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Decorating-methods-of-classes"><span class="nav-number">4.</span> <span class="nav-text">Decorating methods of classes</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#A-universal-decorator"><span class="nav-number">5.</span> <span class="nav-text">A universal decorator</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">song tao</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.2"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

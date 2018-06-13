@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="python 标准库,译文," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 装饰器的各实现，包括函数闭包，wrapt 模块的Python实现与Python C 实现之间，在包装类方法时的性能比较">
+<meta name="keywords" content="python 标准库,译文">
+<meta property="og:type" content="article">
+<meta property="og:title" content="10 Performance overhead when applying decorators to methods">
+<meta property="og:url" content="http://yoursite.com/2018/06/01/wrapt/10-performance-overhead-when-applying-decorators-to-methods/index.html">
+<meta property="og:site_name" content="song tao blogs">
+<meta property="og:description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 装饰器的各实现，包括函数闭包，wrapt 模块的Python实现与Python C 实现之间，在包装类方法时的性能比较">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-06-04T09:12:33.674Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="10 Performance overhead when applying decorators to methods">
+<meta name="twitter:description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 装饰器的各实现，包括函数闭包，wrapt 模块的Python实现与Python C 实现之间，在包装类方法时的性能比较">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/06/01/wrapt/10-performance-overhead-when-applying-decorators-to-methods/"/>
+
+
+
+
+
+  <title>10 Performance overhead when applying decorators to methods | song tao blogs</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">song tao blogs</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">漫步在大陆上的海龟</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/06/01/wrapt/10-performance-overhead-when-applying-decorators-to-methods/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="song tao">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="song tao blogs">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">10 Performance overhead when applying decorators to methods</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-06-01T10:54:03+08:00">
+                2018-06-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/" itemprop="url" rel="index">
+                    <span itemprop="name">函数装饰器</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/猴子补订/" itemprop="url" rel="index">
+                    <span itemprop="name">猴子补订</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/猴子补订/wrapt/" itemprop="url" rel="index">
+                    <span itemprop="name">wrapt</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，<br>翻译于 <a href="https://github.com/GrahamDumpleton/wrapt/tree/master/blog" target="_blank" rel="external">https://github.com/GrahamDumpleton/wrapt/tree/master/blog</a></p>
+</blockquote>
+<p>本篇内容: 装饰器的各实现，包括函数闭包，wrapt 模块的Python实现与Python C 实现之间，在包装类方法时的性能比较<br><a id="more"></a></p>
+<h3 id="Performance-overhead-when-applying-decorators-to-methods"><a href="#Performance-overhead-when-applying-decorators-to-methods" class="headerlink" title="Performance overhead when applying decorators to methods"></a>Performance overhead when applying decorators to methods</h3><p>This is the tenth post in my series of blog posts about Python decorators and how I believe they are generally poorly implemented. It follows on from the previous post titled <a href="09-performance-overhead-of-using-decorators.md">Performance overhead of using decorators</a>, with the very first post in the series being <a href="01-how-you-implemented-your-python-decorator-is-wrong.md">How you implemented your Python decoratoris wrong</a>.<br><strong>这是Python装饰器系列博客的第十篇</strong></p>
+<p>In the previous post I started looking at the performance implications of using decorators. In that post I started out by looking at the overheads when applying a decorator to a normal function, comparing a decorator implemented as a function closure to the more robust decorator implementation which has been the subject of this series of posts.<br><strong>在上一篇文章中，我开始研究使用装饰器对性能的影响。并对作为函数闭包实现的装饰器与前文描述的通用装饰器进行了性能比较。</strong></p>
+<p>For a 2012 model MacBook Pro the tests yielded for a straight function call:<br><strong>对于2012年的MacBook Pro，直接调用函数的测试结果是:</strong></p>
+<p><code>10000000 loops, best of 3: 0.132 usec per loop</code></p>
+<p>When using a decorator implemented as a function closure the result was:<br><strong>使用函数闭包实现的装饰器的测试结果是:</strong></p>
+<p><code>1000000 loops, best of 3: 0.326 usec per loop</code></p>
+<p>And finally with the decorator factory described in this series of blog posts:<br><strong>最受，使用装饰器工厂函数的测试结果是:</strong></p>
+<p><code>1000000 loops, best of 3: 0.771 usec per loop</code></p>
+<p>This final figure was based on a pure Python implementation. When however the object proxy and function wrapper were implemented as a C extension, it was possible to get this down to:<br><strong>上述是代理对象，和function wrapper 对象的Python实现测试结果，如果将它们以Python C扩展实现，可以降低至:</strong></p>
+<p><code>1000000 loops, best of 3: 0.382 usec per loop</code></p>
+<p>This result was not much different to when using a decorator implemented as a function closure.<br><strong>这与使用函数闭包实现的装饰器，性能相差无几。</strong></p>
+<p>What now for when decorators are applied to methods of a class?<br><strong>将装饰器应用在类方法会怎样?</strong></p>
+<h3 id="Overhead-of-having-to-bind-functions"><a href="#Overhead-of-having-to-bind-functions" class="headerlink" title="Overhead of having to bind functions"></a>Overhead of having to bind functions</h3><p>The issue with applying decorators to methods of a class is that if you are going to honour the Python execution model, the decorator needs to be implemented as a descriptor and correctly bind methods to a class or class instance when accessed. In the decorator described in this series of posts we actually made use of that mechanism so as to be able to determine when a decorator was being applied to a normal function, instance method or class method.<br><strong>将装饰器应用于类的方法的问题是，如果要遵守Python执行模型，则需要将装饰器实现为描述符，并在访问时正确地将方法绑定到类或类实例。在本系列文章中描述的装饰器中，我们正是实现了此机制，以便能够确定装饰器整被应用于与普通的函数、实例方法或类方法中的哪一个。</strong></p>
+<p>Although this process of binding ensures correct operation, it comes at an additional cost in overhead over what a decorator implemented as a function closure, which does not make any attempt to preserve the Python execution model, would do.<br><strong>相比于使用函数闭包实现的装饰器，不会遵守任何的Python 执行模型，这个绑定过程确保了正确的操作，但是也带来了额外的开销。</strong></p>
+<p>In order to see what extra steps occur, we can again use the Python profile hooks mechanism to trace execution of the call of our decorated function. In this case the execution of an instance method.<br><strong>为了查看发生了哪些额外的步骤，我们可以再次使用Python profile挂钩机制来跟踪修饰函数调用的执行。当前即跟踪实例方法的调用</strong></p>
+<p>First lets check again what we would get for a decorator implemented as a function closure.<br><strong>首先，让我们来跟踪函数闭包实现的装饰器调用了哪些函数:</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">def my_function_wrapper(wrapped):</div><div class="line">    def _my_function_wrapper(*args, **kwargs):</div><div class="line">        return wrapped(*args, **kwargs)</div><div class="line">    return _my_function_wrapper</div><div class="line"></div><div class="line">class Class(object):</div><div class="line">    @my_function_wrapper</div><div class="line">    def method(self):</div><div class="line">        pass</div><div class="line"></div><div class="line">instance = Class()</div><div class="line"></div><div class="line">import sys</div><div class="line"></div><div class="line">def tracer(frame, event, arg):</div><div class="line">    print(frame.f_code.co_name, event)</div><div class="line"></div><div class="line">sys.setprofile(tracer)</div><div class="line"></div><div class="line">instance.method()</div></pre></td></tr></table></figure></p>
+<p>The result in running this is effectively the same as when decorating a normal function.<br><strong>结果跟装饰器一个普通函数类似:</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">_my_function_wrapper call</div><div class="line">    method call</div><div class="line">    method return</div><div class="line">_my_function_wrapper return</div></pre></td></tr></table></figure></p>
+<p>We should therefore expect that the overhead will not be substantially different when we perform actual timing tests.<br><strong>因此，我们应该预期，当我们执行实际的时间测试时，开销不会有很大的不同。</strong></p>
+<p>Now for when using our decorator factory. To provide context this time we need to present the complete recipe for the implementation.<br><strong>现在使用我们的装饰器工厂函数。为了提供上下文，我展示了完整的代码实现</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div></pre></td><td class="code"><pre><div class="line">class object_proxy(object):</div><div class="line"></div><div class="line">    def __init__(self, wrapped):</div><div class="line">        self.wrapped = wrapped</div><div class="line">        try:</div><div class="line">            self.__name__ = wrapped.__name__</div><div class="line">        except AttributeError:</div><div class="line">            pass</div><div class="line"></div><div class="line">    @property</div><div class="line">    def __class__(self):</div><div class="line">        return self.wrapped.__class__</div><div class="line"></div><div class="line">    def __getattr__(self, name):</div><div class="line">        return getattr(self.wrapped, name)</div><div class="line"></div><div class="line">class bound_function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped, instance, wrapper, binding, parent):</div><div class="line">        super(bound_function_wrapper, self).__init__(wrapped)</div><div class="line">        self.instance = instance</div><div class="line">        self.wrapper = wrapper</div><div class="line">        self.binding = binding</div><div class="line">        self.parent = parent</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        if self.binding == &apos;function&apos;:</div><div class="line">            if self.instance is None:</div><div class="line">                instance, args = args[0], args[1:]</div><div class="line">                wrapped = functools.partial(self.wrapped, instance)</div><div class="line">                return self.wrapper(wrapped, instance, args, kwargs)</div><div class="line">            else:</div><div class="line">                return self.wrapper(self.wrapped, self.instance, args, kwargs)</div><div class="line">        else:</div><div class="line">            instance = getattr(self.wrapped, &apos;__self__&apos;, None)</div><div class="line">            return self.wrapper(self.wrapped, instance, args, kwargs)</div><div class="line"></div><div class="line">    def __get__(self, instance, owner):</div><div class="line">        if self.instance is None and self.binding == &apos;function&apos;:</div><div class="line">            descriptor = self.parent.wrapped.__get__(instance, owner)</div><div class="line">            return bound_function_wrapper(descriptor, instance, self.wrapper,</div><div class="line">                    self.binding, self.parent)</div><div class="line">        return self</div><div class="line"></div><div class="line">class function_wrapper(object_proxy):</div><div class="line"></div><div class="line">    def __init__(self, wrapped, wrapper):</div><div class="line">        super(function_wrapper, self).__init__(wrapped)</div><div class="line">        self.wrapper = wrapper</div><div class="line">        if isinstance(wrapped, classmethod):</div><div class="line">            self.binding = &apos;classmethod&apos;</div><div class="line">        elif isinstance(wrapped, staticmethod):</div><div class="line">            self.binding = &apos;staticmethod&apos;</div><div class="line">        else:</div><div class="line">            self.binding = &apos;function&apos;</div><div class="line"></div><div class="line">    def __get__(self, instance, owner):</div><div class="line">        wrapped = self.wrapped.__get__(instance, owner)</div><div class="line">        return bound_function_wrapper(wrapped, instance, self.wrapper,</div><div class="line">                self.binding, self)</div><div class="line"></div><div class="line">    def __call__(self, *args, **kwargs):</div><div class="line">        return self.wrapper(self.wrapped, None, args, kwargs)</div><div class="line"></div><div class="line">def decorator(wrapper):</div><div class="line">    def _wrapper(wrapped, instance, args, kwargs):</div><div class="line">        def _execute(wrapped):</div><div class="line">            if instance is None:</div><div class="line">                return function_wrapper(wrapped, wrapper)</div><div class="line">            elif inspect.isclass(instance):</div><div class="line">                return function_wrapper(wrapped,</div><div class="line">                        wrapper.__get__(None, instance))</div><div class="line">            else:</div><div class="line">                return function_wrapper(wrapped,</div><div class="line">                        wrapper.__get__(instance, type(instance)))</div><div class="line">        return _execute(*args, **kwargs)</div><div class="line">    return function_wrapper(wrapper, _wrapper)</div></pre></td></tr></table></figure></p>
+<p>With our decorator implementation now being:<br><strong>我们的装饰器实现如下:</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">@decorator</div><div class="line">def my_function_wrapper(wrapped, instance, args, kwargs):</div><div class="line">    return wrapped(*args, **kwargs)</div></pre></td></tr></table></figure>
+<p>the result we get when executing the decorated instance method of the class is:<br><strong>装饰实例方法的测试输出结果如下:</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">(&apos;__get__&apos;, &apos;call&apos;) # function_wrapper</div><div class="line">    (&apos;__init__&apos;, &apos;call&apos;) # bound_function_wrapper</div><div class="line">        (&apos;__init__&apos;, &apos;call&apos;) # object_proxy</div><div class="line">        (&apos;__init__&apos;, &apos;return&apos;)</div><div class="line">    (&apos;__init__&apos;, &apos;return&apos;)</div><div class="line">(&apos;__get__&apos;, &apos;return&apos;)</div><div class="line"></div><div class="line">(&apos;__call__&apos;, &apos;call&apos;) # bound_function_wrapper</div><div class="line">    (&apos;my_function_wrapper&apos;, &apos;call&apos;)</div><div class="line">        (&apos;method&apos;, &apos;call&apos;)</div><div class="line">        (&apos;method&apos;, &apos;return&apos;)</div><div class="line">    (&apos;my_function_wrapper&apos;, &apos;return&apos;)</div><div class="line">(&apos;__call__&apos;, &apos;return&apos;)</div></pre></td></tr></table></figure></p>
+<p>As can be seen, due to the binding of the method to the instance of the class which occurs in __get__(), a lot more is now happening. The overhead can therefore be expected to be significantly more also.<br><strong>可以看到，由于方法与发生在__get__()中的类实例的绑定，现在发生了很多事情。因此，开销也会显著增加。</strong></p>
+<h3 id="Timing-execution-of-the-method-call"><a href="#Timing-execution-of-the-method-call" class="headerlink" title="Timing execution of the method call"></a>Timing execution of the method call</h3><p>As before, rather than use the implementation above, the actual implementation from the wrapt library will again be used.<br><strong>与前面一样，不再使用上面的实现，而是再次使用wrapt库中的实际实现。</strong></p>
+<p>This time our test is run as:<br><strong>这次我们的测试代码是:</strong></p>
+<p>`$ python -m timeit -s ‘import benchmarks; c=benchmarks.Class()’ ‘c.method()’``</p>
+<p>For the case of no decorator being used on the instance method, the result is:<br><strong>没有被装饰的实例方法，直接运行的结果是:</strong><br><code>10000000 loops, best of 3: 0.143 usec per loop</code></p>
+<p>This is a bit more than for the case of a normal function call due to the binding of the function to the instance which is occurring.<br><strong>这比普通函数调用的情况要多一点，因为发生的了实例方法的绑定。</strong></p>
+<p>Next up is using the decorator implemented as a function closure. For this we get:<br><strong>使用函数闭包实现的装饰器。测试结果如下:</strong></p>
+<p><code>1000000 loops, best of 3: 0.382 usec per loop</code></p>
+<p>Again, somewhat more than the undecorated case, but not a great deal more than when the decorator implemented as a function closure was applied to a normal function. The overhead of this decorator when applied to a normal function vs a instance method is therefore not significantly different.<br><strong>再一次，比未修饰的情况稍微多一点，与被应用到函数的装饰器相差无几。因此，当应用于普通函数与实例方法时，装饰器的开销并没有太大的差异。</strong></p>
+<p>Now for the case of our decorator factory and function wrapper which honours the Python execution model, by ensuring that binding of the function to the instance of the class is done correctly.<br><strong>现在轮到我们的装饰器工厂函数和function wrapper对象</strong></p>
+<p>First up is where a pure Python implementation is used.<br><strong>首先测试Python 实现:</strong><br><code>100000 loops, best of 3: 6.67 usec per loop</code></p>
+<p>Ouch. Compared to when using a function closure to implement the decorator, this is quite an additional hit in runtime overhead.<br><strong>哎哟。与使用函数闭包实现装饰器相比，这在运行时开销上增加了不少负担。</strong></p>
+<p>Although this is only about an extra 6 usec per call, you do need to think about this in context. In particular, if such a decorator is applied to a function which is called 1000 times in the process of handing a web request, that is an extra 6 ms added on top of the response time for that web request.<br><strong>虽然每次通话只需要额外的6个usec，但是您需要在上下文中考虑这个问题。特别是，如果在处理web请求的过程中对一个调用了1000次的函数应用了这样的装饰器，那么在该web请求的响应时间之上增加了6 ms。</strong></p>
+<p>This is the point where many will no doubt argue that being correct is not worth it if the overhead is simply too much. But then, it also isn’t likely the case that the decorated function, nor the decorator itself are going to do nothing and so the additional overhead incurred may still be a small percentage of the run time cost of those and so not in practice noticeable.<br><strong>在这一点上，许多人无疑会辩称，如果管理费用太高，那么正确是不值得的。但是，装饰函数和装饰器本身也不可能什么都不做，因此所产生的额外开销可能只是运行时成本的一小部分，因此在实践中并不明显。</strong></p>
+<p>All the same, can the use of a C extension improve things?<br><strong>同样的，如果使用Python C扩展模块实现呢？</strong></p>
+<p>For the case of the object proxy and function wrapper being implemented as a C extension, the result is:<br><strong>对于作为C扩展实现的对象代理和函数包装器，结果是:</strong></p>
+<p><code>1000000 loops, best of 3: 0.836 usec per loop</code></p>
+<p>So instead of 6 ms, that is less than 1 ms of additional overhead if the decorated function was called a 1000 times.<br><strong>所以不是6ms，而是小于1ms的额外开销如果修饰函数被调用1000次。</strong></p>
+<p>It is still somewhat more than when using a decorator implemented as a function closure, but reiterating again, the use of a function closure when decorating a method of a class is technically broken by design as it does not honour the Python execution model.<br><strong>它仍然比使用作为函数闭包实现的装饰器要多，但再次重申，在修饰类的方法时使用函数闭包不符合Python执行模型。</strong></p>
+<h3 id="Who-cares-if-it-isn’t-quite-correct"><a href="#Who-cares-if-it-isn’t-quite-correct" class="headerlink" title="Who cares if it isn’t quite correct"></a>Who cares if it isn’t quite correct</h3><p>Am I splitting hairs and being overly pedantic in wanting things to be done properly?<br><strong>我是在吹毛求疵、过于迂腐地想把事情做好吗?</strong></p>
+<p>Sure, for what you are using decorators for you may well get away with using a decorator implemented as a function closure. When you start though moving into the area of using function wrappers to perform monkey patching of arbitrary code, you cannot afford to do things in a sloppy way.<br><strong>当然，对于你现在所使用的装饰器，闭包实现可能工作的很好。但是当您开始使用函数包装器执行任意代码的猴子补丁时，情况就不一样了。</strong></p>
+<p>If you do not honour the Python execution model when doing monkey patching, you can too easily break in very subtle and obscure ways the third party code you are monkey patching. Customers don’t really like it when what you do crashes their web application. So for what I need to do at least, it does matter and it matters a lot.<br><strong>如果你在做猴子补丁时不遵守Python的执行模型，那么你很容易以非常微妙和晦涩的方式打破第三方代码。客户可不会喜欢你破坏了他们的web应用程序。所以至少我现在所作的是很重要的。</strong></p>
+<p>Now in this post I have only considered the overhead when decorating instance methods of a class. I did not cover what the overheads are when decorating static methods and class methods. If you are curious about those and how they may be different, you can check out the benchmarks for the full range of cases in the wrapt documentation.<br><strong>在本文中，我只考虑了修饰类实例方法时的开销。我没有涵盖在修饰静态方法和类方法时的开销。如果您对它们的不同之处感到好奇，您可以在wrapt文档中查看完整的案例的基准。</strong></p>
+<p>In the next post I will touch once again on issues of performance overhead, but also a bit on alternative ways of implementing a decorator so as to try and address the problems raised in my very first post. This will be as a part of a comparison between the approach described in this series of posts and the way in which the decorator module available from PyPi implements its variant of a decorator factory.<br><strong>在下一篇文章中，我将再次讨论性能开销问题，但也将讨论实现装饰器的一些替代方法，以便尝试并解决我在第一篇文章中提出的问题。这些内容将作为，对博客中描述的实现和 PyPi 模块中的实现的对比的一部分</strong></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/python-标准库/" rel="tag"># python 标准库</a>
+          
+            <a href="/tags/译文/" rel="tag"># 译文</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/29/wrapt/09-performance-overhead-of-using-decorators/" rel="next" title="09 Performance overhead of using decorators">
+                <i class="fa fa-chevron-left"></i> 09 Performance overhead of using decorators
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/06/02/wrapt/11-safely-applying-monkey-patches-in-python/" rel="prev" title="11 Safely applying monkey patches in Python">
+                11 Safely applying monkey patches in Python <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.jpg"
+               alt="song tao" />
+          <p class="site-author-name" itemprop="name">song tao</p>
+           
+              <p class="site-description motion-element" itemprop="description">有些东西写下来是想告诉自己，别太着急</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">22</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/hotttao" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                    
+                      GitHub
+                    
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://weibo.com/2622065365/profile" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-weibo"></i>
+                  
+                    
+                      微博
+                    
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Performance-overhead-when-applying-decorators-to-methods"><span class="nav-number">1.</span> <span class="nav-text">Performance overhead when applying decorators to methods</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Overhead-of-having-to-bind-functions"><span class="nav-number">2.</span> <span class="nav-text">Overhead of having to bind functions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Timing-execution-of-the-method-call"><span class="nav-number">3.</span> <span class="nav-text">Timing execution of the method call</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Who-cares-if-it-isn’t-quite-correct"><span class="nav-number">4.</span> <span class="nav-text">Who cares if it isn’t quite correct</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">song tao</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.2"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="python 标准库,译文," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 将 synchronized 同步原语装饰器实现为上下文管里器">
+<meta name="keywords" content="python 标准库,译文">
+<meta property="og:type" content="article">
+<meta property="og:title" content="08 The @synchronized decorator as context manager">
+<meta property="og:url" content="http://yoursite.com/2018/05/28/wrapt/08-the-synchronized-decorator-as-context-manager/index.html">
+<meta property="og:site_name" content="song tao blogs">
+<meta property="og:description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 将 synchronized 同步原语装饰器实现为上下文管里器">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-06-01T10:46:13.528Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="08 The @synchronized decorator as context manager">
+<meta name="twitter:description" content="本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，翻译于 https://github.com/GrahamDumpleton/wrapt/tree/master/blog  本篇内容: 将 synchronized 同步原语装饰器实现为上下文管里器">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/05/28/wrapt/08-the-synchronized-decorator-as-context-manager/"/>
+
+
+
+
+
+  <title>08 The @synchronized decorator as context manager | song tao blogs</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">song tao blogs</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">漫步在大陆上的海龟</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/28/wrapt/08-the-synchronized-decorator-as-context-manager/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="song tao">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="song tao blogs">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">08 The @synchronized decorator as context manager</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-28T10:54:03+08:00">
+                2018-05-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/" itemprop="url" rel="index">
+                    <span itemprop="name">函数装饰器</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/猴子补订/" itemprop="url" rel="index">
+                    <span itemprop="name">猴子补订</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/函数装饰器/猴子补订/wrapt/" itemprop="url" rel="index">
+                    <span itemprop="name">wrapt</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>本系列 blog 与 python wrat 模块相关，深入介绍了 Python 装饰器，猴子补订等相关内容，<br>翻译于 <a href="https://github.com/GrahamDumpleton/wrapt/tree/master/blog" target="_blank" rel="external">https://github.com/GrahamDumpleton/wrapt/tree/master/blog</a></p>
+</blockquote>
+<p>本篇内容: 将 synchronized 同步原语装饰器实现为上下文管里器<br><a id="more"></a></p>
+<h3 id="The-synchronized-decorator-as-context-manager"><a href="#The-synchronized-decorator-as-context-manager" class="headerlink" title="The @synchronized decorator as context manager"></a>The @synchronized decorator as context manager</h3><p>This is the eight post in my series of blog posts about Python decorators and how I believe they are generally poorly implemented. It follows on from the previous post titled <a href="07-the-missing-synchronized-decorator.md">The missing @synchronized decorator</a>, with the very first post in the series being <a href="01-how-you-implemented-your-python-decorator-is-wrong.md">How you implemented your Python decoratoris wrong</a><br><strong>这是Python装饰器系列博客的第八篇</strong></p>
+<p>In the previous post I described how we could use our new universal decorator pattern to implement a better @synchronized decorator for Python. The intent in doing this was to come up with a better approximation of the equivalent synchronization mechanisms in Java.<br><strong>在前一篇文章中，我描述了如何使用新的通用装饰器模式来实现Python的 @synchronized 同步原语装饰器。这样做的目的是为了更好地了解Java中等效的同步机制。</strong></p>
+<p>Of the two synchronization mechanisms provided by Java, synchronized methods and synchronized statements, we have however so far only implemented an equivalent to synchronized methods.<br><strong>在Java提供的两个同步机制中，同步方法和同步原语，目前为止我们只实现了同步方法。</strong></p>
+<p>In this post I will describe how we can take our @synchronized decorator and extend it to also be used as a context manager, thus providing an an equivalent of synchronized statements in Java.<br><strong>在本文中，我将描述如何使用@synchronized 装饰器，并将其扩展为上下文管理器，从而等效的实现Java的同步原语。</strong></p>
+<h3 id="The-original-synchronized-decorator"><a href="#The-original-synchronized-decorator" class="headerlink" title="The original @synchronized decorator"></a>The original @synchronized decorator</h3><p>The implementation of our @synchronized decorator so far is:<br><strong>到目前为止，我们的@synchronized 装饰器的实现是。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">@decorator</div><div class="line">def synchronized(wrapped, instance, args, kwargs):</div><div class="line">    if instance is None:</div><div class="line">        owner = wrapped</div><div class="line">    else:</div><div class="line">        owner = instance  </div><div class="line"></div><div class="line">    lock = vars(owner).get(&apos;_synchronized_lock&apos;, None)  </div><div class="line"></div><div class="line">    if lock is None:</div><div class="line">        meta_lock = vars(synchronized).setdefault(</div><div class="line">                &apos;_synchronized_meta_lock&apos;, threading.Lock())  </div><div class="line"></div><div class="line">        with meta_lock:</div><div class="line">            lock = vars(owner).get(&apos;_synchronized_lock&apos;, None)</div><div class="line">            if lock is None:</div><div class="line">                lock = threading.RLock()</div><div class="line">                setattr(owner, &apos;_synchronized_lock&apos;, lock)  </div><div class="line"></div><div class="line">    with lock:</div><div class="line">        return wrapped(*args, **kwargs)</div></pre></td></tr></table></figure></p>
+<p>By determining whether the decorator is being used to wrap a normal function, a method bound to a class instance or a class, and with the decorator changing behaviour as a result, we are able to use the one decorator implementation in a number of scenarios.<br><strong>通过确定装饰器被用于包装普通函数、实例方法或类的方法中的哪一个，我们可以在许多场景中使用同一一个装饰器。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">@synchronized # lock bound to function1</div><div class="line">def function1():</div><div class="line">    pass</div><div class="line"></div><div class="line">@synchronized # lock bound to function2</div><div class="line">def function2():</div><div class="line">    pass</div><div class="line"></div><div class="line">@synchronized # lock bound to Class</div><div class="line">class Class(object):  </div><div class="line"></div><div class="line">    @synchronized # lock bound to instance of Class</div><div class="line">    def function_im(self):</div><div class="line">        pass</div><div class="line"></div><div class="line">    @synchronized # lock bound to Class</div><div class="line">    @classmethod</div><div class="line">    def function_cm(cls):</div><div class="line">        pass</div><div class="line"></div><div class="line">    @synchronized # lock bound to function_sm</div><div class="line">    @staticmethod</div><div class="line">    def function_sm():</div><div class="line">        pass</div></pre></td></tr></table></figure></p>
+<p>What we now want to do is modify the decorator to also allow:<br><strong>我们现在想要实现的是让同步装饰器也能完成如下操作:</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">class Object(object):  </div><div class="line"></div><div class="line">    @synchronized</div><div class="line">    def function_im_1(self):</div><div class="line">        pass  </div><div class="line"></div><div class="line">    def function_im_2(self):</div><div class="line">        with synchronized(self):</div><div class="line">            pass</div></pre></td></tr></table></figure></p>
+<p>That is, as well as being able to be used as a decorator, we enable it to be used as a context manager in conjunction with the with statement. By doing this it then provides the ability to only acquire the corresponding lock for a selected number of statements within a function rather than the whole function.<br><strong>也就是说，除了可以用作装饰器之外，它还能与with语句一起用作上下文管理器。通过这样做，它就能够对函数中的部分语句加锁，而不是整个函数。</strong></p>
+<p>For the case of acquiring the same lock used by instance methods, we would pass the self argument or instance object into synchronized when used as a context manager. It could instead also be passed the class type if needing to synchronize with class methods.<br><strong>用作上下文管理器时，如果需要与实例方法同步，我们需要将把self参数或类实例传递给synchronized。如果需要与类方法同步，也可以传递类类型。</strong></p>
+<h3 id="The-function-wrapper-as-context-manager"><a href="#The-function-wrapper-as-context-manager" class="headerlink" title="The function wrapper as context manager"></a>The function wrapper as context manager</h3><p>Right now with how the decorator is implemented, when we use synchronized as a function call, it will return an instance of our function wrapper class.<br><strong>在现有的synchronized实现上，当使用synchronized作为函数调用时，它将返回函数包装器类的一个实例。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">&gt;&gt;&gt; synchronized(None)</div><div class="line">&lt;__main__.function_wrapper object at 0x107b7ea10&gt;</div></pre></td></tr></table></figure></p>
+<p>This function wrapper does not implement the <strong>enter</strong>() and <strong>exit</strong>() functions that are required for an object to be used as a context manager. Since the function wrapper type is our own class, all we need to do though is create a derived version of the class and use that instead. Because though the creation of that function wrapper is bound up within the definition of @decorator, we need to bypass @decorator and use the function wrapper directly.<br><strong>这个函数包装器没有实现作为上下文管理器的对象所需的<strong>enter</strong>()和<strong>exit</strong>()函数。由于函数包装器类型是我们自己的类，所以我们只需要创建子类并使用它。因为尽管这个函数包装器的创建是在@decorator的定义中绑定的，但是我们需要绕过@decorator并直接使用函数包装器。</strong></p>
+<p>The first step therefore is to rewrite our @synchronized decorator so it doesn’t use @decorator.<br><strong>因此，第一步是重写我们的@synchronized decorator，不使用@decorator。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">def synchronized(wrapped):</div><div class="line">    def _synchronized_lock(owner):</div><div class="line">        lock = vars(owner).get(&apos;_synchronized_lock&apos;, None)</div><div class="line"></div><div class="line">        if lock is None:</div><div class="line">            meta_lock = vars(synchronized).setdefault(</div><div class="line">                    &apos;_synchronized_meta_lock&apos;, threading.Lock())</div><div class="line"></div><div class="line">            with meta_lock:</div><div class="line">                lock = vars(owner).get(&apos;_synchronized_lock&apos;, None)</div><div class="line">                if lock is None:</div><div class="line">                    lock = threading.RLock()</div><div class="line">                    setattr(owner, &apos;_synchronized_lock&apos;, lock)</div><div class="line"></div><div class="line">        return lock</div><div class="line"></div><div class="line">    def _synchronized_wrapper(wrapped, instance, args, kwargs):</div><div class="line">        with _synchronized_lock(instance or wrapped):</div><div class="line">            return wrapped(*args, **kwargs)</div><div class="line"></div><div class="line">    return function_wrapper(wrapped, _synchronized_wrapper)</div></pre></td></tr></table></figure></p>
+<p>This works the same as our original implementation but we now have access to the point where the function wrapper was created. With that being the case, we can now create a class which derives from the function wrapper and adds the required methods to satisfy the context manager protocol.<br><strong>这与我们最初的实现相同，但是我们现在可以访问创建函数包装器的点。在这种情况下，我们现在可以创建一个从函数包装器派生的类，并添加所需的方法来满足上下文管理器协议。</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line">def synchronized(wrapped):</div><div class="line">    def _synchronized_lock(owner):</div><div class="line">        lock = vars(owner).get(&apos;_synchronized_lock&apos;, None)</div><div class="line"></div><div class="line">        if lock is None:</div><div class="line">            meta_lock = vars(synchronized).setdefault(</div><div class="line">                    &apos;_synchronized_meta_lock&apos;, threading.Lock())</div><div class="line"></div><div class="line">            with meta_lock:</div><div class="line">                lock = vars(owner).get(&apos;_synchronized_lock&apos;, None)</div><div class="line">                if lock is None:</div><div class="line">                    lock = threading.RLock()</div><div class="line">                    setattr(owner, &apos;_synchronized_lock&apos;, lock)</div><div class="line"></div><div class="line">        return lock</div><div class="line"></div><div class="line">    def _synchronized_wrapper(wrapped, instance, args, kwargs):</div><div class="line">        with _synchronized_lock(instance or wrapped):</div><div class="line">            return wrapped(*args, **kwargs)</div><div class="line"></div><div class="line">    class _synchronized_function_wrapper(function_wrapper):</div><div class="line"></div><div class="line">        def __enter__(self):</div><div class="line">            self._lock = _synchronized_lock(self.wrapped)</div><div class="line">            self._lock.acquire()</div><div class="line">            return self._lock</div><div class="line"></div><div class="line">        def __exit__(self, *args):</div><div class="line">            self._lock.release()</div><div class="line"></div><div class="line">    return _synchronized_function_wrapper(wrapped, _synchronized_wrapper)</div></pre></td></tr></table></figure></p>
+<h3 id="We-now-have-two-scenarios-for-what-can-happen"><a href="#We-now-have-two-scenarios-for-what-can-happen" class="headerlink" title="We now have two scenarios for what can happen."></a>We now have two scenarios for what can happen.</h3><p>In the case of synchronized being used as a decorator still, our new derived function wrapper will wrap the function or method it was applied to. When that function or class method is called, the existing <strong>call</strong>() method of the function wrapper base class will be called and the decorator semantics will apply with the wrapper called to acquire the appropriate lock and call the wrapped function.<br><strong>当synchronized继续作为装饰器使用时，新的function wrapper的衍生类被用于包装被包装函数和方法。当函数或类方法被调用时，function wrapper基类中的<strong>call</strong> 方法被调用。装饰器将在尝试获取锁之后执行被包装函数。</strong></p>
+<p>In the case where is was instead used for the purposes of a context manager, our new derived function wrapper would actually be wrapping the class instance or class type. Nothing is being called though and instead the with statement will trigger the execution of the <strong>enter</strong>() and <strong>exit</strong>() methods to acquire the appropriate lock around the context of the statements to be executed.<br><strong>当synchronized作为上下文管里器使用时。新的衍生类将用于包装类实例或类本身。没有方法会被调用，取而代之的是在进入上下文时，<strong>enter</strong>()会获取锁，离开上下文时，<strong>exit</strong>()会释放锁。</strong></p>
+<p>So all nice and neat and not even that complicated compared to previous attempts at doing the same thing which were referenced in the prior post on this topic.<br><strong>与在之前的文章中形容的复杂度相比，现在的实现简单明了。</strong></p>
+<h3 id="It-isn’t-just-about-decorator"><a href="#It-isn’t-just-about-decorator" class="headerlink" title="It isn’t just about @decorator"></a>It isn’t just about @decorator</h3><p>Now one of the things that this hopefully shows is that although @decorator can be used to create your own custom decorators, this isn’t always the most appropriate way to go. The separate existence of the function wrapper gives a great deal of flexibility in what one can do as far as wrapping objects to modify the behaviour. One can also drop down and use the object proxy directly in certain circumstances.<br><strong>希望这能说明的一点是，尽管@decorator被用来创建自定义装饰器，但这并不总是最合适的方式。function wrapper 对象的单独存在为修改被包装对象的行为提供了很大的灵活性。在某些情况下，还可以直接删除和使用对象代理。</strong></p>
+<p>All together these provide a general purpose set of tools for doing any sort of wrapping or monkey patching and not just for use in decorators. I will now start to shift the focus of this series of blog posts to look more at the more general area of wrapping and monkey patching.<br><strong>所有这些都提供了一个通用的工具集，用于进行任何类型的包装或修补，而不仅仅是用于装饰。现在，我将开始将这一系列博客文章的焦点转移到更一般的包装和猴子补丁上。</strong></p>
+<p>Before I do get into that, in my next post I will first talk about the performance implications implicit in using the function wrapper which has been described when compared to the more traditional way of using function closures to implement decorators. This will include overhead comparisons where the complete object proxy and function wrapper classes are implemented as a Python C extension for added performance.<br><strong>在此之前，在下一篇文章中，我将首先讨论与使用函数闭包实现装饰器的更传统方式相比，使用function wrapper隐含的性能影响。以及使用Python C扩展实现完整的对象代理和function wrapper后，性能改善的大小。</strong></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/python-标准库/" rel="tag"># python 标准库</a>
+          
+            <a href="/tags/译文/" rel="tag"># 译文</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/26/wrapt/07-the-missing-synchronized-decorator/" rel="next" title="07 The missing @synchronized decorator">
+                <i class="fa fa-chevron-left"></i> 07 The missing @synchronized decorator
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/05/29/wrapt/09-performance-overhead-of-using-decorators/" rel="prev" title="09 Performance overhead of using decorators">
+                09 Performance overhead of using decorators <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.jpg"
+               alt="song tao" />
+          <p class="site-author-name" itemprop="name">song tao</p>
+           
+              <p class="site-description motion-element" itemprop="description">有些东西写下来是想告诉自己，别太着急</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">22</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/hotttao" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                    
+                      GitHub
+                    
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://weibo.com/2622065365/profile" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-weibo"></i>
+                  
+                    
+                      微博
+                    
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#The-synchronized-decorator-as-context-manager"><span class="nav-number">1.</span> <span class="nav-text">The @synchronized decorator as context manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#The-original-synchronized-decorator"><span class="nav-number">2.</span> <span class="nav-text">The original @synchronized decorator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#The-function-wrapper-as-context-manager"><span class="nav-number">3.</span> <span class="nav-text">The function wrapper as context manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#We-now-have-two-scenarios-for-what-can-happen"><span class="nav-number">4.</span> <span class="nav-text">We now have two scenarios for what can happen.</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#It-isn’t-just-about-decorator"><span class="nav-number">5.</span> <span class="nav-text">It isn’t just about @decorator</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">song tao</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.2"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
