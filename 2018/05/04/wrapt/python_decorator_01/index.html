@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>如何实现一个 Python 装饰器 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="wrapt,函数装饰器" />
+    
+    <meta name="description" content="稍微对 Python 有所了解的程序员一定知道 Python 装饰器和函数闭包。我曾经也以为很了解，直到在《流畅的Python》中看到了 Wrapt 模块。">
+<meta name="keywords" content="wrapt,函数装饰器">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何实现一个 Python 装饰器">
+<meta property="og:url" content="http://yoursite.com/2018/05/04/wrapt/python_decorator_01/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="稍微对 Python 有所了解的程序员一定知道 Python 装饰器和函数闭包。我曾经也以为很了解，直到在《流畅的Python》中看到了 Wrapt 模块。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/python/decorator.jpg">
+<meta property="og:updated_time" content="2018-09-02T09:27:32.634Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="如何实现一个 Python 装饰器">
+<meta name="twitter:description" content="稍微对 Python 有所了解的程序员一定知道 Python 装饰器和函数闭包。我曾经也以为很了解，直到在《流畅的Python》中看到了 Wrapt 模块。">
+<meta name="twitter:image" content="http://yoursite.com/images/python/decorator.jpg">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/Python/">Python</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-wrapt/python_decorator_01" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        如何实现一个 Python 装饰器
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2018/05/04/wrapt/python_decorator_01/" class="article-date">
+            <time datetime="2018-05-04T05:54:03.000Z" itemprop="datePublished">2018-05-04</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/wrapt/">wrapt</a>, <a class="tag-link" href="/tags/函数装饰器/">函数装饰器</a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p><img src="/images/python/decorator.jpg" alt="Python decorator"></p>
+<p>稍微对 Python 有所了解的程序员一定知道 Python 装饰器和函数闭包。我曾经也以为很了解，直到在《流畅的Python》中看到了 Wrapt 模块。<br><a id="more"></a></p>
+<p>Wrapt 模块的作者 Graham Dumpleton 先生写了 14 篇博客详细讲解了如何在 Python 中实现一个能同时包装函数，类方法，实例方法的通用装饰器。本文以及接下来几篇文章是我对那 14 篇博客的整理和笔记。</p>
+<p>Graham Dumpleton 先生的博文 和 Wrapt 模块请参阅:</p>
+<ul>
+<li><a href="https://github.com/GrahamDumpleton/wrapt/tree/master/blog" target="_blank" rel="external">GrahamDumpleton wrapt blog</a></li>
+<li><a href="https://wrapt.readthedocs.io/en/latest/" target="_blank" rel="external">wrapt 1.10.11 documentation</a></li>
+</ul>
+<h2 id="1-通过函数闭包实现装饰器"><a href="#1-通过函数闭包实现装饰器" class="headerlink" title="1. 通过函数闭包实现装饰器"></a>1. 通过函数闭包实现装饰器</h2><p>装饰器的典型目的是为被包装函数附加的额外的处理逻辑。我遇到的使用装饰器的最典型场景是，大多数数据库对一次查询可设置的查询的条件有数量限制，大量查询时需要将多个查询条件分组进行多次查询在合并查询结果。比如我有100000 用户需要根据ID 查询其性别，查询条件太多，只能分批多次查询，然后将查询结果合并。这种分批查询不仅对 mysql，对其他任何数据库都适用，所以非常适用用装饰器将分批查询再合并的功能抽象出来。</p>
+<h3 id="1-1-实现原理"><a href="#1-1-实现原理" class="headerlink" title="1.1 实现原理"></a>1.1 实现原理</h3><p>大多数人(我)都是通过闭包来创建一个装饰器，就像下面这样。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_wrapper</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">    <span class="keyword">return</span> _wrapper</div><div class="line"></div><div class="line"><span class="comment"># @ 符应用一个装饰器在Python2.4 中被加入。它仅仅是如下方式的语法糖</span></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">pass</span></div><div class="line"></div><div class="line">function = function_wrapper(function)</div></pre></td></tr></table></figure></p>
+<p>整个包装的执行过程如下:</p>
+<ol>
+<li>包装函数(<code>function_wrapper</code>)接收被包装函数(<code>wrapped</code>)作为参数，并将内部的另一个内部函数(<code>_wrapper</code>) 作为返回值</li>
+<li>通过<code>@</code>装饰器或函数的调用赋值，使用 <code>_wrapper</code> 替换 <code>wrapped</code>，这样对 <code>wrapped</code> 的调用实际是调用的 <code>_wrapped</code></li>
+<li><code>_wrapped</code> 通过函数闭包保留了对 <code>wrapped</code> 函数的引用，这样它就可以在内部调用 <code>wrapped</code> 函数并返回调用结果。</li>
+<li><code>_wrapped</code> 在调用 <code>wrapped</code> 之前或之后可以添加其他处理逻辑，以达到为 <code>wrapped</code> 附加功能的目的。</li>
+</ol>
+<p>虽然通常都是适用函数闭包实现装饰器，但是能展示它工作原理的更好的示例是使用一个类实现它:</p>
+<ol>
+<li><code>function_wrapper</code> 类通过属性保留对被包装函数的引用</li>
+<li>当被包装函数被调用时，包装类的 <code>__call__</code> 方法被调用，并进而调用原始的被包装函数</li>
+<li><code>__call__</code> 包含了附加的通用处理逻辑。</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">function_wrapper</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wrapped)</span>:</span></div><div class="line">        self.wrapped = wrapped</div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.wrapped(*args, **kwargs)</div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">pass</span></div></pre></td></tr></table></figure>
+<h3 id="1-2-局限"><a href="#1-2-局限" class="headerlink" title="1.2 局限"></a>1.2 局限</h3><p>尽管通过闭包实现装饰器很简单，但是这种方式存在很多局限，其中最重要的是打断了 Python 内部的自省，也没有遵循 Python 对象模型的执行方式。</p>
+<h4 id="猴子补丁"><a href="#猴子补丁" class="headerlink" title="猴子补丁"></a>猴子补丁</h4><p>与装饰器十分相似的一个技术是 <code>monkey patching</code>(猴子打补丁)，猴子打补丁会进入并修改其他人的代码。二者不同的是装饰器作用的时间是函数定义完成之后，而猴子补订在函数导入模块时被应用。为了能同时使用函数包装器和猴子补丁，函数包装器必需是透明的，并且内部维护了一个堆，以便多个装饰器，猴子补订能按照预期的顺序执行。</p>
+<h2 id="2-自省丢失"><a href="#2-自省丢失" class="headerlink" title="2. 自省丢失"></a>2. 自省丢失</h2><p>当我们讨论函数闭包时，我们会预期函数的自省属性和函数的外在表现相一致。这些包括<code>__name__</code>，<code>__doc__</code> 属性。但是当使用函数闭包时，原函数的自省属性会被内嵌函数所替代，因为函数闭包返回的是内嵌函数。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_wrapper</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">    <span class="keyword">return</span> _wrapper</div><div class="line"></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>print(function.__name__)</div><div class="line">_wrapper</div></pre></td></tr></table></figure>
+<p>当使用类实现闭包时，类实例没有 <code>__name__</code> 属性，访问此属性时，会导致 AttributeError 异常</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">function_wrapper</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wrapped)</span>:</span></div><div class="line">        self.wrapped = wrapped</div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.wrapped(*args, **kwargs)</div><div class="line"></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>print(function.__name__)</div><div class="line">Traceback (most recent call last):</div><div class="line">  File <span class="string">"&lt;stdin&gt;"</span>, line <span class="number">1</span>, <span class="keyword">in</span> &lt;module&gt;</div><div class="line">AttributeError: <span class="string">'function_wrapper'</span> object has no attribute <span class="string">'__name__'</span></div></pre></td></tr></table></figure>
+<p>此处的解决方式是，在函数闭包内，将被包装函数的内省属性复制到内嵌函数上。这样函数名称和文档字符串属性就能表现正常</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_wrapper</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">    _wrapper.__name__ = wrapped.__name__</div><div class="line">    _wrapper.__doc__ = wrapped.__doc__</div><div class="line">    <span class="keyword">return</span> _wrapper</div><div class="line"></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>print(function.__name__)</div><div class="line">function</div></pre></td></tr></table></figure>
+<p>手动复制属性是费劲的，如果未来扩展了其他自省属性，代码需要被更新。例如需要复制 <code>__module__</code> 属性，在Python3 中需要复制  <code>__qualname__</code> 和 <code>__annotations__</code> 属性。为了避免这么做，Python 标准库为我们提供了 <code>functools.wraps()</code> 装饰器，完成自省属性的复制</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> functools</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line"><span class="meta">    @functools.wraps(wrapped)</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_wrapper</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">    <span class="keyword">return</span> _wrapper</div><div class="line"></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>print(function.__name__)</div><div class="line">function</div></pre></td></tr></table></figure>
+<p>使用类实现装饰器时，我们需要使用 <code>functools.update_wrapper()</code> 函数</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> functools</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">function_wrapper</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wrapped)</span>:</span></div><div class="line">        self.wrapped = wrapped</div><div class="line">        functools.update_wrapper(self, wrapped)</div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.wrapped(*args, **kwargs)</div></pre></td></tr></table></figure>
+<p>或许你已经认为通过 <code>functolls.wraps</code> 函数我们能确保函数的自省属性是正确的，但事实上它并不能一直有效。假如我们去访问函数的参数信息，返回的将是包装函数的参数信息而不是被包装函数的。即，在使用闭包的方式中，内嵌函数的参数信息被返回。因此包装器没能保留函数签名信息</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> inspect</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function_wrapper</span><span class="params">(wrapped)</span>:</span> ...</div><div class="line"></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">(arg1, arg2)</span>:</span> <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>print(inspect.getargspec(function))</div><div class="line">ArgSpec(args=[], varargs=<span class="string">'args'</span>, keywords=<span class="string">'kwargs'</span>, defaults=<span class="keyword">None</span>)</div></pre></td></tr></table></figure>
+<p>类包装器更加严重，因为会触发异常，并解释称被包装函数不是一个函数。我们完全不能获取函数签名信息，即使被包装函数是可调用的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">function_wrapper</span><span class="params">(object)</span>:</span> ...</div><div class="line"></div><div class="line"><span class="meta">@function_wrapper</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">function</span><span class="params">(arg1, arg2)</span>:</span> <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>print(inspect.getargspec(function))</div><div class="line">Traceback (most recent call last):</div><div class="line">  File <span class="string">"..."</span>, line XXX, <span class="keyword">in</span> &lt;module&gt;</div><div class="line">    print(inspect.getargspec(function))</div><div class="line">  File <span class="string">".../inspect.py"</span>, line <span class="number">813</span>, <span class="keyword">in</span> getargspec</div><div class="line">    <span class="keyword">raise</span> TypeError(<span class="string">'&#123;!r&#125; is not a Python function'</span>.format(func))</div><div class="line">TypeError: &lt;__main__.function_wrapper object at <span class="number">0x107e0ac90</span>&gt; <span class="keyword">is</span> <span class="keyword">not</span> a Python function</div></pre></td></tr></table></figure>
+<p>另外一个自省的示例是使用 <code>inspect.getsource()</code> 获取函数源代码。闭包装饰器返回的是内嵌函数的源代码，而类装饰器则会触发异常</p>
+<h2 id="3-描述符协议"><a href="#3-描述符协议" class="headerlink" title="3.描述符协议"></a>3.描述符协议</h2><p>同函数类似，装饰器也可以应用于类方法。Python 包含了两个特殊的装饰器<code>@classmethod</code> 和 <code>@staticmethod</code> 将实例方法转换为特殊的类方法。装饰器应用于类方法同样隐含着几个问题</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Class</span><span class="params">(object)</span>:</span></div><div class="line"></div><div class="line"><span class="meta">    @function_wrapper</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">method</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">    @classmethod</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">cmethod</span><span class="params">(cls)</span>:</span></div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">    @staticmethod</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">smethod</span><span class="params">()</span>:</span></div><div class="line">        <span class="keyword">pass</span></div></pre></td></tr></table></figure>
+<p>第一即使使用了 <code>functools.wraps</code> 或者 <code>functools.update_wrapper</code>，当装饰器被用在 <code>@classmethod</code>，<code>@staticmethod</code> 上时，仍然会导致异常。这是因为这两个特殊的装饰器没能将一些必要的属性复制过来。这是一个Python2 的bug，并在Python3中通过忽略丢失的属性修复了</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Class</span><span class="params">(object)</span>:</span></div><div class="line"><span class="meta">    @function_wrapper</span></div><div class="line"><span class="meta">    @classmethod</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">cmethod</span><span class="params">(cls)</span>:</span></div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line">Traceback (most recent call last):</div><div class="line">  File <span class="string">"&lt;stdin&gt;"</span>, line <span class="number">1</span>, <span class="keyword">in</span> &lt;module&gt;</div><div class="line">  File <span class="string">"&lt;stdin&gt;"</span>, line <span class="number">3</span>, <span class="keyword">in</span> Class</div><div class="line">  File <span class="string">"&lt;stdin&gt;"</span>, line <span class="number">2</span>, <span class="keyword">in</span> wrapper</div><div class="line">  File <span class="string">".../functools.py"</span>, line <span class="number">33</span>, <span class="keyword">in</span> update_wrapper</div><div class="line">    setattr(wrapper, attr, getattr(wrapped, attr))</div><div class="line">AttributeError: <span class="string">'classmethod'</span> object has no attribute <span class="string">'__module__'</span></div></pre></td></tr></table></figure>
+<p>即使我们运行在 Python3 上，我们依然会遇到问题。这是因为所有类型的装饰器都假设被包装函数是直接可调用的。事实上并非如此。Python classmethod 装饰器返回一个描述符，这个描述符不是直接可调用的，但是装饰器假设被包装函数直接可调用，因此会出错。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Class</span><span class="params">(object)</span>:</span></div><div class="line"><span class="meta">    @function_wrapper</span></div><div class="line"><span class="meta">    @classmethod</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">cmethod</span><span class="params">(cls)</span>:</span></div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>Class.cmethod()</div><div class="line">Traceback (most recent call last):</div><div class="line">  File <span class="string">"classmethod.py"</span>, line <span class="number">15</span>, <span class="keyword">in</span> &lt;module&gt;</div><div class="line">    Class.cmethod()</div><div class="line">  File <span class="string">"classmethod.py"</span>, line <span class="number">6</span>, <span class="keyword">in</span> _wrapper</div><div class="line">    <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">TypeError: <span class="string">'classmethod'</span> object <span class="keyword">is</span> <span class="keyword">not</span> callable</div></pre></td></tr></table></figure>
+<h2 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h2><p>函数闭包实现的装饰器存在以下问题:</p>
+<ol>
+<li>无法保留函数的自省属性</li>
+<li>无法获取函数签名信息</li>
+<li>无法获取函数源代码</li>
+<li>无法将装饰器应用于另一个为实现描述符的装饰器之上.简单的装饰器实现不会遵守被包装对象的描述符协议，因而破坏了Python对象的执行模型</li>
+</ol>
+<p>使用 <code>functools.wraps()</code> 和 <code>functools.update_wrapper()</code> 能保留常规的自省属性，但依旧无法保留函数签名信息和源代码，而且由于 Python2 的bug，无法将装饰器直接应用于类方法和静态方法(导入时即报错)</p>
+<p>确实存在第三方包，尝试解决这些问题，例如PyPi上的decorator模块。这个模块虽然对前两类问题有所帮助，但仍然存在一些潜在的问题，当尝试通过猴子补丁动态应用函数包装时，可能会导致问题</p>
+<p>这并不意味着这些问题是不可解决的，而且可以以一种不牺牲性能的方式解决。现在已经说明了要解决的问题，在随后的文章将会解释如何解决这些问题，以及提供哪些额外的功能。</p>
+
+        </div>
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2018/05/04/wrapt/python_decorator_01/" data-id="cjlhs626z000bsbhgqb64aovw" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2018/06/13/deploy/supervisor_tornado/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            supervisor tornado 部署
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2017/09/04/deploy/virtualenv/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">virtualenv</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/13/deploy/supervisor_tornado/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2018/06/13/deploy/supervisor_tornado/" class="title">supervisor tornado 部署</a></p>
+                            <p class="item-date"><time datetime="2018-06-13T05:54:03.000Z" itemprop="datePublished">2018-06-13</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/05/04/wrapt/python_decorator_01/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="如何实现一个 Python 装饰器" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/05/04/wrapt/python_decorator_01/" class="title">如何实现一个 Python 装饰器</a></p>
+                            <p class="item-date"><time datetime="2018-05-04T05:54:03.000Z" itemprop="datePublished">2018-05-04</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2017/09/04/deploy/virtualenv/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/virtualenv.jpg)" alt="virtualenv" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2017/09/04/deploy/virtualenv/" class="title">virtualenv</a></p>
+                            <p class="item-date"><time datetime="2017-09-04T05:54:03.000Z" itemprop="datePublished">2017-09-04</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2017/09/03/hexo/hexo-github/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/blog_init/hexo.jpg)" alt="hexo github blog" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2017/09/03/hexo/hexo-github/" class="title">hexo github blog</a></p>
+                            <p class="item-date"><time datetime="2017-09-03T03:58:00.000Z" itemprop="datePublished">2017-09-03</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/wrapt/" style="font-size: 10px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 10px;">函数装饰器</a> <a href="/tags/部署工具/" style="font-size: 20px;">部署工具</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2018 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2018/05/04/wrapt/python_decorator_01/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

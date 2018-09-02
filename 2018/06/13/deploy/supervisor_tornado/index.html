@@ -6,18 +6,24 @@
     
 
     
-    <title>宋涛的博客</title>
+    <title>supervisor tornado 部署 | 宋涛的博客</title>
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
-    <meta property="og:type" content="website">
-<meta property="og:title" content="宋涛的博客">
-<meta property="og:url" content="http://yoursite.com/404.html">
+        <meta name="keywords" content="部署工具,supervisor,tornado" />
+    
+    <meta name="description" content="通过 supervisor 创建监听套接字的文件描述符，为多个 tornado 进程共享">
+<meta name="keywords" content="部署工具,supervisor,tornado">
+<meta property="og:type" content="article">
+<meta property="og:title" content="supervisor tornado 部署">
+<meta property="og:url" content="http://yoursite.com/2018/06/13/deploy/supervisor_tornado/index.html">
 <meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="通过 supervisor 创建监听套接字的文件描述符，为多个 tornado 进程共享">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2017-09-03T09:20:09.938Z">
+<meta property="og:updated_time" content="2018-08-31T09:11:30.411Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="宋涛的博客">
+<meta name="twitter:title" content="supervisor tornado 部署">
+<meta name="twitter:description" content="通过 supervisor 创建监听套接字的文件描述符，为多个 tornado 进程共享">
     
 
     
@@ -126,33 +132,49 @@
                         <div class="main-body-header">
     <h1 class="header">
     
-    宋涛的博客
+    <a class="page-title-link" href="/categories/运维/">运维</a>
     </h1>
 </div>
 
                         <div class="main-body-content">
-                            <article id="page-" class="article article-single article-type-page" itemscope itemprop="blogPost">
+                            <article id="post-deploy/supervisor_tornado" class="article article-single article-type-post" itemscope itemprop="blogPost">
     <div class="article-inner">
         
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        supervisor tornado 部署
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2018/06/13/deploy/supervisor_tornado/" class="article-date">
+            <time datetime="2018-06-13T05:54:03.000Z" itemprop="datePublished">2018-06-13</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/supervisor/">supervisor</a>, <a class="tag-link" href="/tags/tornado/">tornado</a>, <a class="tag-link" href="/tags/部署工具/">部署工具</a>
+    </div>
+
+            </div>
         
         
         <div class="article-entry" itemprop="articleBody">
-            <!DOCTYPE HTML>
-<html>
-<head>
-  <meta http-equiv="content-type" content="text/html;charset=utf-8;">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <meta name="robots" content="all">
-  <meta name="robots" content="index,follow">
-  <link rel="stylesheet" type="text/css" href="https://qzone.qq.com/gy/404/style/404style.css">
-</head>
-<body>
-  <script type="text/plain" src="http://www.qq.com/404/search_children.js" charset="utf-8" homepageurl="/" homepagename="回到我的主页">
-  </script>
-  <script src="https://qzone.qq.com/gy/404/data.js" charset="utf-8"></script>
-  <script src="https://qzone.qq.com/gy/404/page.js" charset="utf-8"></script>
-</body>
-</html>
+            <p>通过 supervisor 创建监听套接字的文件描述符，为多个 tornado 进程共享<br><a id="more"></a></p>
+<h3 id="1-tornado-启动"><a href="#1-tornado-启动" class="headerlink" title="1. tornado 启动"></a>1. tornado 启动</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado.netutil <span class="keyword">import</span> set_close_exec</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    app = AnalyticApiApplication()</div><div class="line">    http_serve = httpserver.HTTPServer(app)</div><div class="line">    <span class="comment"># http_serve.listen(options.port)</span></div><div class="line">    <span class="comment"># supervisor 创建的监听套接字文件描述符，通过 0 号传递给 tornado的所有进程</span></div><div class="line">    sock = socket.fromfd(<span class="number">0</span>, family=socket.AF_INET, type=socket.SOCK_STREAM)</div><div class="line">    set_close_exec(sock.fileno())</div><div class="line">    sock.setblocking(<span class="number">0</span>)   <span class="comment"># 设置套接字为非阻塞调用</span></div><div class="line">    http_serve.add_socket(sock)</div><div class="line">    ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure>
+<h3 id="2-supervisor-配置"><a href="#2-supervisor-配置" class="headerlink" title="2. supervisor 配置"></a>2. supervisor 配置</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">command=/home/tao/.local/bin/pipenv run python app.py --connect=local-dev --debug=1</div><div class="line">socket=tcp://localhost:8888</div><div class="line">directory=/home/tao/projects/analytics_api</div><div class="line">user=tao</div><div class="line">numprocs=4</div><div class="line">process_name=%(program_name)s_%(process_num)02d</div><div class="line">stdout_logfile =/var/log/tornado_pyapi_stdout_%(process_num)02d.log  </div><div class="line">stderr_logfile =/var/log/tornado_pyapi_stderr_%(process_num)02d.log</div></pre></td></tr></table></figure>
+<h3 id="3-tornado-bind-socket"><a href="#3-tornado-bind-socket" class="headerlink" title="3. tornado.bind_socket"></a>3. tornado.bind_socket</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">bind_sockets</span><span class="params">(port, address=None, family=socket.AF_UNSPEC,</span></span></div><div class="line"><span class="function"><span class="params">                 backlog=_DEFAULT_BACKLOG, flags=None, reuse_port=False)</span>:</span></div><div class="line">    <span class="string">"""Creates listening sockets bound to the given port and address.</span></div><div class="line"><span class="string"></span></div><div class="line"><span class="string">    Returns a list of socket objects (multiple sockets are returned if</span></div><div class="line"><span class="string">    the given address maps to multiple IP addresses, which is most common</span></div><div class="line"><span class="string">    for mixed IPv4 and IPv6 use).</span></div><div class="line"><span class="string"></span></div><div class="line"><span class="string">    Address may be either an IP address or hostname.  If it's a hostname,</span></div><div class="line"><span class="string">    the server will listen on all IP addresses associated with the</span></div><div class="line"><span class="string">    name.  Address may be an empty string or None to listen on all</span></div><div class="line"><span class="string">    available interfaces.  Family may be set to either `socket.AF_INET`</span></div><div class="line"><span class="string">    or `socket.AF_INET6` to restrict to IPv4 or IPv6 addresses, otherwise</span></div><div class="line"><span class="string">    both will be used if available.</span></div><div class="line"><span class="string"></span></div><div class="line"><span class="string">    The ``backlog`` argument has the same meaning as for</span></div><div class="line"><span class="string">    `socket.listen() &lt;socket.socket.listen&gt;`.</span></div><div class="line"><span class="string"></span></div><div class="line"><span class="string">    ``flags`` is a bitmask of AI_* flags to `~socket.getaddrinfo`, like</span></div><div class="line"><span class="string">    ``socket.AI_PASSIVE | socket.AI_NUMERICHOST``.</span></div><div class="line"><span class="string"></span></div><div class="line"><span class="string">    ``reuse_port`` option sets ``SO_REUSEPORT`` option for every socket</span></div><div class="line"><span class="string">    in the list. If your platform doesn't support this option ValueError will</span></div><div class="line"><span class="string">    be raised.</span></div><div class="line"><span class="string">    """</span></div><div class="line">    <span class="keyword">if</span> reuse_port <span class="keyword">and</span> <span class="keyword">not</span> hasattr(socket, <span class="string">"SO_REUSEPORT"</span>):</div><div class="line">        <span class="keyword">raise</span> ValueError(<span class="string">"the platform doesn't support SO_REUSEPORT"</span>)</div><div class="line"></div><div class="line">    sockets = []</div><div class="line">    <span class="keyword">if</span> address == <span class="string">""</span>:</div><div class="line">        address = <span class="keyword">None</span></div><div class="line">    <span class="keyword">if</span> <span class="keyword">not</span> socket.has_ipv6 <span class="keyword">and</span> family == socket.AF_UNSPEC:</div><div class="line">        <span class="comment"># Python can be compiled with --disable-ipv6, which causes</span></div><div class="line">        <span class="comment"># operations on AF_INET6 sockets to fail, but does not</span></div><div class="line">        <span class="comment"># automatically exclude those results from getaddrinfo</span></div><div class="line">        <span class="comment"># results.</span></div><div class="line">        <span class="comment"># http://bugs.python.org/issue16208</span></div><div class="line">        family = socket.AF_INET</div><div class="line">    <span class="keyword">if</span> flags <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">        flags = socket.AI_PASSIVE</div><div class="line">    bound_port = <span class="keyword">None</span></div><div class="line">    <span class="keyword">for</span> res <span class="keyword">in</span> set(socket.getaddrinfo(address, port, family, socket.SOCK_STREAM,</div><div class="line">                                      <span class="number">0</span>, flags)):</div><div class="line">        af, socktype, proto, canonname, sockaddr = res</div><div class="line">        <span class="keyword">if</span> (sys.platform == <span class="string">'darwin'</span> <span class="keyword">and</span> address == <span class="string">'localhost'</span> <span class="keyword">and</span></div><div class="line">                af == socket.AF_INET6 <span class="keyword">and</span> sockaddr[<span class="number">3</span>] != <span class="number">0</span>):</div><div class="line">            <span class="comment"># Mac OS X includes a link-local address fe80::1%lo0 in the</span></div><div class="line">            <span class="comment"># getaddrinfo results for 'localhost'.  However, the firewall</span></div><div class="line">            <span class="comment"># doesn't understand that this is a local address and will</span></div><div class="line">            <span class="comment"># prompt for access (often repeatedly, due to an apparent</span></div><div class="line">            <span class="comment"># bug in its ability to remember granting access to an</span></div><div class="line">            <span class="comment"># application). Skip these addresses.</span></div><div class="line">            <span class="keyword">continue</span></div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            sock = socket.socket(af, socktype, proto)</div><div class="line">        <span class="keyword">except</span> socket.error <span class="keyword">as</span> e:</div><div class="line">            <span class="keyword">if</span> errno_from_exception(e) == errno.EAFNOSUPPORT:</div><div class="line">                <span class="keyword">continue</span></div><div class="line">            <span class="keyword">raise</span></div><div class="line">        set_close_exec(sock.fileno())</div><div class="line">        <span class="keyword">if</span> os.name != <span class="string">'nt'</span>:</div><div class="line">            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, <span class="number">1</span>)</div><div class="line">        <span class="keyword">if</span> reuse_port:</div><div class="line">            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, <span class="number">1</span>)</div><div class="line">        <span class="keyword">if</span> af == socket.AF_INET6:</div><div class="line">            <span class="comment"># On linux, ipv6 sockets accept ipv4 too by default,</span></div><div class="line">            <span class="comment"># but this makes it impossible to bind to both</span></div><div class="line">            <span class="comment"># 0.0.0.0 in ipv4 and :: in ipv6.  On other systems,</span></div><div class="line">            <span class="comment"># separate sockets *must* be used to listen for both ipv4</span></div><div class="line">            <span class="comment"># and ipv6.  For consistency, always disable ipv4 on our</span></div><div class="line">            <span class="comment"># ipv6 sockets and use a separate ipv4 socket when needed.</span></div><div class="line">            <span class="comment">#</span></div><div class="line">            <span class="comment"># Python 2.x on windows doesn't have IPPROTO_IPV6.</span></div><div class="line">            <span class="keyword">if</span> hasattr(socket, <span class="string">"IPPROTO_IPV6"</span>):</div><div class="line">                sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, <span class="number">1</span>)</div><div class="line"></div><div class="line">        <span class="comment"># automatic port allocation with port=None</span></div><div class="line">        <span class="comment"># should bind on the same port on IPv4 and IPv6</span></div><div class="line">        host, requested_port = sockaddr[:<span class="number">2</span>]</div><div class="line">        <span class="keyword">if</span> requested_port == <span class="number">0</span> <span class="keyword">and</span> bound_port <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</div><div class="line">            sockaddr = tuple([host, bound_port] + list(sockaddr[<span class="number">2</span>:]))</div><div class="line"></div><div class="line">        sock.setblocking(<span class="number">0</span>)</div><div class="line">        sock.bind(sockaddr)</div><div class="line">        bound_port = sock.getsockname()[<span class="number">1</span>]</div><div class="line">        sock.listen(backlog)</div><div class="line">        sockets.append(sock)</div><div class="line">    <span class="keyword">return</span> sockets</div></pre></td></tr></table></figure>
 
         </div>
         <footer class="article-footer">
@@ -160,7 +182,7 @@
 
 
 
-    <a data-url="http://yoursite.com/404.html" data-id="cjlhruu920000cfhgrii3syei" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2018/06/13/deploy/supervisor_tornado/" data-id="cjlhrypu90001rrhg195mqzzh" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -294,6 +316,19 @@
             
         </ul>
     </div>
+    
+        
+<nav id="article-nav">
+    
+    
+        <a href="/2018/05/04/wrapt/python_decorator_01/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">如何实现一个 Python 装饰器</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
     
     <div class="widgets-container">
         
@@ -492,7 +527,7 @@
     var disqus_shortname = 'hexo-theme-hueman';
     
     
-    var disqus_url = 'http://yoursite.com/404.html';
+    var disqus_url = 'http://yoursite.com/2018/06/13/deploy/supervisor_tornado/';
     
     (function() {
     var dsq = document.createElement('script');
