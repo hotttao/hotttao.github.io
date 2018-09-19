@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>10 装饰类的性能 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="wrapt,函数装饰器" />
+    
+    <meta name="description" content="在上一篇文章中，我们对作为函数闭包实现的装饰器与前文描述的通用装饰器进行了性能比较。本节我们继续我们的性能测试，看看装饰一个类方法时，不同实现方式的性能表现。">
+<meta name="keywords" content="wrapt,函数装饰器">
+<meta property="og:type" content="article">
+<meta property="og:title" content="10 装饰类的性能">
+<meta property="og:url" content="http://yoursite.com/2018/06/01/wrapt/python_decorator_10/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="在上一篇文章中，我们对作为函数闭包实现的装饰器与前文描述的通用装饰器进行了性能比较。本节我们继续我们的性能测试，看看装饰一个类方法时，不同实现方式的性能表现。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/python/decorator.jpg">
+<meta property="og:updated_time" content="2018-09-15T07:19:19.900Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="10 装饰类的性能">
+<meta name="twitter:description" content="在上一篇文章中，我们对作为函数闭包实现的装饰器与前文描述的通用装饰器进行了性能比较。本节我们继续我们的性能测试，看看装饰一个类方法时，不同实现方式的性能表现。">
+<meta name="twitter:image" content="http://yoursite.com/images/python/decorator.jpg">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/Python/">Python</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-wrapt/python_decorator_10" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        10 装饰类的性能
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2018/06/01/wrapt/python_decorator_10/" class="article-date">
+            <time datetime="2018-05-31T16:00:00.000Z" itemprop="datePublished">2018-06-01</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/wrapt/">wrapt</a>, <a class="tag-link" href="/tags/函数装饰器/">函数装饰器</a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p><img src="/images/python/decorator.jpg" alt="Python decorator"></p>
+<p>在上一篇文章中，我们对作为函数闭包实现的装饰器与前文描述的通用装饰器进行了性能比较。本节我们继续我们的性能测试，看看装饰一个类方法时，不同实现方式的性能表现。<br><a id="more"></a></p>
+<h2 id="1-装饰函数的性能比较"><a href="#1-装饰函数的性能比较" class="headerlink" title="1. 装饰函数的性能比较"></a>1. 装饰函数的性能比较</h2><p>在上一篇文章中，函数闭包实现的装饰器与前文描述的通用装饰器性能测试结果如下</p>
+<p>对于2012年的MacBook Pro，直接调用函数的测试结果是:</p>
+<p><code>10000000 loops, best of 3: 0.132 usec per loop</code></p>
+<p>使用函数闭包实现的装饰器的测试结果是:</p>
+<p><code>1000000 loops, best of 3: 0.326 usec per loop</code></p>
+<p>最受，使用装饰器工厂函数的测试结果是:</p>
+<p><code>1000000 loops, best of 3: 0.771 usec per loop</code></p>
+<p>上述是代理对象，和 <code>function wrapper</code> 对象的Python实现测试结果，如果将它们以Python C扩展实现，可以降低至:</p>
+<p><code>1000000 loops, best of 3: 0.382 usec per loop</code></p>
+<p>这与使用函数闭包实现的装饰器，性能相差无几。</p>
+<p>将装饰器应用在类方法会怎样？</p>
+<h2 id="2-必须绑定函数的开销"><a href="#2-必须绑定函数的开销" class="headerlink" title="2. 必须绑定函数的开销"></a>2. 必须绑定函数的开销</h2><p>将装饰器应用于类的方法的问题是，如果要遵守Python执行模型，则需要将装饰器实现为描述符，并在访问时正确地将方法绑定到类或类实例。在本系列文章中描述的装饰器中，我们正是实现了此机制，以便能够确定装饰器整被应用于与普通的函数、实例方法或类方法中的哪一个。</p>
+<p>相比于使用函数闭包实现的装饰器不会遵守任何的Python 执行模型，这个绑定过程确保了正确的操作，但是也带来了额外的开销。为了查看发生了哪些额外的步骤，我们可以再次使用Python profile挂钩机制来跟踪修饰函数调用的执行。当前即跟踪实例方法的调用</p>
+<p>首先，让我们来跟踪函数闭包实现的装饰器调用了哪些函数:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">my_function_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_my_function_wrapper</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">    <span class="keyword">return</span> _my_function_wrapper</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Class</span><span class="params">(object)</span>:</span></div><div class="line"><span class="meta">    @my_function_wrapper</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">method</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line">instance = Class()</div><div class="line"></div><div class="line"><span class="keyword">import</span> sys</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">tracer</span><span class="params">(frame, event, arg)</span>:</span></div><div class="line">    print(frame.f_code.co_name, event)</div><div class="line"></div><div class="line">sys.setprofile(tracer)</div><div class="line"></div><div class="line">instance.method()</div></pre></td></tr></table></figure>
+<p>结果跟装饰器一个普通函数类似:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">_my_function_wrapper call</div><div class="line">    method call</div><div class="line">    method <span class="keyword">return</span></div><div class="line">_my_function_wrapper <span class="keyword">return</span></div></pre></td></tr></table></figure>
+<p>因此，我们应该预期，当我们执行实际的时间测试时，开销不会有很大的不同。现在使用我们的装饰器工厂函数。为了提供上下文，我展示了完整的代码实现</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">object_proxy</span><span class="params">(object)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wrapped)</span>:</span></div><div class="line">        self.wrapped = wrapped</div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            self.__name__ = wrapped.__name__</div><div class="line">        <span class="keyword">except</span> AttributeError:</div><div class="line">            <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="meta">    @property</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__class__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.wrapped.__class__</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__getattr__</span><span class="params">(self, name)</span>:</span></div><div class="line">        <span class="keyword">return</span> getattr(self.wrapped, name)</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">bound_function_wrapper</span><span class="params">(object_proxy)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wrapped, instance, wrapper, binding, parent)</span>:</span></div><div class="line">        super(bound_function_wrapper, self).__init__(wrapped)</div><div class="line">        self.instance = instance</div><div class="line">        self.wrapper = wrapper</div><div class="line">        self.binding = binding</div><div class="line">        self.parent = parent</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">if</span> self.binding == <span class="string">'function'</span>:</div><div class="line">            <span class="keyword">if</span> self.instance <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">                instance, args = args[<span class="number">0</span>], args[<span class="number">1</span>:]</div><div class="line">                wrapped = functools.partial(self.wrapped, instance)</div><div class="line">                <span class="keyword">return</span> self.wrapper(wrapped, instance, args, kwargs)</div><div class="line">            <span class="keyword">else</span>:</div><div class="line">                <span class="keyword">return</span> self.wrapper(self.wrapped, self.instance, args, kwargs)</div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            instance = getattr(self.wrapped, <span class="string">'__self__'</span>, <span class="keyword">None</span>)</div><div class="line">            <span class="keyword">return</span> self.wrapper(self.wrapped, instance, args, kwargs)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, instance, owner)</span>:</span></div><div class="line">        <span class="keyword">if</span> self.instance <span class="keyword">is</span> <span class="keyword">None</span> <span class="keyword">and</span> self.binding == <span class="string">'function'</span>:</div><div class="line">            descriptor = self.parent.wrapped.__get__(instance, owner)</div><div class="line">            <span class="keyword">return</span> bound_function_wrapper(descriptor, instance, self.wrapper,</div><div class="line">                    self.binding, self.parent)</div><div class="line">        <span class="keyword">return</span> self</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">function_wrapper</span><span class="params">(object_proxy)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wrapped, wrapper)</span>:</span></div><div class="line">        super(function_wrapper, self).__init__(wrapped)</div><div class="line">        self.wrapper = wrapper</div><div class="line">        <span class="keyword">if</span> isinstance(wrapped, classmethod):</div><div class="line">            self.binding = <span class="string">'classmethod'</span></div><div class="line">        <span class="keyword">elif</span> isinstance(wrapped, staticmethod):</div><div class="line">            self.binding = <span class="string">'staticmethod'</span></div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            self.binding = <span class="string">'function'</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, instance, owner)</span>:</span></div><div class="line">        wrapped = self.wrapped.__get__(instance, owner)</div><div class="line">        <span class="keyword">return</span> bound_function_wrapper(wrapped, instance, self.wrapper,</div><div class="line">                self.binding, self)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.wrapper(self.wrapped, <span class="keyword">None</span>, args, kwargs)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">decorator</span><span class="params">(wrapper)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_wrapper</span><span class="params">(wrapped, instance, args, kwargs)</span>:</span></div><div class="line">        <span class="function"><span class="keyword">def</span> <span class="title">_execute</span><span class="params">(wrapped)</span>:</span></div><div class="line">            <span class="keyword">if</span> instance <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">                <span class="keyword">return</span> function_wrapper(wrapped, wrapper)</div><div class="line">            <span class="keyword">elif</span> inspect.isclass(instance):</div><div class="line">                <span class="keyword">return</span> function_wrapper(wrapped,</div><div class="line">                        wrapper.__get__(<span class="keyword">None</span>, instance))</div><div class="line">            <span class="keyword">else</span>:</div><div class="line">                <span class="keyword">return</span> function_wrapper(wrapped,</div><div class="line">                        wrapper.__get__(instance, type(instance)))</div><div class="line">        <span class="keyword">return</span> _execute(*args, **kwargs)</div><div class="line">    <span class="keyword">return</span> function_wrapper(wrapper, _wrapper)</div></pre></td></tr></table></figure>
+<p>我们的装饰器实现如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="meta">@decorator</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">my_function_wrapper</span><span class="params">(wrapped, instance, args, kwargs)</span>:</span></div><div class="line">    <span class="keyword">return</span> wrapped(*args, **kwargs)</div></pre></td></tr></table></figure>
+<p>装饰实例方法的测试输出结果如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">(<span class="string">'__get__'</span>, <span class="string">'call'</span>) <span class="comment"># function_wrapper</span></div><div class="line">    (<span class="string">'__init__'</span>, <span class="string">'call'</span>) <span class="comment"># bound_function_wrapper</span></div><div class="line">        (<span class="string">'__init__'</span>, <span class="string">'call'</span>) <span class="comment"># object_proxy</span></div><div class="line">        (<span class="string">'__init__'</span>, <span class="string">'return'</span>)</div><div class="line">    (<span class="string">'__init__'</span>, <span class="string">'return'</span>)</div><div class="line">(<span class="string">'__get__'</span>, <span class="string">'return'</span>)</div><div class="line"></div><div class="line">(<span class="string">'__call__'</span>, <span class="string">'call'</span>) <span class="comment"># bound_function_wrapper</span></div><div class="line">    (<span class="string">'my_function_wrapper'</span>, <span class="string">'call'</span>)</div><div class="line">        (<span class="string">'method'</span>, <span class="string">'call'</span>)</div><div class="line">        (<span class="string">'method'</span>, <span class="string">'return'</span>)</div><div class="line">    (<span class="string">'my_function_wrapper'</span>, <span class="string">'return'</span>)</div><div class="line">(<span class="string">'__call__'</span>, <span class="string">'return'</span>)</div></pre></td></tr></table></figure>
+<p>可以看到，由于方法与发生在 <code>__get__()</code> 中的类实例的绑定，现在发生了很多事情。因此，开销也会显著增加。</p>
+<h2 id="3-执行类方法的开销"><a href="#3-执行类方法的开销" class="headerlink" title="3. 执行类方法的开销"></a>3. 执行类方法的开销</h2><p>与前面一样，不再使用上面的实现，而是再次使用wrapt库中的实际实现。这次我们的测试代码是:</p>
+<p><code>$ python -m timeit -s &#39;import benchmarks; c=benchmarks.Class()&#39; &#39;c.method()&#39;</code></p>
+<p>没有被装饰的实例方法，直接运行的结果是:</p>
+<p><code>10000000 loops, best of 3: 0.143 usec per loop</code></p>
+<p>这比普通函数调用的情况要多一点，因为发生的了实例方法的绑定。</p>
+<p>使用函数闭包实现的装饰器。测试结果如下:</p>
+<p><code>1000000 loops, best of 3: 0.382 usec per loop</code></p>
+<p>再一次，比未修饰的情况稍微多一点，与被应用到函数的装饰器相差无几。因此，当应用于普通函数与实例方法时，装饰器的开销并没有太大的差异。现在轮到我们的装饰器工厂函数和 <code>function wrapper</code>对象。首先测试Python 实现:</p>
+<p><code>100000 loops, best of 3: 6.67 usec per loop</code></p>
+<p>与使用函数闭包实现装饰器相比，这在运行时开销上增加了不少负担。虽然每次执行只需要额外的6个usec，但是您需要在上下文中考虑这个问题。特别是，如果在处理web请求的过程中对一个调用了1000次的函数应用了这样的装饰器，那么在该web请求的响应时间之上增加了6 ms。</p>
+<p>在这一点上，许多人无疑会辩称，如果运行成本太高，那么正确是不值得的。但是，装饰函数和装饰器本身也不可能什么都不做，因此所产生的额外开销可能只是运行时成本的一小部分，因此在实践中并不明显。同样的，如果使用Python C扩展模块实现呢？对于作为C扩展实现的对象代理和函数包装器，结果是:</p>
+<p><code>1000000 loops, best of 3: 0.836 usec per loop</code></p>
+<p>所以不是6ms，而是小于1ms的额外开销如果修饰函数被调用1000次。它仍然比使用作为函数闭包实现的装饰器要多，但再次重申，在修饰类的方法时使用函数闭包不符合Python执行模型。</p>
+<h2 id="4-需要大费周折么"><a href="#4-需要大费周折么" class="headerlink" title="4. 需要大费周折么"></a>4. 需要大费周折么</h2><p>我是在吹毛求疵、过于迂腐地想把事情做好吗？当然，对于你现在所使用的装饰器，闭包实现可能工作的很好。但是当您开始使用函数包装器执行任意代码的猴子补丁时，情况就不一样了。如果你在做猴子补丁时不遵守Python的执行模型，那么你很容易以非常微妙和晦涩的方式打破第三方代码。客户可不会喜欢你破坏了他们的web应用程序。所以至少我现在所作的是很重要的。</p>
+<p>在本文中，我只考虑了修饰类实例方法时的开销。我没有涵盖在修饰静态方法和类方法时的开销。如果您对它们的不同之处感到好奇，您可以在wrapt文档中查看完整的案例的基准。</p>
+<p>在下一篇文章中，我将再次讨论性能开销问题，但也将讨论实现装饰器的一些替代方法，以便尝试并解决我在第一篇文章中提出的问题。这些内容将作为，对博客中描述的实现和 PyPi 模块中的实现的对比的一部分。</p>
+
+        </div>
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2018/06/01/wrapt/python_decorator_10/" data-id="cjm8ysnx20017dshgz0ulqy0s" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2018/06/02/wrapt/python_decorator_11/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            11 在 Python 中安全的使用猴子补丁
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2018/05/30/wrapt/python_decorator_09/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">09 装饰器性能比较</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/13/deploy/supervisor_tornado/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2018/06/13/deploy/supervisor_tornado/" class="title">supervisor tornado 部署</a></p>
+                            <p class="item-date"><time datetime="2018-06-13T05:54:03.000Z" itemprop="datePublished">2018-06-13</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/05/wrapt/python_decorator_14/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="14 为 Python 应用自动打补丁" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/05/wrapt/python_decorator_14/" class="title">14 为 Python 应用自动打补丁</a></p>
+                            <p class="item-date"><time datetime="2018-06-04T16:00:00.000Z" itemprop="datePublished">2018-06-05</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/04/wrapt/python_decorator_13/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="13 猴子补丁在 Python 中的加载次序问题" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/04/wrapt/python_decorator_13/" class="title">13 猴子补丁在 Python 中的加载次序问题</a></p>
+                            <p class="item-date"><time datetime="2018-06-03T16:00:00.000Z" itemprop="datePublished">2018-06-04</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/03/wrapt/python_decorator_12/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="12 使用 wrapt 辅助测试" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/03/wrapt/python_decorator_12/" class="title">12 使用 wrapt 辅助测试</a></p>
+                            <p class="item-date"><time datetime="2018-06-02T16:00:00.000Z" itemprop="datePublished">2018-06-03</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/02/wrapt/python_decorator_11/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="11 在 Python 中安全的使用猴子补丁" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/02/wrapt/python_decorator_11/" class="title">11 在 Python 中安全的使用猴子补丁</a></p>
+                            <p class="item-date"><time datetime="2018-06-01T16:00:00.000Z" itemprop="datePublished">2018-06-02</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">14</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">14</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">14</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/wrapt/" style="font-size: 20px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 20px;">函数装饰器</a> <a href="/tags/部署工具/" style="font-size: 15px;">部署工具</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2018 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2018/06/01/wrapt/python_decorator_10/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

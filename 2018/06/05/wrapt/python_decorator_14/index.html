@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>14 为 Python 应用自动打补丁 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="wrapt,函数装饰器" />
+    
+    <meta name="description" content="前面我们已经决绝了猴子补丁的导入次序问题，但是这个解决方案有个前提，就是我们必需能修改应用程序代码，以在程序的最开始执行我们的注册函数。本节我们的目的是找到另一种解决方案取消这个限制。">
+<meta name="keywords" content="wrapt,函数装饰器">
+<meta property="og:type" content="article">
+<meta property="og:title" content="14 为 Python 应用自动打补丁">
+<meta property="og:url" content="http://yoursite.com/2018/06/05/wrapt/python_decorator_14/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="前面我们已经决绝了猴子补丁的导入次序问题，但是这个解决方案有个前提，就是我们必需能修改应用程序代码，以在程序的最开始执行我们的注册函数。本节我们的目的是找到另一种解决方案取消这个限制。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/python/decorator.jpg">
+<meta property="og:updated_time" content="2018-09-19T09:45:39.648Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="14 为 Python 应用自动打补丁">
+<meta name="twitter:description" content="前面我们已经决绝了猴子补丁的导入次序问题，但是这个解决方案有个前提，就是我们必需能修改应用程序代码，以在程序的最开始执行我们的注册函数。本节我们的目的是找到另一种解决方案取消这个限制。">
+<meta name="twitter:image" content="http://yoursite.com/images/python/decorator.jpg">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/Python/">Python</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-wrapt/python_decorator_14" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        14 为 Python 应用自动打补丁
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2018/06/05/wrapt/python_decorator_14/" class="article-date">
+            <time datetime="2018-06-04T16:00:00.000Z" itemprop="datePublished">2018-06-05</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/wrapt/">wrapt</a>, <a class="tag-link" href="/tags/函数装饰器/">函数装饰器</a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p><img src="/images/python/decorator.jpg" alt="Python decorator"></p>
+<p>前面我们已经决绝了猴子补丁的导入次序问题，但是这个解决方案有个前提，就是我们必需能修改应用程序代码，以在程序的最开始执行我们的注册函数。本节我们的目的是找到另一种解决方案取消这个限制。<br><a id="more"></a></p>
+<h2 id="1-猴子补丁的问题所在"><a href="#1-猴子补丁的问题所在" class="headerlink" title="1. 猴子补丁的问题所在"></a>1. 猴子补丁的问题所在</h2><p>在之前关于猴子的文章中，我们讨论了导入次序问题。也就是说，正确使用猴子补丁取决于，我们能在任何其他代码导入我们想要修补的模块之前为其打上打补丁。换句话说就是在我们打补丁之前，其他代码是否已经按名称导入了对模块内函数的引用，并将其存储在它自己的名称空间中。即在打补丁之前，其他模块是否已经使用了</p>
+<p><code>from module import function</code></p>
+<p>如果我们不能尽早进入，那么就需要对目标函数的所有使用打补丁，这在一般情况下是不可能的，因为我们不知道函数在哪里被导入。我所描述的一种解决方案是使用导入后钩子机制，使我们能够在模块被任何代码导入之前访问模块并打补丁。这种技术仍然依赖于在有效运行其他代码之前安装导入后钩子机制本身。这意味着必须手动修改应用程序的主Python脚本文件，这并不总是实用的。本文的目的是研究如何避免修改主Python脚本文件来解决导入次序问题。</p>
+<h2 id="2-在-pth-文件中执行代码"><a href="#2-在-pth-文件中执行代码" class="headerlink" title="2. 在 .pth 文件中执行代码"></a>2. 在 .pth 文件中执行代码</h2><p>作为Python导入系统的一部分，以及在哪些目录中搜索Python模块，有一种扩展机制，即可以将一个<code>.pth</code>扩展名文件安装到Python的<code>site-packages</code>目录中。用于指明Python包代码并不在默认的Python模块搜索路径上，而是存在于其他位置，通常是在<code>site-packages</code>的子目录中。<code>.pth</code>文件的目的是充当指向Python包的实际代码的指针。</p>
+<p>在简单的情况下，<code>.pth</code>文件将包含与包含Python包代码的实际目录的名称相关的或绝对的路径名。如果它是一个相对路径名，那么它将相对于.pth文件所在的目录。</p>
+<p>如果使用 <code>.pth</code>，当Python 解释器初始化时，它会创建Python模块的搜索路经，在添加所有默认搜索目录后，它将查找 <code>site-packages</code>内的所有目录，并解析每一个 <code>.pth</code> 文件，并将 <code>.pth</code> 内的目录添加到最后的搜索目录列表中。</p>
+<p>现在，在Python的历史中，这个<code>.pth</code>机制被增强了，以支持一个特殊的情况。这种特殊情况是，如果<code>.pth</code>文件中的一行从导入开始，那么该行将作为Python代码执行，而不是简单地将其作为目录添加到要搜索模块的目录列表中。</p>
+<p>这最初是为了允许为模块执行特殊的启动代码，以允许为Unicode注册一个非标准的编解码器。不过，它后来也被用于<code>easy_install</code>的实现中，如果您曾经运行过<code>easy-install</code>并查看了site-packages目录中的<code>easy-install.pth</code>文件，您会发现以下代码:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> sys; sys.__plen = len(sys.path)</div><div class="line">./antigravity<span class="number">-0.1</span>-py2<span class="number">.7</span>.egg</div><div class="line"><span class="keyword">import</span> sys; new=sys.path[sys.__plen:]; <span class="keyword">del</span> sys.path[sys.__plen:]; p=getattr(sys,<span class="string">'__egginsert'</span>,<span class="number">0</span>); sys.path[p:p]=new; sys.__egginsert = p+len(new)</div></pre></td></tr></table></figure>
+<p>因此，只要能够将代码放在一行上，就可以在每次运行Python解释器时，在<code>.pth</code>文件中做一些非常古怪的事情。我(作者)认为可执行代码在<code>.pth</code>文件中的概念是非常危险的，到目前为止，我(作者)一直避免依赖<code>.pth</code>文件的这个特性。</p>
+<p>我(作者)对<code>.pth</code>文件中的可执行代码的担心是它总是在运行。这意味着，即使您已经将预构建的<code>RPM/DEB</code>包或<code>Python wheel</code> 安装到系统中的Python安装环境中，并且认为这样做更安全，因为避免了作为根用户运行 <code>setup.py</code>。但是.pth文件意味着包仍然可以在您不知情的情况下运行代码，甚至不需要将模块导入任何应用程序。考虑到安全性，Python真应该有一个白名单机制，用于确定信任哪些.pth文件，以允许其在每次运行Python解释器(特别是作为根用户)时执行代码。</p>
+<p>如果有人关心的话，我将把这个讨论留给其他人来讨论，至少现在我将展示如何使用.pth文件的这个特性(滥用)来实现对正在运行的任何Python应用程序进行自动的猴子补丁的机制。</p>
+<h2 id="3-添加导入勾子"><a href="#3-添加导入勾子" class="headerlink" title="3. 添加导入勾子"></a>3. 添加导入勾子</h2><p>在前一篇文章中，我们讨论的导入后钩子机制，在任何Python应用程序脚本文件的开头，我都需要手动添加如下代码:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> os</div><div class="line"></div><div class="line"><span class="keyword">from</span> wrapt <span class="keyword">import</span> discover_post_import_hooks</div><div class="line"></div><div class="line">patches = os.environ.get(<span class="string">'WRAPT_PATCHES'</span>)</div><div class="line"></div><div class="line"><span class="keyword">if</span> patches:</div><div class="line">    <span class="keyword">for</span> name <span class="keyword">in</span> patches.split(<span class="string">','</span>):</div><div class="line">        name = name.strip()</div><div class="line">        <span class="keyword">if</span> name:</div><div class="line">            <span class="keyword">print</span> <span class="string">'discover'</span>, name</div><div class="line">            discover_post_import_hooks(name)</div></pre></td></tr></table></figure>
+<p>它所做的是使用环境变量作为任何使用<code>setuptools</code>入口点注册的包的名称来源，这些入口点包含我们想要应用的猴子补丁。</p>
+<p>了解了可以在.pth文件执行代码的能力,现在可以使用它，让这段代码在Python解释器启动时自动执行,从而避免了每次都需要手动修改每个Python应用程序，来应用我们的猴子补丁。</p>
+<p>但是在实践中，我们需要的代码实际上要比这个稍微复杂一些，并且不能很容易地直接添加到<code>.pth</code>文件中，这是由于需要将所有代码写在一行上。因此，我们要做的是将所有代码放在一个单独的模块中，然后执行该模块。我们不希望每次都导入那个模块，也许用户看到它被导入时会感到害怕，即使它没有被使用，所以我们将通过环境变量的判断使用它。因此，我们可以在我们的<code>.pth</code>中使用的是:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> os, sys; os.environ.get(<span class="string">'AUTOWRAPT_BOOTSTRAP'</span>) <span class="keyword">and</span> __import__(<span class="string">'autowrapt.bootstrap'</span>) <span class="keyword">and</span> sys.modules[<span class="string">'autowrapt.bootstrap'</span>].bootstrap()</div></pre></td></tr></table></figure>
+<p>也就是说，如果环境变量被设置为非空值，那么我们需要导入包含引导代码的模块并执行它。至于引导代码，这就有点麻烦了。我们不能只使用以前手动修改Python应用程序脚本文件时使用的代码。这是因为<code>.pth</code>文件的解析发生在Python解释器初始化。</p>
+<p>问题有两个。第一个问题发生在执行导入钩子的发现，当.pth文件被执行时，它被处理的顺序是未知的，所以在我们的代码运行的时候，最终的Python模块搜索路径可能没有设置。第二个问题是<code>.pth</code>文件的处理发生在任何<code>sitecustomize.py</code>或<code>usercustomize.py</code>被处理完之前。因此，Python解释器可能不在其最终配置状态。因此，我们必须对我们所做的事情小心一点。</p>
+<p>我们真正需要的是将任何操作延迟到Python解释器的初始化完成之后。问题是我们如何做到这一点。</p>
+<h2 id="4-site-模块"><a href="#4-site-模块" class="headerlink" title="4. site 模块"></a>4. site 模块</h2><p>Python解释器初始化的最后部分是由<code>site</code> 模块的<code>main()</code>函数完成的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">global</span> ENABLE_USER_SITE</div><div class="line">    abs__file__()</div><div class="line">    known_paths = removeduppaths()</div><div class="line">    <span class="keyword">if</span> ENABLE_USER_SITE <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">        ENABLE_USER_SITE = check_enableusersite()</div><div class="line">    known_paths = addusersitepackages(known_paths)</div><div class="line">    known_paths = addsitepackages(known_paths)     </div><div class="line">    <span class="keyword">if</span> sys.platform == <span class="string">'os2emx'</span>:</div><div class="line">        setBEGINLIBPATH()</div><div class="line">    setquit()</div><div class="line">    setcopyright()</div><div class="line">    sethelper()</div><div class="line">    aliasmbcs()</div><div class="line">    setencoding()</div><div class="line">    execsitecustomize()</div><div class="line">    <span class="keyword">if</span> ENABLE_USER_SITE:</div><div class="line">        execusercustomize()    <span class="comment"># .pth 在此之后执行</span></div><div class="line">    <span class="comment"># Remove sys.setdefaultencoding() so that users cannot change the</span></div><div class="line">    <span class="comment"># encoding after initialization. The test for presence is needed when</span></div><div class="line">    <span class="comment"># this module is run as a script, because this code is executed twice.</span></div><div class="line">    <span class="keyword">if</span> hasattr(sys, <span class="string">"setdefaultencoding"</span>):</div><div class="line">        <span class="keyword">del</span> sys.setdefaultencoding</div></pre></td></tr></table></figure>
+<p>我们希望依赖的.pth解析和代码执行是在<code>addsitepackages()</code>函数中完成的。因此，我们真正需要的是将代码的任何执行推迟到<code>execsitecustomize()</code>中或<code>execusercustomize()</code>函数运行之后。实现这一点的方法是对这两个函数进行修改，并在它们完成时触发我们的代码。</p>
+<p>我们需要都打上补丁，因为<code>usercustomize.py</code>的执行是可选的，取决于ENABLE_USER_SITE环境变量是否为真。因此，我们的<code>bootstrap()</code>函数应该如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_execsitecustomize_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_execsitecustomize</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">        <span class="keyword">finally</span>:</div><div class="line">            <span class="keyword">if</span> <span class="keyword">not</span> site.ENABLE_USER_SITE:       <span class="comment"># 判断</span></div><div class="line">                _register_bootstrap_functions()</div><div class="line">    <span class="keyword">return</span> _execsitecustomize</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_execusercustomize_wrapper</span><span class="params">(wrapped)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_execusercustomize</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            <span class="keyword">return</span> wrapped(*args, **kwargs)</div><div class="line">        <span class="keyword">finally</span>:</div><div class="line">            _register_bootstrap_functions()</div><div class="line">    <span class="keyword">return</span> _execusercustomize</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">bootstrap</span><span class="params">()</span>:</span></div><div class="line">    site.execsitecustomize = _execsitecustomize_wrapper(site.execsitecustomize)</div><div class="line">    site.execusercustomize = _execusercustomize_wrapper(site.execusercustomize)</div></pre></td></tr></table></figure>
+<p>尽管我曾经说过手工构建的猴子补丁有多糟糕，并且wrapt模块应该用于创建猴子补丁，但是在这种情况下，我们实际上不能使用wrapt模块。这是因为从技术上讲，作为用户安装的包，wrapt包此时可能不能使用。如果wrapt的安装方式是这样的，那么导入它的能力本身就依赖于<code>.pth</code>文件的处理。因此，我们使用一个函数闭包来使用简单的包装器。</p>
+<p>在实际的包装器中，您可以看到两个包装器中哪个最终调用 <code>_register_bootstrap_functions()</code> 取决于ENABLE_USER_SITE是否为真，如果启用了对<code>usersitecustomize()</code>的支持，那么只能在<code>execsitecustomize()</code>中调用它。</p>
+<p>最后，我们现在将<code>_register_bootstrap_functions()</code> 定义为:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">_registered = <span class="keyword">False</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_register_bootstrap_functions</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">global</span> _registered</div><div class="line">    <span class="keyword">if</span> _registered:</div><div class="line">        <span class="keyword">return</span></div><div class="line">    _registered = <span class="keyword">True</span></div><div class="line"></div><div class="line">    <span class="keyword">from</span> wrapt <span class="keyword">import</span> discover_post_import_hooks</div><div class="line">    <span class="keyword">for</span> name <span class="keyword">in</span> os.environ.get(<span class="string">'AUTOWRAPT_BOOTSTRAP'</span>, <span class="string">''</span>).split(<span class="string">','</span>):</div><div class="line">        discover_post_import_hooks(name)</div></pre></td></tr></table></figure>
+<h2 id="5-初始化包"><a href="#5-初始化包" class="headerlink" title="5. 初始化包"></a>5. 初始化包</h2><p>我们已经解决了所有问题，但是如何安装它，特别是如何安装自定义的.pth文件。为此我们使用一个设置<code>.py</code>文件:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> sys</div><div class="line"><span class="keyword">import</span> os</div><div class="line"></div><div class="line"><span class="keyword">from</span> setuptools <span class="keyword">import</span> setup</div><div class="line"><span class="keyword">from</span> distutils.sysconfig <span class="keyword">import</span> get_python_lib</div><div class="line"></div><div class="line">setup_kwargs = dict(</div><div class="line">    name = <span class="string">'autowrapt'</span>,</div><div class="line">    packages = [<span class="string">'autowrapt'</span>],</div><div class="line">    package_dir = &#123;<span class="string">'autowrapt'</span>: <span class="string">'src'</span>&#125;,</div><div class="line">    data_files = [(get_python_lib(prefix=<span class="string">''</span>), [<span class="string">'autowrapt-init.pth'</span>])],</div><div class="line">    entry_points = &#123;<span class="string">'autowrapt.examples'</span>: [<span class="string">'this = autowrapt.examples:autowrapt_this'</span>]&#125;,</div><div class="line">    install_requires = [<span class="string">'wrapt&gt;=1.10.4'</span>],</div><div class="line">)</div><div class="line"></div><div class="line">setup(**setup_kwargs)</div></pre></td></tr></table></figure>
+<p>为了安装<code>.pth</code>，我们使用了<code>setup()</code>调用的<code>data_files</code>参数。使用<code>distutils.sysconfig</code>模块中的<code>get_python_lib()</code>函数确定安装文件的实际位置。前缀“空字符串”的参数确保了Python包安装的路经为 <code>site-packages</code> 的相对路径，而不是绝对路径。**</p>
+<p>安装这个包时非常重要的一点是，您不能使用<code>easy_install</code>或<code>python setup.py</code>安装。只能使用<code>pip</code>安装这个包。</p>
+<p>这样做的原因是，如果不使用pip，那么包安装工具可以将包安装为egg。在这种情况下，自定义<code>.pth</code>文件实际上将安装在egg目录中，而不是实际安装在<code>site-packages</code>目录中。</p>
+<p><code>.pth</code>文件只有被添加到 <code>site-packages</code> 目录中，才能用于映射<code>autowrapt</code>包存在的子目录。从<code>site</code>模块调用的<code>addsitepackages()</code>函数并不会处理包含在<code>.pth</code>文件添加的目录中的<code>.pth</code>文件，因此我们的自定义<code>.pth</code>文件将被跳过。**</p>
+<p>在使用“pip”时，默认情况下不使用eggs，所以可行。</p>
+<p>还要注意的是，这个包不能与<code>buildout</code>一起工作，因为它总是将包作为<code>eggs</code>安装，并且在Python 安装环境中安装任何脚本时，都会显式地设置Python模块搜索路径本身。</p>
+<h2 id="6-使用示例"><a href="#6-使用示例" class="headerlink" title="6. 使用示例"></a>6. 使用示例</h2><p>此软件包的实际完整源代码可在:</p>
+<p><a href="https://github.com/GrahamDumpleton/autowrapt" target="_blank" rel="external">https://github.com/GrahamDumpleton/autowrapt</a></p>
+<p>这个包也在PyPi上作为autowrapt发布，因此您可以尝试它，如果您真的想使用它的话。为了方便快速地测试它是否有效，autowrapt包打包了一个示例<code>monkey patch</code>。在上面的setyp.py被设置如下:**</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">entry_points = &#123;<span class="string">'autowrapt.examples'</span>: [<span class="string">'this = autowrapt.examples:autowrapt_this'</span>]&#125;,</div></pre></td></tr></table></figure>
+<p>这个<code>entry point</code> 定义了一个名为<code>autowrapt.examples</code>的猴子补丁。定义了当导入 this 模块时，模块<code>autowrapt.examples</code>中的猴子补丁函数<code>autowrapt_this()</code>将被执行。**</p>
+<p>所以要运行这个测试需要:</p>
+<p><code>pip install autowrapt</code></p>
+<p>如果没有所需的最小版本，也应该安装wrapt模块。现在正常运行命令行解释器，并在提示符处执行:</p>
+<p><code>import this</code></p>
+<p>这应该会显示Python的Zen。退出Python解释器，现在运行:</p>
+<p><code>AUTOWRAPT_BOOTSTRAP=autowrapt.examples python</code></p>
+<p>这将再次运行Python解释器，并将环境变量<code>AUTOWRAPT_BOOTSTRAP</code>设置为<code>autowrapt.examples</code>,以匹配在setup.py中为<code>autowrapt</code>定义的<code>entry point</code>。autowrapt_this()”函数的实际代码是:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> __future__ <span class="keyword">import</span> print_function</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">autowrapt_this</span><span class="params">(module)</span>:</span></div><div class="line">    print(<span class="string">'The wrapt package is absolutely amazing and you should use it.'</span>)</div></pre></td></tr></table></figure>
+<p>所以如果我们再一次运行:</p>
+<p><code>import this</code></p>
+<p>我们现在应该看到Python Zen的扩展版本。在本例中，我们实际上并没有对目标模块中的任何代码打补丁，但它显示了补丁函数实际上是按预期被触发。</p>
+<h2 id="7-其他机制"><a href="#7-其他机制" class="headerlink" title="7. 其他机制"></a>7. 其他机制</h2><p>虽然这种机制相当干净，并且只需要设置环境变量，但是不能像前面提到的那样与buildout一起使用。对于buildout，我们需要研究其他可以实现同样效果的方法。我将在下一篇关于这一主题的博文中讨论这些其他选择。</p>
+
+        </div>
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2018/06/05/wrapt/python_decorator_14/" data-id="cjm8ysnx00014dshga4h5fn59" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2018/06/13/deploy/supervisor_tornado/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            supervisor tornado 部署
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2018/06/04/wrapt/python_decorator_13/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">13 猴子补丁在 Python 中的加载次序问题</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/13/deploy/supervisor_tornado/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2018/06/13/deploy/supervisor_tornado/" class="title">supervisor tornado 部署</a></p>
+                            <p class="item-date"><time datetime="2018-06-13T05:54:03.000Z" itemprop="datePublished">2018-06-13</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/05/wrapt/python_decorator_14/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="14 为 Python 应用自动打补丁" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/05/wrapt/python_decorator_14/" class="title">14 为 Python 应用自动打补丁</a></p>
+                            <p class="item-date"><time datetime="2018-06-04T16:00:00.000Z" itemprop="datePublished">2018-06-05</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/04/wrapt/python_decorator_13/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="13 猴子补丁在 Python 中的加载次序问题" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/04/wrapt/python_decorator_13/" class="title">13 猴子补丁在 Python 中的加载次序问题</a></p>
+                            <p class="item-date"><time datetime="2018-06-03T16:00:00.000Z" itemprop="datePublished">2018-06-04</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/03/wrapt/python_decorator_12/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="12 使用 wrapt 辅助测试" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/03/wrapt/python_decorator_12/" class="title">12 使用 wrapt 辅助测试</a></p>
+                            <p class="item-date"><time datetime="2018-06-02T16:00:00.000Z" itemprop="datePublished">2018-06-03</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/02/wrapt/python_decorator_11/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/python/decorator.jpg)" alt="11 在 Python 中安全的使用猴子补丁" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
+                            <p class="item-title"><a href="/2018/06/02/wrapt/python_decorator_11/" class="title">11 在 Python 中安全的使用猴子补丁</a></p>
+                            <p class="item-date"><time datetime="2018-06-01T16:00:00.000Z" itemprop="datePublished">2018-06-02</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">14</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">14</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">14</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/wrapt/" style="font-size: 20px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 20px;">函数装饰器</a> <a href="/tags/部署工具/" style="font-size: 15px;">部署工具</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2018 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2018/06/05/wrapt/python_decorator_14/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
