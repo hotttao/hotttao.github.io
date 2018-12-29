@@ -6,7 +6,7 @@
     
 
     
-    <title>13 散列表 | 宋涛的博客</title>
+    <title>14 散列表 | 宋涛的博客</title>
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
@@ -15,15 +15,15 @@
     <meta name="description" content="散列表原理">
 <meta name="keywords" content="数据结构与算法">
 <meta property="og:type" content="article">
-<meta property="og:title" content="13 散列表">
+<meta property="og:title" content="14 散列表">
 <meta property="og:url" content="http://yoursite.com/2018/10/21/alog/hash_map/index.html">
 <meta property="og:site_name" content="宋涛的博客">
 <meta property="og:description" content="散列表原理">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/algo/hash/hash_map.jpg">
-<meta property="og:updated_time" content="2018-11-16T08:35:48.219Z">
+<meta property="og:updated_time" content="2018-12-28T14:00:46.750Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="13 散列表">
+<meta name="twitter:title" content="14 散列表">
 <meta name="twitter:description" content="散列表原理">
 <meta name="twitter:image" content="http://yoursite.com/images/algo/hash/hash_map.jpg">
     
@@ -146,7 +146,7 @@
                 
     
         <h1 class="article-title" itemprop="name">
-        13 散列表
+        14 散列表
         </h1>
     
 
@@ -254,9 +254,33 @@
 <li>装载因子和动态扩容: HashMap 最大装载因子默认是 0.75，当 HashMap 中元素个数超过 0.75*capacity（capacity 表示散列表的容量）的时候，就会启动扩容，每次扩容都会扩容为原来的两倍大小。</li>
 <li>散列冲突解决: HashMap 底层采用链表法，在 JDK1.8 版本中引入了红黑树。而当链表长度太长（默认超过 8）时，链表就转换为红黑树。当红黑树结点个数少于 8 个的时候，又会将红黑树转化为链表</li>
 </ol>
-<p><strong>参考:</strong></p>
+<h2 id="3-Python-的-dict"><a href="#3-Python-的-dict" class="headerlink" title="3. Python 的 dict"></a>3. Python 的 dict</h2><p>上面我们介绍了散列表的实现原理，但是实现一个工业及的散列表是在大量数学和实验的基础上实现的。因为我主要用的还是 Python ，因此我就以 Python 中的dict 实现来介绍当前工业级的散列表的最佳实践，并着手实现一个简单的散列表。</p>
+<h3 id="3-1-散列函数"><a href="#3-1-散列函数" class="headerlink" title="3.1 散列函数"></a>3.1 散列函数</h3><p>Python 中的散列函数通常有两个部分组成:</p>
+<ol>
+<li>哈希码: 将一个键映射到一个整数</li>
+<li>压缩函数: 将哈希码映射到散列表内部数组的索引</li>
+</ol>
+<p>这么做的目的是将哈希码的计算与具体的散列表大小相独立，这样就可以为每个对象开发一个通用的哈希码，并且可以用于任意大小的散列表，只有压缩函数与散列表的大小有关。</p>
+<h3 id="3-2-哈希码"><a href="#3-2-哈希码" class="headerlink" title="3.2 哈希码"></a>3.2 哈希码</h3><p>不同对象的哈希码有如下几种实现方式:</p>
+<ol>
+<li>对于数值类型的对象，我们可以简单的把用于表示数值 X 的各个位所表示的值作为它的哈希码。如果数值的位数超过哈希码的长度，比如将 64 位浮点数哈希为 32 位的整数，可以对前后 32 求和或做异或处理</li>
+<li>对于字符串或元组形式表示的可变长度对象，通常使用多项式哈希和循环移位哈希，这两种方式都会考虑字符串中字符的位置</li>
+</ol>
+<p>多项式哈希码的计算方式如下，其中 i 表示字符串中第 i 个字符，a 是非 0 常数。在处理英文字符串时 33，37，39，41 是合适选择值。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure></p>
+<p>循环移位的 Python 算法如下，在处理英文字符串时 5 位移动能产生最少的散列冲突。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">hash_code</span><span class="params">(s)</span>:</span></div><div class="line">    mask = (<span class="number">1</span> &lt;&lt; <span class="number">32</span>) - <span class="number">1</span></div><div class="line">    h = <span class="number">0</span></div><div class="line">    <span class="keyword">for</span> c <span class="keyword">in</span> s:</div><div class="line">        h = (h &lt;&lt; <span class="number">5</span> &amp; mask) | (h &gt;&gt; <span class="number">27</span>)</div><div class="line">        h += ord(c)</div><div class="line">    <span class="keyword">return</span> h</div></pre></td></tr></table></figure>
+<h4 id="Python-中的哈希码"><a href="#Python-中的哈希码" class="headerlink" title="Python 中的哈希码"></a>Python 中的哈希码</h4><p>Python 中只有不可变的数据类型可以哈希，以确保一个对象的生命周期中其哈希码不变。对于字符串 Python 使用类似于多项式哈希码的技术，精心设计了字符串的哈希码，没有使用异或和相加。使用相似的基于元组每个元素的哈希码的组合技术计算元组的哈希码。对于 frozenset 对象，元素的顺序是无关的，因此一个自然的选择是用异或值计算单个哈希码而不用任何移位。</p>
+<p>用户自定义对象默认是不可哈希的，除非自定义 <code>__hash__</code> 内置函数，<code>hash()</code> 函数会调用此方法获取对象的哈希码。通过计算组合属性的哈希码作为自定义对象的哈希码是常见方法。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">__hash__</span><span class="params">()</span>:</span></div><div class="line">  <span class="keyword">return</span> hash(self._red, self._green, self._blue)</div></pre></td></tr></table></figure>
+<p>一个重要的规则是，<code>__eq__</code> 与 <code>__hash__</code> 的实现必需一致，即如果<code>x==y</code>，则 <code>hash(x)==hash(y)</code>。比如 <code>hash(1)==hash(1.0)</code></p>
+<h3 id="3-3-压缩函数"><a href="#3-3-压缩函数" class="headerlink" title="3.3 压缩函数"></a>3.3 压缩函数</h3><p>一个好的压缩函数应该确保两个不同的哈希码映射到相同索引的可能性为 1/N，工业级别最常用的压缩函数是 MAD(Multiply-Add-Divide)。选择这个压缩函数是为了消除在哈希码集合中的重复模式，并且得到更好的哈希函数。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">[(ai + b) mod p] mod N</div><div class="line">- N: 散列表内部数组的大小</div><div class="line">- p: 比 N 大的素数</div><div class="line">- a，b 是从区间 [0, p-1] 任意选择的整数，并且 a &gt; 0</div></pre></td></tr></table></figure>
+<h3 id="3-4-散列冲突处理"><a href="#3-4-散列冲突处理" class="headerlink" title="3.4 散列冲突处理"></a>3.4 散列冲突处理</h3><p>散列冲突解决方案中的开放寻址法，有多个变种。常见的包括线性探测，二次探测，双哈希策略。Python 中采用的是迭代地探测桶。这种方法下散列表的负载因子可以达到 2/3。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"># 迭代地探测桶</div><div class="line">A[(h(k) + f(i)) mod N]</div><div class="line">- h(k): 哈希码</div><div class="line">- f(i): 基于伪随机数产生器的函数，它提供一个基于原始哈希码位的可重复的但是随机</div><div class="line">        的，连续的地址探测序列</div></pre></td></tr></table></figure></p>
+<h2 id="4-散列表的简单实现"><a href="#4-散列表的简单实现" class="headerlink" title="4. 散列表的简单实现"></a>4. 散列表的简单实现</h2><p>最后，我们介绍散列表的两种实现，一种使用链表法，另一种使用包含线性探测的开放寻址。</p>
+<h3 id="4-1-公用基类"><a href="#4-1-公用基类" class="headerlink" title="4.1 公用基类"></a>4.1 公用基类</h3><p><strong>参考:</strong></p>
 <ul>
 <li><a href="https://time.geekbang.org/column/126" target="_blank" rel="external">王争老师专栏-数据结构与算法之美</a></li>
+<li><a href="https://book.douban.com/subject/30323938/" target="_blank" rel="external">《数据结构与算法：python语言实现》</a></li>
 </ul>
 
         </div>
@@ -265,7 +289,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2018/10/21/alog/hash_map/" data-id="cjphpy0hl000e6ahgr774jit8" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2018/10/21/alog/hash_map/" data-id="cjq9b1if2004pgghgll5q729a" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -407,7 +431,7 @@
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            14 散列表与链表
+            15 散列表与链表
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
@@ -416,7 +440,7 @@
     
         <a href="/2018/10/20/alog/skip_list/" id="article-nav-older" class="article-nav-link-wrap">
         <strong class="article-nav-caption">上一篇</strong>
-        <p class="article-nav-title">12 跳表</p>
+        <p class="article-nav-title">13 跳表</p>
         <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
         </a>
     
@@ -438,10 +462,10 @@
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/10/28/alog/heap/" class="thumbnail">
+                            <a href="/2018/11/16/alog/graph_search/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/algo/heap/heap.jpg)" alt="20 堆" class="thumbnail-image"></span>
+        <span class="thumbnail-image thumbnail-none"></span>
     
     
 </a>
@@ -450,18 +474,18 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/10/28/alog/heap/" class="title">20 堆</a></p>
-                            <p class="item-date"><time datetime="2018-10-27T16:00:00.000Z" itemprop="datePublished">2018-10-28</time></p>
+                            <p class="item-title"><a href="/2018/11/16/alog/graph_search/" class="title">33 深度和广度优先搜索</a></p>
+                            <p class="item-date"><time datetime="2018-11-15T16:00:00.000Z" itemprop="datePublished">2018-11-16</time></p>
                         </div>
                     </li>
                 
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/10/27/alog/recursion_tree/" class="thumbnail">
+                            <a href="/2018/11/15/alog/graph/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/algo/recursion_tree/recursion_tree.jpg)" alt="19 递归树" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/algo/graph/linked_graph.jpg)" alt="32 图的表示" class="thumbnail-image"></span>
     
     
 </a>
@@ -470,18 +494,18 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/10/27/alog/recursion_tree/" class="title">19 递归树</a></p>
-                            <p class="item-date"><time datetime="2018-10-26T16:00:00.000Z" itemprop="datePublished">2018-10-27</time></p>
+                            <p class="item-title"><a href="/2018/11/15/alog/graph/" class="title">32 图的表示</a></p>
+                            <p class="item-date"><time datetime="2018-11-14T16:00:00.000Z" itemprop="datePublished">2018-11-15</time></p>
                         </div>
                     </li>
                 
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/10/26/alog/red_black_tree/" class="thumbnail">
+                            <a href="/2018/11/10/alog/dp/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/algo/red_black_tree/red_black_tree.jpg)" alt="18 红黑二叉树" class="thumbnail-image"></span>
+        <span class="thumbnail-image thumbnail-none"></span>
     
     
 </a>
@@ -490,18 +514,18 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/10/26/alog/red_black_tree/" class="title">18 红黑二叉树</a></p>
-                            <p class="item-date"><time datetime="2018-10-25T16:00:00.000Z" itemprop="datePublished">2018-10-26</time></p>
+                            <p class="item-title"><a href="/2018/11/10/alog/dp/" class="title">31 动态规划</a></p>
+                            <p class="item-date"><time datetime="2018-11-09T16:00:00.000Z" itemprop="datePublished">2018-11-10</time></p>
                         </div>
                     </li>
                 
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/10/25/alog/binary_tree/" class="thumbnail">
+                            <a href="/2018/11/05/alog/divide/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/algo/binary_tree/binary_tree_search.jpg)" alt="17 二叉查找树与完全二叉树" class="thumbnail-image"></span>
+        <span class="thumbnail-image thumbnail-none"></span>
     
     
 </a>
@@ -510,18 +534,18 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/10/25/alog/binary_tree/" class="title">17 二叉查找树与完全二叉树</a></p>
-                            <p class="item-date"><time datetime="2018-10-24T16:00:00.000Z" itemprop="datePublished">2018-10-25</time></p>
+                            <p class="item-title"><a href="/2018/11/05/alog/divide/" class="title">29 分治算法</a></p>
+                            <p class="item-date"><time datetime="2018-11-04T16:00:00.000Z" itemprop="datePublished">2018-11-05</time></p>
                         </div>
                     </li>
                 
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/10/24/alog/tree_base/" class="thumbnail">
+                            <a href="/2018/11/05/alog/backtracking/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/algo/tree_base/tree_concept.jpg)" alt="16 树的存储与遍历" class="thumbnail-image"></span>
+        <span class="thumbnail-image thumbnail-none"></span>
     
     
 </a>
@@ -530,8 +554,8 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/10/24/alog/tree_base/" class="title">16 树的存储与遍历</a></p>
-                            <p class="item-date"><time datetime="2018-10-23T16:00:00.000Z" itemprop="datePublished">2018-10-24</time></p>
+                            <p class="item-title"><a href="/2018/11/05/alog/backtracking/" class="title">30 回溯算法</a></p>
+                            <p class="item-date"><time datetime="2018-11-04T16:00:00.000Z" itemprop="datePublished">2018-11-05</time></p>
                         </div>
                     </li>
                 
@@ -544,7 +568,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">37</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">50</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
         </div>
     </div>
 
@@ -554,7 +578,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
         </div>
     </div>
 
@@ -564,7 +588,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unittest/">unittest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单元测试/">单元测试</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">20</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unittest/">unittest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单元测试/">单元测试</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">33</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
         </div>
     </div>
 
