@@ -6,24 +6,26 @@
     
 
     
-    <title>24 字符串匹配之 BM 算法 | 宋涛的博客</title>
+    <title>24 字符串匹配之 KMP 算法 | 宋涛的博客</title>
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
         <meta name="keywords" content="数据结构与算法" />
     
-    <meta name="description" content="最优匹配的 BM 算法">
+    <meta name="description" content="优雅的的 KMP 算法">
 <meta name="keywords" content="数据结构与算法">
 <meta property="og:type" content="article">
-<meta property="og:title" content="24 字符串匹配之 BM 算法">
-<meta property="og:url" content="http://yoursite.com/2018/10/31/alog/str_match2/index.html">
+<meta property="og:title" content="24 字符串匹配之 KMP 算法">
+<meta property="og:url" content="http://yoursite.com/2018/10/31/alog/str_match3/index.html">
 <meta property="og:site_name" content="宋涛的博客">
-<meta property="og:description" content="最优匹配的 BM 算法">
+<meta property="og:description" content="优雅的的 KMP 算法">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2018-12-28T14:10:17.556Z">
+<meta property="og:image" content="http://yoursite.com/images/algo/string/kmp_match.png">
+<meta property="og:updated_time" content="2018-12-30T14:47:56.207Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="24 字符串匹配之 BM 算法">
-<meta name="twitter:description" content="最优匹配的 BM 算法">
+<meta name="twitter:title" content="24 字符串匹配之 KMP 算法">
+<meta name="twitter:description" content="优雅的的 KMP 算法">
+<meta name="twitter:image" content="http://yoursite.com/images/algo/string/kmp_match.png">
     
 
     
@@ -137,14 +139,14 @@
 </div>
 
                         <div class="main-body-content">
-                            <article id="post-alog/str_match2" class="article article-single article-type-post" itemscope itemprop="blogPost">
+                            <article id="post-alog/str_match3" class="article article-single article-type-post" itemscope itemprop="blogPost">
     <div class="article-inner">
         
             <header class="article-header">
                 
     
         <h1 class="article-title" itemprop="name">
-        24 字符串匹配之 BM 算法
+        24 字符串匹配之 KMP 算法
         </h1>
     
 
@@ -154,7 +156,7 @@
             <div class="article-meta">
                 
     <div class="article-date">
-        <a href="/2018/10/31/alog/str_match2/" class="article-date">
+        <a href="/2018/10/31/alog/str_match3/" class="article-date">
             <time datetime="2018-10-30T16:00:00.000Z" itemprop="datePublished">2018-10-31</time>
         </a>
     </div>
@@ -171,8 +173,49 @@
         
         
         <div class="article-entry" itemprop="articleBody">
-            <p>最优匹配的 BM 算法</p>
+            <p>优雅的的 KMP 算法</p>
 <a id="more"></a>
+<h2 id="1-KMP-算法"><a href="#1-KMP-算法" class="headerlink" title="1. KMP 算法"></a>1. KMP 算法</h2><p>BM（Boyer-Moore）和 KMP(Knuth-Morris-Pratt) 都是非常高效的字符串匹配算法。BM 比 KMP 更高效，有实验统计 BM 的性能 是 KMP 3-4 倍。但是他们都非常复杂难懂。除了专栏，我也非常推荐你看一看阮一峰老师有关 <a href="http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html" target="_blank" rel="external">BM</a> 和 <a href="http://www.ruanyifeng.com/blog/2013/05/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm.html" target="_blank" rel="external">KMP</a> 算法的介绍。因为 BM 算法利用到了KMP的算法思想，本节我们就先来介绍 KMP 的实现。</p>
+<h3 id="1-1-优化思路"><a href="#1-1-优化思路" class="headerlink" title="1.1 优化思路"></a>1.1 优化思路</h3><p>KMP 算法基于这样一个实现思路: 如下图所示，对于字符串匹配过程中已经匹配的部分，我们是已知的；利用这个已知的信息，我们可以把模式串往后移动更多位，而不是 BR 算法中的一位。而最终移动的位数取决于已匹配部分的<code>&quot;前缀&quot;和&quot;后缀&quot;的最长的共有元素的长度</code>，我们将这个最长的公共子串称为<code>最长可匹配(前缀/后缀)子串</code></p>
+<p><img src="/images/algo/string/kmp_match.png" alt="kmp_match"></p>
+<p>在上面的图例中，已匹配部分是 <code>ABCDAB</code>，前后缀最长匹配的元素是 <code>AB</code>，因此前缀 <code>AB</code>就可以直接来到后缀<code>AB</code>的位置，直接向后移动 4 位继续匹配，如下图所示。</p>
+<p><img src="/images/algo/string/kmp_match2.png" alt="kmp_match"></p>
+<p>字符串已匹配部分永远是模式串的前缀子串，因此<code>最长可匹配(前缀/后缀)子串</code>我们可以提前计算出来，这个就是 KMP 中的 <code>部分匹配表</code>。因此，整个 KMP 的计算过程就分成了两步:</p>
+<ol>
+<li>计算部分匹配表</li>
+<li>根据部分匹配表计算每次不匹配时，模式串的移动位数，进行字符串匹配</li>
+</ol>
+<h3 id="1-2-部分匹配表"><a href="#1-2-部分匹配表" class="headerlink" title="1.2 部分匹配表"></a>1.2 部分匹配表</h3><p>部分匹配表，被称为失效函数，又称为 next 数组。在计算 next 数组之前，首先我们需要明确两个概念: “前缀”和”后缀”:</p>
+<ol>
+<li>“前缀”指除了最后一个字符以外，一个字符串的全部头部组合</li>
+<li>“后缀”指除了第一个字符以外，一个字符串的全部尾部组合</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">以&quot;ABCDAB&quot;为例</div><div class="line">0.　&quot;A&quot;的前缀和后缀都为空集，共有元素的长度为0；</div><div class="line">1.　&quot;AB&quot;的前缀为[A]，后缀为[B]，共有元素的长度为0；</div><div class="line">2.　&quot;ABC&quot;的前缀为[A, AB]，后缀为[BC, C]，共有元素的长度0；</div><div class="line">3.　&quot;ABCD&quot;的前缀为[A, AB, ABC]，后缀为[BCD, CD, D]，共有元素的长度为0；</div><div class="line">4.　&quot;ABCDA&quot;的前缀为[A, AB, ABC, ABCD]，后缀为[BCDA, CDA, DA, A]，共有元素为&quot;A&quot;，长度为1；</div><div class="line">5.　&quot;ABCDAB&quot;的前缀为[A, AB, ABC, ABCD, ABCDA]，后缀为[BCDAB, CDAB, DAB, AB, B]，共有元素为&quot;AB&quot;，长度为2；</div><div class="line">6.　&quot;ABCDABD&quot;的前缀为[A, AB, ABC, ABCD, ABCDA, ABCDAB]，后缀为[BCDABD, CDABD, DABD, ABD, BD, D]，共有元素的长度为0。</div></pre></td></tr></table></figure>
+<p>即”ABCDAB” 的 next 数组为 <code>[0, 0, 0, 0, 1, 2, 0]</code>。其中</p>
+<ol>
+<li>next 数组的下标对应每个前缀子串结尾字符的下标</li>
+<li>next 数组的值则是最长可匹配子串的长度</li>
+</ol>
+<h3 id="1-3-KMP-复杂度分析"><a href="#1-3-KMP-复杂度分析" class="headerlink" title="1.3 KMP 复杂度分析"></a>1.3 KMP 复杂度分析</h3><p>KMP 的空间复杂度是 O(m)，时间复杂度为 O(m+n)。分析过程在我们讲解完 KMP 的实现之后再来讲解。</p>
+<h2 id="2-KMP-算法实现"><a href="#2-KMP-算法实现" class="headerlink" title="2. KMP 算法实现"></a>2. KMP 算法实现</h2><h3 id="2-1-计算部分匹配表"><a href="#2-1-计算部分匹配表" class="headerlink" title="2.1 计算部分匹配表"></a>2.1 计算部分匹配表</h3><p>部分匹配表的计算非常巧妙，下面是代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">kmp_next</span><span class="params">(P)</span>:</span></div><div class="line">    m = len(P)</div><div class="line">    fail = [<span class="number">0</span>] * m</div><div class="line">    j = <span class="number">1</span>  <span class="comment"># 按照下标从小到大的子串</span></div><div class="line">    k = <span class="number">0</span>  <span class="comment"># 上一个子串最长可匹配子串的长度</span></div><div class="line">    <span class="keyword">while</span> j &lt; m:</div><div class="line">        <span class="keyword">if</span> P[j] == P[k]:     </div><div class="line">            fail[j] = k + <span class="number">1</span></div><div class="line">            j += <span class="number">1</span></div><div class="line">            k += <span class="number">1</span></div><div class="line">        <span class="keyword">elif</span> k &gt; <span class="number">0</span>:</div><div class="line">            k = fail[k - <span class="number">1</span>]</div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            j += <span class="number">1</span></div><div class="line">    <span class="keyword">return</span> fail</div></pre></td></tr></table></figure>
+<p>我们以”ABCDAB”为例来讲解计算过程，大家需要牢记的是<code>P[j]</code> 表示当前子串的最后一个字符，<code>P[k]</code> 表示上一个子串的最长可匹配子串的下一个字符，此时分为三种情况:</p>
+<ol>
+<li><code>P[j] == P[k]</code>: 对应<code>ABCDAB</code>，前一个子串是<code>ABCDA</code>，最长可匹配子串是 <code>A</code>，此时<code>P[5]==P[1]==B，即AB=AB</code>,所以 <code>ABCDAB</code>的最长可匹配子串长度就是 2</li>
+<li><code>P[j] != P[k] and k &gt; 0</code>: 对应<code>ABCDABD</code>，<code>P[6]!=P[2]，即D!=C</code>，此时可以确定的是<code>ABCDABD</code>的最长可匹配子串，只能从<code>ABD</code>进行匹配，进而问题转换为已知<code>AB</code>的最长可匹配子串，求<code>ABD</code>的最长可匹配子串问题。</li>
+<li><code>P[j] != P[k] and k == 0</code>: 显然此时就没有任何可匹配到的子串。</li>
+</ol>
+<p>这个计算过程很巧妙，不多看几次很难明白。</p>
+<p>在next 的计算过程中，使用了一个额外的数组，因此这一部份的空间复杂度是 O(m)。在 while 循环中 j 执行的次数一定不会超过 m，而 k 变量无论是增加累计的量，还是减少累计的量都不会超过 m，因此这一部分的时间复杂度为 O(m)。</p>
+<h3 id="2-2-KMP-字符串匹配过程"><a href="#2-2-KMP-字符串匹配过程" class="headerlink" title="2.2 KMP 字符串匹配过程"></a>2.2 KMP 字符串匹配过程</h3><p>字符串匹配的过程中，最重要的一步是确定不匹配时，后移的位数，代码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">kmp_match</span><span class="params">(T, P)</span>:</span></div><div class="line">    fail = kmp_next(P)</div><div class="line">    n, m = len(T), len(P)</div><div class="line">    k = <span class="number">0</span></div><div class="line">    j = <span class="number">0</span></div><div class="line">    <span class="keyword">while</span> j &lt; n:</div><div class="line">        <span class="keyword">if</span> T[j] == P[k]:</div><div class="line">            <span class="keyword">if</span> k == m - <span class="number">1</span>:</div><div class="line">                <span class="keyword">return</span> j - (m - <span class="number">1</span>)</div><div class="line">            k += <span class="number">1</span></div><div class="line">            j += <span class="number">1</span></div><div class="line">        <span class="keyword">elif</span> k &gt; <span class="number">0</span>:</div><div class="line">            k = fail[k - <span class="number">1</span>]  <span class="comment"># 后移表示为 k 索引的变化</span></div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            j += <span class="number">1</span></div><div class="line">    <span class="keyword">return</span> <span class="number">-1</span></div></pre></td></tr></table></figure>
+<p>整个匹配过程中，j 变量的执行次数不会超过 n，而变量 k，无论是增加的累计量还是减少的累计量都不会超过 n，因此这一部分的时间复杂度不会超过 O(n)。因此总的时间复杂度不会超过O(m+n)。</p>
+<p><strong>参考:</strong></p>
+<ul>
+<li><a href="https://time.geekbang.org/column/126" target="_blank" rel="external">王争老师专栏-数据结构与算法之美</a></li>
+<li><a href="http://www.ruanyifeng.com/blog/2013/05/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm.html" target="_blank" rel="external">阮一峰-KMP算法</a></li>
+<li><a href="https://book.douban.com/subject/30323938/" target="_blank" rel="external">《数据结构与算法：python语言实现》</a></li>
+</ul>
 
         </div>
         <footer class="article-footer">
@@ -180,7 +223,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2018/10/31/alog/str_match2/" data-id="cjq9bln62002c6ghgv7q02bqs" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2018/10/31/alog/str_match3/" data-id="cjqet5vib002i9mhg106k3zrd" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -318,11 +361,11 @@
         
 <nav id="article-nav">
     
-        <a href="/2018/11/01/alog/str_match3/" id="article-nav-newer" class="article-nav-link-wrap">
+        <a href="/2018/11/01/alog/str_match2/" id="article-nav-newer" class="article-nav-link-wrap">
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            25 字符串匹配之 KMP 算法
+            25 字符串匹配之 BM 算法
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
@@ -536,7 +579,7 @@
                 <h1 class="logo-wrap">
                     <a href="/" class="logo"></a>
                 </h1>
-                <p>&copy; 2018 宋涛</p>
+                <p>&copy; 2019 宋涛</p>
                 <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
             </div>
             <div class="footer-plugins">
@@ -555,7 +598,7 @@
     var disqus_shortname = 'hexo-theme-hueman';
     
     
-    var disqus_url = 'http://yoursite.com/2018/10/31/alog/str_match2/';
+    var disqus_url = 'http://yoursite.com/2018/10/31/alog/str_match3/';
     
     (function() {
     var dsq = document.createElement('script');

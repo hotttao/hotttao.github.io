@@ -20,10 +20,12 @@
 <meta property="og:site_name" content="宋涛的博客">
 <meta property="og:description" content="粗暴匹配的 BF 与 RK 算法">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2018-12-28T14:01:36.224Z">
+<meta property="og:image" content="http://yoursite.com/images/algo/string/brute.jpg">
+<meta property="og:updated_time" content="2018-12-30T07:40:06.182Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="23 字符串匹配之 BF &amp; RK 算法">
 <meta name="twitter:description" content="粗暴匹配的 BF 与 RK 算法">
+<meta name="twitter:image" content="http://yoursite.com/images/algo/string/brute.jpg">
     
 
     
@@ -178,15 +180,33 @@
 <li>单模式串匹配算法: 一个串跟一个串进行匹配，包括BF，RK，KMP，BM 算法</li>
 <li>多字符串匹配算法: 一个串中同时查找多个串，包括 Trie 树和 AC 自动机</li>
 </ol>
-<p>本节我们先来学习“最简单粗暴的” BF 和 RK 算法。</p>
-<h3 id="1-1-BF-算法"><a href="#1-1-BF-算法" class="headerlink" title="1.1 BF 算法"></a>1.1 BF 算法</h3><h3 id="1-2-RK-算法"><a href="#1-2-RK-算法" class="headerlink" title="1.2 RK 算法"></a>1.2 RK 算法</h3>
+<p>本节我们先来学习“最简单粗暴的” BF 和 RK 算法。为了便于描述，对于在字符串A中查找 B，我们将 A 称为主串，B 称为模式串，<code>n=len(A), m=len(B)</code>。</p>
+<h3 id="1-1-BF-算法"><a href="#1-1-BF-算法" class="headerlink" title="1.1 BF 算法"></a>1.1 BF 算法</h3><p>BF(Brute Force) 暴力匹配算法，采用的就是我们最容易理解的穷举法。从主串的第一位开始检查主串中所有长度为 m 的子串看是否与模式串相等。主串中有<code>(n-m+1)</code>个长度为 m 的子串，因此总共需要比较<code>(n-m+1)*m</code>次</p>
+<p>BF 算法的时间复杂度很高，为 O(m*n)，但却是一个比较常用的字符串匹配算法，而原因有两个:</p>
+<ol>
+<li>大部分情况下，模式串和主串的长度都不会太长。而且每次模式串与主串中的子串匹配的时候，当中途遇到不能匹配的字符的时候，就可以就停止了，不需要把 m 个字符都比对一下。所以，尽管理论上的最坏情况时间复杂度是 O(n*m)，但是，统计意义上，大部分情况下，算法执行效率要比这个高很多。</li>
+<li>算法简单，实现起来不容易出错</li>
+</ol>
+<h3 id="1-2-RK-算法"><a href="#1-2-RK-算法" class="headerlink" title="1.2 RK 算法"></a>1.2 RK 算法</h3><p>RK 算法的全称叫 Rabin-Karp 算法，是由它的两位发明者 Rabin 和 Karp 的名字来命名的。RK 算法可以理解为引入了哈希算法的 BF。</p>
+<p>RK 算法希望通过计算字符串的哈希值，并通过比较哈希值，而不是比较字符串，来缩小BF算法中主串的子串与模式串的比较时间。要想达到优化的目的，我们必需使得<code>(字符串哈希+哈希值比较的时间) &lt; (m 次字符比较的时间)</code>。因为哈希值是整数，单次整数的比较时间可以忽略不计。但是字符串哈希值的计算也需要遍历每个字符，因此想要优化，必需精心设计此处的哈希函数。</p>
+<p>为了减少字串哈希值的计算量，在计算第 i 个字串的哈希值时，需要能用到已经计算的第 i-1 个字串的哈希值，并且平衡好计算过程中空间占用和哈希冲突的概率。因为 RK 算法并不常用，所以这里我不再过多讲述，有兴趣的同学可以自己查看专栏的介绍。</p>
+<p>RK 算法的时间复杂度取决于哈希函数，理想情况下，RK 算法的时间复杂度是 O(n)，如果存在冲突的情况下，时间复杂度可能会退化。极端情况下，时间复杂度就退化为 O(n*m)。</p>
+<h2 id="2-实现"><a href="#2-实现" class="headerlink" title="2. 实现"></a>2. 实现</h2><h3 id="2-1-BF-算法"><a href="#2-1-BF-算法" class="headerlink" title="2.1 BF 算法"></a>2.1 BF 算法</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">find_brute</span><span class="params">(T, P)</span>:</span></div><div class="line">    <span class="string">"""</span></div><div class="line"><span class="string">    :param T: 主串</span></div><div class="line"><span class="string">    :param P: 模式串</span></div><div class="line"><span class="string">    :return:</span></div><div class="line"><span class="string">    """</span></div><div class="line">    n, m = len(T), len(P)</div><div class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(n - m + <span class="number">1</span>):</div><div class="line">        j = <span class="number">0</span></div><div class="line">        <span class="keyword">while</span> j &lt; m <span class="keyword">and</span> T[i + j] == P[j]:</div><div class="line">            j += <span class="number">1</span></div><div class="line">        <span class="keyword">if</span> j == m:</div><div class="line">            <span class="keyword">return</span> i</div><div class="line">    <span class="keyword">return</span> <span class="number">-1</span></div></pre></td></tr></table></figure>
+<h2 id="3-应用"><a href="#3-应用" class="headerlink" title="3. 应用"></a>3. 应用</h2><p>今天讲的一维字符串匹配可以应用到二维空间中。即如下图所示，在一个二维主串中搜索另一个二维模式串。<br><img src="/images/algo/string/brute.jpg" alt="brute_test"></p>
+<p>下面是代码实现:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">pass</span></div></pre></td></tr></table></figure></p>
+<p><strong>参考:</strong></p>
+<ul>
+<li><a href="https://time.geekbang.org/column/126" target="_blank" rel="external">王争老师专栏-数据结构与算法之美</a></li>
+<li><a href="https://book.douban.com/subject/30323938/" target="_blank" rel="external">《数据结构与算法：python语言实现》</a></li>
+</ul>
+
         </div>
         <footer class="article-footer">
             
 
 
 
-    <a data-url="http://yoursite.com/2018/10/30/alog/str_match1/" data-id="cjq9bln6100296ghgcfvry2tn" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2018/10/30/alog/str_match1/" data-id="cjqet5vib002f9mhg4elq5tvn" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -324,11 +344,11 @@
         
 <nav id="article-nav">
     
-        <a href="/2018/10/31/alog/str_match2/" id="article-nav-newer" class="article-nav-link-wrap">
+        <a href="/2018/10/31/alog/str_match3/" id="article-nav-newer" class="article-nav-link-wrap">
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            24 字符串匹配之 BM 算法
+            24 字符串匹配之 KMP 算法
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
@@ -542,7 +562,7 @@
                 <h1 class="logo-wrap">
                     <a href="/" class="logo"></a>
                 </h1>
-                <p>&copy; 2018 宋涛</p>
+                <p>&copy; 2019 宋涛</p>
                 <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
             </div>
             <div class="footer-plugins">
