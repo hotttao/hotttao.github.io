@@ -6,7 +6,7 @@
     
 
     
-    <title>32 图的表示 | 宋涛的博客</title>
+    <title>34 图的表示 | 宋涛的博客</title>
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
@@ -15,15 +15,15 @@
     <meta name="description" content="如何表示一个图">
 <meta name="keywords" content="数据结构与算法">
 <meta property="og:type" content="article">
-<meta property="og:title" content="32 图的表示">
+<meta property="og:title" content="34 图的表示">
 <meta property="og:url" content="http://yoursite.com/2018/11/15/alog/graph/index.html">
 <meta property="og:site_name" content="宋涛的博客">
 <meta property="og:description" content="如何表示一个图">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/algo/graph/linked_graph.jpg">
-<meta property="og:updated_time" content="2018-12-28T14:00:33.365Z">
+<meta property="og:updated_time" content="2019-01-06T10:22:34.040Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="32 图的表示">
+<meta name="twitter:title" content="34 图的表示">
 <meta name="twitter:description" content="如何表示一个图">
 <meta name="twitter:image" content="http://yoursite.com/images/algo/graph/linked_graph.jpg">
     
@@ -79,7 +79,7 @@
                                     <a class="main-nav-list-link" href="/">主页</a>
                                 </li>
                             
-                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
                                     
                         </ul>
                         <nav id="sub-nav">
@@ -146,7 +146,7 @@
                 
     
         <h1 class="article-title" itemprop="name">
-        32 图的表示
+        34 图的表示
         </h1>
     
 
@@ -181,7 +181,11 @@
 <li>边: 顶点之间存在链接关系，可以有方向，也可以有权重</li>
 <li>有向图: 边有方向的图</li>
 <li>带权图: 边存在权重的图</li>
-<li>度: 顶点包含的边数，在有向图中，度分为出度和入度</li>
+<li>度: 顶点包含的边数，在有向图中，度分为出度和入度<ul>
+<li>出度表示以顶点作为起点的边，该边也称为顶点的输出边</li>
+<li>入度表示以顶点作为终点的边，该边也称为顶点的入射边</li>
+</ul>
+</li>
 </ol>
 <p>很显然在表示和存储一个图时，我们需要保存图的顶点，边，以及边的方向和权重。而图的存储有两个常见方法: 邻接矩阵和邻接表</p>
 <h3 id="1-1-邻接矩阵"><a href="#1-1-邻接矩阵" class="headerlink" title="1.1 邻接矩阵"></a>1.1 邻接矩阵</h3><p>邻接矩阵的底层是一个二维数组，<code>A[i][j]</code> 表示从节点 i 指向节点 j 的一条边，<code>A[i][j]</code>元素的值表示是否存在这条边或者在带权图中表示边的权重。</p>
@@ -199,14 +203,39 @@
 <p>社交网络是一张稀疏图，更适合使用邻接表来存储。不过，此处我们需要两个图: 邻接表和逆邻接表。邻接表中存储了用户的关注关系，逆邻接表中存储的是用户的被关注关系，分别用于关注和粉丝两种关系的判断。因为我们有排序需求，而跳表存储的数据本身就是有序的，所以我们选择用跳表来替代链表。</p>
 <p>但是对于拥有亿级别用户的微博，显然我们没法将图存在一台机器的内存上。我们可以通过哈希算法等数据分片方式，通过对顶点的哈希然后分片，将邻接表存储在不同的机器上。当要查询顶点与顶点关系的时候，我们就利用同样的哈希算法，先定位顶点所在的机器，然后再在相应的机器上查找。</p>
 <p>此外借助于 mysql 这样的外部存储，我们可以将 <code>(user_id, follower_id)</code> 这样的关注关系存储在 mysql 中。相比于图这可能是更好的解决方案。</p>
-<h2 id="2-实现"><a href="#2-实现" class="headerlink" title="2. 实现"></a>2. 实现</h2>
+<h2 id="2-实现"><a href="#2-实现" class="headerlink" title="2. 实现"></a>2. 实现</h2><p>图是顶点和边的集合，我们将图的抽象模型定义为三种数据类型的组合: <code>Vertex</code>,<code>Edge</code> 和 <code>Graph</code>。</p>
+<h4 id="Vertex"><a href="#Vertex" class="headerlink" title="Vertex"></a>Vertex</h4><p>Vertex ADT 用来表示顶点对象，有一个用来检索所存储元素的方法  <code>element()</code></p>
+<h4 id="Edge"><a href="#Edge" class="headerlink" title="Edge"></a>Edge</h4><p>Edge ADT 用来表示边，并具有如下方法:</p>
+<ul>
+<li><code>element()</code>: 返回保存的边的值</li>
+<li><code>endpoint()</code>: 返回边对应的<code>(u, v)</code>，<code>u</code>为边起点，<code>v</code>为边的终点</li>
+<li><code>opposite(u)</code>: 传入边的一个端点，返回边的另一个端点</li>
+</ul>
+<h4 id="Graph"><a href="#Graph" class="headerlink" title="Graph"></a>Graph</h4><p>Graph ADT 表示图，包含如下方法:</p>
+<ul>
+<li><code>vertex_count()</code>: 返回图的顶点数量</li>
+<li><code>vertices()</code>: 迭代返回图中的所有顶点</li>
+<li><code>edge_count()</code>: 返回图的边的数量</li>
+<li><code>edges()</code>: 迭代返回图中的所有边</li>
+<li><code>get_edge(u, v)</code>: 返回从顶点 u 到顶点 v 的边，不存在返回 None，对于无向图 <code>get_edge(u, v)</code>，<code>get_edge(v, u)</code> 没有区别</li>
+<li><code>degree(v, out=True)</code>: 返回顶点的出度，<code>out=False</code> 返回顶点的出度</li>
+<li><code>incident_edges(v, out=True)</code>: 迭代返回顶点 v 的输出边，<code>out=False</code> 迭代返回顶点的输入边</li>
+<li><code>insert_vertex(v=None)</code>: 创建并返回一个顶点的 Vertex 对象</li>
+<li><code>insert_edge(u, v, x=None)</code>: 创建一个从顶点<code>u</code> 到顶点 <code>v</code>，存储元素 x 的 <code>Edge</code> 边对象</li>
+<li><code>remove_vertex(v)</code>: 删除顶点及与顶点关联的边</li>
+<li><code>remove_edge(e)</code>: 删除边 e</li>
+</ul>
+<p>我们接下来就以邻接表，并使用哈希表代替链表的方式实现上述的抽象数据结构。</p>
+<h3 id="2-1-图的邻接表实现"><a href="#2-1-图的邻接表实现" class="headerlink" title="2.1 图的邻接表实现"></a>2.1 图的邻接表实现</h3><h4 id="Vertext-和-Edge-类"><a href="#Vertext-和-Edge-类" class="headerlink" title="Vertext 和 Edge 类"></a>Vertext 和 Edge 类</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Vertex</span><span class="params">(object)</span>:</span></div><div class="line">    __slots__ = <span class="string">'_element'</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, x)</span>:</span></div><div class="line">        self._element = x</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">element</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._element</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__hash__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> hash(id(self))</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Edge</span><span class="params">(object)</span>:</span></div><div class="line">    __slots__ = <span class="string">'_origin'</span>, <span class="string">'_destination'</span>, <span class="string">'_element'</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, u, v, x)</span>:</span></div><div class="line">        self._origin = u</div><div class="line">        self._destination = v</div><div class="line">        self._element = x</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">endpoints</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._origin, self._destination</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">opposite</span><span class="params">(self, v)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._destination <span class="keyword">if</span> v <span class="keyword">is</span> self._origin <span class="keyword">else</span> self._origin</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">element</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._element</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__hash__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> hash((self._origin, self._destination))</div></pre></td></tr></table></figure>
+<h3 id="Graph-类"><a href="#Graph-类" class="headerlink" title="Graph 类"></a>Graph 类</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Graph</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, directed=False)</span>:</span></div><div class="line">        <span class="string">"""</span></div><div class="line"><span class="string">        :param directed: 是否创建有向图，默认为 False 表示创建无向图</span></div><div class="line"><span class="string">        """</span></div><div class="line">        self._outgoing = &#123;&#125;  <span class="comment"># key 为起点，value 为终点的</span></div><div class="line">        <span class="comment"># 设计要点: key 为终点，value 为起点的，无向图_incoming 只是 _outgoing 的别名</span></div><div class="line">        self._incoming = &#123;&#125; <span class="keyword">if</span> directed <span class="keyword">else</span> self._outgoing</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">is_directed</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._incoming <span class="keyword">is</span> <span class="keyword">not</span> self._outgoing</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">vertex_count</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> len(self._outgoing)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">vertices</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._outgoing.keys()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">edge_count</span><span class="params">(self)</span>:</span></div><div class="line">        total = sum(len(self._outgoing[u]) <span class="keyword">for</span> u <span class="keyword">in</span> self._outgoing)</div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> self.is_directed():</div><div class="line">            total /= <span class="number">2</span></div><div class="line">        <span class="keyword">return</span> total</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">edges</span><span class="params">(self)</span>:</span></div><div class="line">        result = set()  <span class="comment"># 对于无向图，需要去重</span></div><div class="line">        <span class="keyword">for</span> u <span class="keyword">in</span> self._outgoing:</div><div class="line">            result.update(u.values())</div><div class="line">        <span class="keyword">return</span> result</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_edge</span><span class="params">(self, u, v)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._outgoing[u].get(v)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">degree</span><span class="params">(self, v, outgoing=True)</span>:</span></div><div class="line">        adj = self._outgoing <span class="keyword">if</span> outgoing <span class="keyword">else</span> self._incoming</div><div class="line">        <span class="keyword">return</span> len(adj[v])</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">incident_edge</span><span class="params">(self, v, outgoing=True)</span>:</span></div><div class="line">        adj = self._outgoing <span class="keyword">if</span> outgoing <span class="keyword">else</span> self._incoming</div><div class="line">        <span class="keyword">for</span> edge <span class="keyword">in</span> adj[v].values:</div><div class="line">            <span class="keyword">yield</span> edge</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">insert_vertex</span><span class="params">(self, x=None)</span>:</span></div><div class="line">        v = Vertex(x=x)</div><div class="line">        self._outgoing[v] = &#123;&#125;</div><div class="line">        <span class="keyword">if</span> self.is_directed():</div><div class="line">            self._incoming[v] = &#123;&#125;</div><div class="line">        <span class="keyword">return</span> v</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">insert_edge</span><span class="params">(self, u, v, x)</span>:</span></div><div class="line">        e = Edge(u, v, x)</div><div class="line">        self._outgoing[u][v] = e</div><div class="line">        self._incoming[v][u] = e</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">remove_vertex</span><span class="params">(self, v)</span>:</span></div><div class="line">        <span class="comment"># 有向图: u --&gt; v ---&gt; v1</span></div><div class="line">        <span class="comment"># 无向图: u---&gt; v ---- u</span></div><div class="line">        <span class="comment"># 删除以 v 为起点的所有边</span></div><div class="line">        <span class="keyword">for</span> v1 <span class="keyword">in</span> self._outgoing[v].keys():</div><div class="line">            <span class="keyword">del</span> self._incoming[v1][v]</div><div class="line">        <span class="keyword">del</span> self._outgoing[v]</div><div class="line">        <span class="comment"># 删除以 v 为终点的所有边</span></div><div class="line">        <span class="keyword">if</span> self.is_directed():</div><div class="line">            <span class="keyword">for</span> u <span class="keyword">in</span> self._incoming[v].keys():</div><div class="line">                <span class="keyword">del</span> self._outgoing[u][v]</div><div class="line">            <span class="keyword">del</span> self._incoming[v]</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">remove_edge</span><span class="params">(self, e)</span>:</span></div><div class="line">        u, v = e.endpoints()</div><div class="line">        <span class="keyword">del</span> self._outgoing[u][v]</div><div class="line">        <span class="keyword">del</span> self._incoming[v][u]</div></pre></td></tr></table></figure>
+
         </div>
         <footer class="article-footer">
             
 
 
 
-    <a data-url="http://yoursite.com/2018/11/15/alog/graph/" data-id="cjqfxro5o000o1whgeza1i8ch" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2018/11/15/alog/graph/" data-id="cjqiuw8gw000o7lhgbyaq8mwb" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -348,16 +377,16 @@
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            33 深度和广度优先搜索
+            35 深度和广度优先搜索
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
     </a>
     
     
-        <a href="/2018/11/10/alog/dp/" id="article-nav-older" class="article-nav-link-wrap">
+        <a href="/2018/11/12/alog/dp_3/" id="article-nav-older" class="article-nav-link-wrap">
         <strong class="article-nav-caption">上一篇</strong>
-        <p class="article-nav-title">31 动态规划</p>
+        <p class="article-nav-title">33 动态规划实战</p>
         <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
         </a>
     
@@ -379,6 +408,26 @@
                     <li>
                         
                         <div class="item-thumbnail">
+                            <a href="/2018/11/16/go/go_grammar/go_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2018/11/16/go/go_grammar/go_1/" class="title">1 go 入门开篇</a></p>
+                            <p class="item-date"><time datetime="2018-11-15T16:00:00.000Z" itemprop="datePublished">2018-11-16</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
                             <a href="/2018/11/16/alog/graph_search/" class="thumbnail">
     
     
@@ -391,7 +440,7 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/11/16/alog/graph_search/" class="title">33 深度和广度优先搜索</a></p>
+                            <p class="item-title"><a href="/2018/11/16/alog/graph_search/" class="title">35 深度和广度优先搜索</a></p>
                             <p class="item-date"><time datetime="2018-11-15T16:00:00.000Z" itemprop="datePublished">2018-11-16</time></p>
                         </div>
                     </li>
@@ -402,7 +451,7 @@
                             <a href="/2018/11/15/alog/graph/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/algo/graph/linked_graph.jpg)" alt="32 图的表示" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/algo/graph/linked_graph.jpg)" alt="34 图的表示" class="thumbnail-image"></span>
     
     
 </a>
@@ -411,7 +460,7 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/11/15/alog/graph/" class="title">32 图的表示</a></p>
+                            <p class="item-title"><a href="/2018/11/15/alog/graph/" class="title">34 图的表示</a></p>
                             <p class="item-date"><time datetime="2018-11-14T16:00:00.000Z" itemprop="datePublished">2018-11-15</time></p>
                         </div>
                     </li>
@@ -419,10 +468,10 @@
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/11/10/alog/dp/" class="thumbnail">
+                            <a href="/2018/11/12/alog/dp_3/" class="thumbnail">
     
     
-        <span class="thumbnail-image thumbnail-none"></span>
+        <span style="background-image:url(/images/algo/dp/string_matches.jpg)" alt="33 动态规划实战" class="thumbnail-image"></span>
     
     
 </a>
@@ -431,38 +480,18 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/11/10/alog/dp/" class="title">31 动态规划</a></p>
-                            <p class="item-date"><time datetime="2018-11-09T16:00:00.000Z" itemprop="datePublished">2018-11-10</time></p>
+                            <p class="item-title"><a href="/2018/11/12/alog/dp_3/" class="title">33 动态规划实战</a></p>
+                            <p class="item-date"><time datetime="2018-11-11T16:00:00.000Z" itemprop="datePublished">2018-11-12</time></p>
                         </div>
                     </li>
                 
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2018/11/07/alog/backtracking/" class="thumbnail">
+                            <a href="/2018/11/11/alog/dp_2/" class="thumbnail">
     
     
-        <span class="thumbnail-image thumbnail-none"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/11/07/alog/backtracking/" class="title">30 回溯算法</a></p>
-                            <p class="item-date"><time datetime="2018-11-06T16:00:00.000Z" itemprop="datePublished">2018-11-07</time></p>
-                        </div>
-                    </li>
-                
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2018/11/05/alog/divide/" class="thumbnail">
-    
-    
-        <span style="background-image:url(/images/algo/divided/reverse_count.jpg)" alt="29 分治算法" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/algo/dp/min_short.jpg)" alt="32 动态规划理论" class="thumbnail-image"></span>
     
     
 </a>
@@ -471,8 +500,8 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Python/">Python</a></p>
-                            <p class="item-title"><a href="/2018/11/05/alog/divide/" class="title">29 分治算法</a></p>
-                            <p class="item-date"><time datetime="2018-11-04T16:00:00.000Z" itemprop="datePublished">2018-11-05</time></p>
+                            <p class="item-title"><a href="/2018/11/11/alog/dp_2/" class="title">32 动态规划理论</a></p>
+                            <p class="item-date"><time datetime="2018-11-10T16:00:00.000Z" itemprop="datePublished">2018-11-11</time></p>
                         </div>
                     </li>
                 
@@ -485,7 +514,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">50</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">52</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
         </div>
     </div>
 
@@ -495,7 +524,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li></ul>
         </div>
     </div>
 
@@ -505,7 +534,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unittest/">unittest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单元测试/">单元测试</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">33</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unittest/">unittest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单元测试/">单元测试</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">35</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li></ul>
         </div>
     </div>
 
@@ -515,7 +544,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/unittest/" style="font-size: 10px;">unittest</a> <a href="/tags/wrapt/" style="font-size: 16.67px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 16.67px;">函数装饰器</a> <a href="/tags/单元测试/" style="font-size: 10px;">单元测试</a> <a href="/tags/数据结构与算法/" style="font-size: 20px;">数据结构与算法</a> <a href="/tags/部署工具/" style="font-size: 13.33px;">部署工具</a>
+            <a href="/tags/go语言入门/" style="font-size: 10px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/unittest/" style="font-size: 10px;">unittest</a> <a href="/tags/wrapt/" style="font-size: 16.67px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 16.67px;">函数装饰器</a> <a href="/tags/单元测试/" style="font-size: 10px;">单元测试</a> <a href="/tags/数据结构与算法/" style="font-size: 20px;">数据结构与算法</a> <a href="/tags/部署工具/" style="font-size: 13.33px;">部署工具</a>
         </div>
     </div>
 
