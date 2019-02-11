@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>13.3 Centos7 Systemd 启动流程 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux开机启动" />
+    
+    <meta name="description" content="Centos7 Systemd 启动流程">
+<meta name="keywords" content="Linux开机启动">
+<meta property="og:type" content="article">
+<meta property="og:title" content="13.3 Centos7 Systemd 启动流程">
+<meta property="og:url" content="http://yoursite.com/2018/08/03/linux_mt/14-Linux系统启动流程及内核模块管理/CentOS7-Systemd启动流程/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="Centos7 Systemd 启动流程">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/linux_mt/linux_mt.jpg">
+<meta property="og:updated_time" content="2019-02-11T12:42:17.513Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="13.3 Centos7 Systemd 启动流程">
+<meta name="twitter:description" content="Centos7 Systemd 启动流程">
+<meta name="twitter:image" content="http://yoursite.com/images/linux_mt/linux_mt.jpg">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_mt/14-Linux系统启动流程及内核模块管理/CentOS7-Systemd启动流程" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        13.3 Centos7 Systemd 启动流程
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2018/08/03/linux_mt/14-Linux系统启动流程及内核模块管理/CentOS7-Systemd启动流程/" class="article-date">
+            <time datetime="2018-08-02T16:00:00.000Z" itemprop="datePublished">2018-08-03</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux开机启动/">Linux开机启动</a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>Centos7 Systemd 启动流程</p>
+<p><img src="/images/linux_mt/linux_mt.jpg" alt="linux-mt"><br><a id="more"></a></p>
+<p>本节我们学习 Centos7 的开机启动程序 Systemd，及其服务管理工具 systemctl。我们会与 Centos6 中的 upstart 的启动程序对比来讲解。大家也可以参考<a href="http://www.ruanyifeng.com/blog/2016/03/systemd-tutorial-part-two.html" target="_blank" rel="external">阮一峰老师的博客</a>。本节内容如下:</p>
+<ol>
+<li>Systemd 概述</li>
+<li>Systemctl 命令的使用</li>
+<li>Systemd 配置文件格式</li>
+</ol>
+<h2 id="1-Sysmted-概述："><a href="#1-Sysmted-概述：" class="headerlink" title="1. Sysmted 概述："></a>1. Sysmted 概述：</h2><p>MBR 架构的系统，开机启动过程是 <code>POST --&gt; Boot Sequeue(BIOS) --&gt; Bootloader(MBR) --&gt; Kernel(ramdisk) --&gt; rootfs --&gt; /sbin/init</code>，而 Systemd 正是 Centos7 的/sbin/init 程序</p>
+<h3 id="1-2-Systemd的新特性"><a href="#1-2-Systemd的新特性" class="headerlink" title="1.2  Systemd的新特性"></a>1.2  Systemd的新特性</h3><p>systemd 相比于 Centos5 的 SysV init，和 Centos 的 Upstart，具有如下特性:</p>
+<ol>
+<li>新特性<ul>
+<li>系统引导时实现服务并行启动；</li>
+<li>按需激活进程；</li>
+<li>系统状态快照；</li>
+<li>基于依赖关系定义服务控制逻辑；</li>
+</ul>
+</li>
+<li>关键特性：<ul>
+<li>基于socket的激活机制：socket与程序分离；</li>
+<li>基于bus的激活机制；</li>
+<li>基于device的激活机制；</li>
+<li>基于Path的激活机制；</li>
+<li>系统快照：保存各unit的当前状态信息于持久存储设备中；</li>
+<li>向后兼容sysv init脚本；/etc/init.d/</li>
+<li>不兼容：<ul>
+<li>systemctl的命令是固定不变的；</li>
+<li>非由systemd启动的服务，systemctl无法与之通信；</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h4 id="1-2-服务配置"><a href="#1-2-服务配置" class="headerlink" title="1.2 服务配置"></a>1.2 服务配置</h4><p>Sysv init 和 Upstart 中，服务的管理单元是一个个具有特定格式的 shell 脚本，由 service 命令统一进行管理。而 Systemd 中服务的核心单元叫 Unit，unit 由其相关配置文件进行标识、识别和配置，配置文件中主要包含了系统服务、监听的socket、保存的快照以及其它与init相关的信息。systemd 按照功能将 unit 分为了如下几种类型。</p>
+<h4 id="unit的常见类型"><a href="#unit的常见类型" class="headerlink" title="unit的常见类型"></a>unit的常见类型</h4><table>
+<thead>
+<tr>
+<th style="text-align:left">类型</th>
+<th style="text-align:left">文件扩展名</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Service unit</td>
+<td style="text-align:left">.service</td>
+<td style="text-align:left">用于定义系统服务</td>
+</tr>
+<tr>
+<td style="text-align:left">Target unit</td>
+<td style="text-align:left">.target</td>
+<td style="text-align:left">用于模拟实现运行级别</td>
+</tr>
+<tr>
+<td style="text-align:left">Device unit</td>
+<td style="text-align:left">.device</td>
+<td style="text-align:left">用于定义内核识别的设备</td>
+</tr>
+<tr>
+<td style="text-align:left">Mount unit</td>
+<td style="text-align:left">.mount</td>
+<td style="text-align:left">定义文件系统挂载点</td>
+</tr>
+<tr>
+<td style="text-align:left">Socket unit</td>
+<td style="text-align:left">.socket</td>
+<td style="text-align:left">用于标识进程间通信用到的socket文件</td>
+</tr>
+<tr>
+<td style="text-align:left">Snapshot unit</td>
+<td style="text-align:left">.snapshot</td>
+<td style="text-align:left">管理系统快照</td>
+</tr>
+<tr>
+<td style="text-align:left">Swap unit</td>
+<td style="text-align:left">.swap</td>
+<td style="text-align:left">用于标识swap设备</td>
+</tr>
+<tr>
+<td style="text-align:left">Automount unit</td>
+<td style="text-align:left">.automount</td>
+<td style="text-align:left">文件系统自动点设备</td>
+</tr>
+<tr>
+<td style="text-align:left">Path unit</td>
+<td style="text-align:left">.path</td>
+<td style="text-align:left">用于定义文件系统中的一文件或目录</td>
+</tr>
+</tbody>
+</table>
+<h4 id="systemd-的配置文件"><a href="#systemd-的配置文件" class="headerlink" title="systemd 的配置文件"></a>systemd 的配置文件</h4><p>systemd 的配置文件位于以下三个目录中</p>
+<ul>
+<li><code>/usr/lib/systemd/system</code>: 实际配置文件的存存放位置</li>
+<li><code>/run/systemd/system</code>：不常用</li>
+<li><code>/etc/systemd/system</code>: 基本上都是软连接</li>
+</ul>
+<p>对于那些支持 Systemd 的软件，安装的时候，会自动在<code>/usr/lib/systemd/system</code>目录添加一个配置文件。<br>如果你想让该软件开机启动，就执行下面的命令（以httpd.service为例）。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@hp system]# ll /etc/systemd/system/default.target</div><div class="line">lrwxrwxrwx. 1 root root 40 3月   5 17:37 /etc/systemd/system/default.target -&gt; /usr/lib/systemd/system/graphical.target</div><div class="line"></div><div class="line">[root@hp system]# systemctl enable httpd</div><div class="line">Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.</div></pre></td></tr></table></figure>
+<p>上面的命令相当于在 <code>/etc/systemd/system</code> 目录添加一个符号链接，指向 <code>/usr/lib/systemd/system</code> 里面的httpd.service文件。<br>这是因为开机时，Systemd只执行 <code>/etc/systemd/system</code> 目录里面的配置文件。这也意味着，如果把修改后的配置文件放在该目录，就可以达到覆盖原始配置的效果。</p>
+<p>除了使用普通的文本查看命令外查看配置文件外，<code>systemctl cat NAME.service</code> 可通过服务名称直接查看配置文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">[root@hp system]$ systemctl cat httpd</div><div class="line"><span class="comment"># /usr/lib/systemd/system/httpd.service</span></div><div class="line">[Unit]</div><div class="line">Description=The Apache HTTP Server</div><div class="line">After=network.target remote-fs.target nss-lookup.target</div><div class="line">Documentation=man:httpd(8)</div><div class="line">Documentation=man:apachectl(8)</div><div class="line"></div><div class="line">[Service]</div><div class="line">Type=notify</div><div class="line">EnvironmentFile=/etc/sysconfig/httpd</div><div class="line">ExecStart=/usr/sbin/httpd <span class="variable">$OPTIONS</span> -DFOREGROUND</div><div class="line">ExecReload=/usr/sbin/httpd <span class="variable">$OPTIONS</span> -k graceful</div><div class="line">ExecStop=/bin/<span class="built_in">kill</span> -WINCH <span class="variable">$&#123;MAINPID&#125;</span></div><div class="line"><span class="comment"># We want systemd to give httpd some time to finish gracefully, but still want</span></div><div class="line"><span class="comment"># it to kill httpd after TimeoutStopSec if something went wrong during the</span></div><div class="line"><span class="comment"># graceful stop. Normally, Systemd sends SIGTERM signal right after the</span></div><div class="line"><span class="comment"># ExecStop, which would kill httpd. We are sending useless SIGCONT here to give</span></div><div class="line"><span class="comment"># httpd time to finish.</span></div><div class="line">KillSignal=SIGCONT</div><div class="line">PrivateTmp=<span class="literal">true</span></div><div class="line"></div><div class="line">[Install]</div><div class="line">WantedBy=multi-user.target</div></pre></td></tr></table></figure>
+<h2 id="2-systemctl-命令使用"><a href="#2-systemctl-命令使用" class="headerlink" title="2. systemctl 命令使用"></a>2. systemctl 命令使用</h2><h3 id="2-1-管理系统服务-service-unit"><a href="#2-1-管理系统服务-service-unit" class="headerlink" title="2.1 管理系统服务 (service unit)"></a>2.1 管理系统服务 (service unit)</h3><p><code>systemctl  [OPTIONS...]  COMMAND  [NAME...]</code></p>
+<ul>
+<li>OPTIONS:<ul>
+<li><code>-t, --type=</code>: 指定查看的 unit 类型</li>
+<li><code>-a, --all</code>：查看所由服务</li>
+</ul>
+</li>
+</ul>
+<h4 id="服务启动与关闭"><a href="#服务启动与关闭" class="headerlink" title="服务启动与关闭"></a>服务启动与关闭</h4><table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">启动</td>
+<td style="text-align:left">service  NAME  start</td>
+<td style="text-align:left">systemctl  start  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">停止</td>
+<td style="text-align:left">service  NAME  stop</td>
+<td style="text-align:left">systemctl  stop  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">重启</td>
+<td style="text-align:left">service  NAME  restart</td>
+<td style="text-align:left">systemctl  restart  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">状态</td>
+<td style="text-align:left">service  NAME  status</td>
+<td style="text-align:left">systemctl  status  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">条件式重启</td>
+<td style="text-align:left">service  NAME  condrestart</td>
+<td style="text-align:left">systemctl  try-restart  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">重载或重启服务</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  reload-or-restart  NAME.servcie</td>
+</tr>
+<tr>
+<td style="text-align:left">重载或条件式重启服务</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  reload-or-try-restart  NAME.service</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">[root@hp system]# systemctl status httpd</div><div class="line">● httpd.service - The Apache HTTP Server</div><div class="line">   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)</div><div class="line">   Active: active (running) since 二 2018-08-07 09:14:30 CST; 1s ago</div><div class="line">     Docs: man:httpd(8)</div><div class="line">           man:apachectl(8)</div><div class="line"> Main PID: 6170 (httpd)</div><div class="line">   Status: &quot;Processing requests...&quot;</div><div class="line">   CGroup: /system.slice/httpd.service</div><div class="line">           ├─6170 /usr/sbin/httpd -DFOREGROUND</div><div class="line">           ├─6174 /usr/sbin/httpd -DFOREGROUND</div><div class="line">           ├─6176 /usr/sbin/httpd -DFOREGROUND</div><div class="line">           ├─6177 /usr/sbin/httpd -DFOREGROUND</div><div class="line">           ├─6178 /usr/sbin/httpd -DFOREGROUND</div><div class="line">           ├─6180 /usr/sbin/httpd -DFOREGROUND</div><div class="line">           └─6181 /usr/sbin/httpd -DFOREGROUND</div><div class="line"></div><div class="line">8月 07 09:14:28 hp.tao systemd[1]: Starting The Apache HTTP Server...</div><div class="line">8月 07 09:14:30 hp.tao systemd[1]: Started The Apache HTTP Server.</div></pre></td></tr></table></figure>
+<p>输出:</p>
+<ul>
+<li>Loaded行：配置文件的位置，是否设为开机启动</li>
+<li>Active行：表示正在运行</li>
+<li>Main PID行：主进程ID</li>
+<li>Status行：由应用本身（这里是 httpd ）提供的软件当前状态</li>
+<li>CGroup块：应用的所有子进程</li>
+<li>日志块：应用的日志</li>
+</ul>
+<h4 id="服务状态查看"><a href="#服务状态查看" class="headerlink" title="服务状态查看"></a>服务状态查看</h4><table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">查看某服务当前激活与否的状态</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  is-active  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有已激活的服务</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-units  –type  service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有服务（已激活及未激活)</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-units  -t  service  –all</td>
+</tr>
+</tbody>
+</table>
+<h4 id="开机自启"><a href="#开机自启" class="headerlink" title="开机自启"></a>开机自启</h4><table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">设置服务开机自启</td>
+<td style="text-align:left">chkconfig  NAME  on</td>
+<td style="text-align:left">systemctl  enable  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">禁止服务开机自启</td>
+<td style="text-align:left">chkconfig  NAME  off</td>
+<td style="text-align:left">systemctl  disable  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看某服务是否能开机自启</td>
+<td style="text-align:left">chkconfig  –list  NAME</td>
+<td style="text-align:left">systemctl  is-enabled  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有服务的开机自启状态</td>
+<td style="text-align:left">chkconfig  –list</td>
+<td style="text-align:left">systemctl  list-unit-files –type service</td>
+</tr>
+<tr>
+<td style="text-align:left">禁止某服务设定为开机自启</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  mask  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">取消此禁止</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  unmask  NAME.servcie</td>
+</tr>
+</tbody>
+</table>
+<h4 id="依赖关系"><a href="#依赖关系" class="headerlink" title="依赖关系"></a>依赖关系</h4><table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">查看服务的依赖关系</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-dependencies  NAME.service</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-2-管理-target-units"><a href="#2-2-管理-target-units" class="headerlink" title="2.2 管理 target units"></a>2.2 管理 target units</h3><table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">runlevel0.target,  poweroff.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">1</td>
+<td style="text-align:left">runlevel1.target,  rescue.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">2</td>
+<td style="text-align:left">runlevel2.tartet,  multi-user.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">3</td>
+<td style="text-align:left">runlevel3.tartet,  multi-user.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">4</td>
+<td style="text-align:left">runlevel4.tartet,  multi-user.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">5</td>
+<td style="text-align:left">runlevel5.target,  graphical.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">6</td>
+<td style="text-align:left">runlevel6.target,  reboot.target</td>
+</tr>
+<tr>
+<td style="text-align:left">级别切换</td>
+<td style="text-align:left">init  N</td>
+<td style="text-align:left">systemctl  isolate  NAME.target</td>
+</tr>
+<tr>
+<td style="text-align:left">查看级别</td>
+<td style="text-align:left">runlevel</td>
+<td style="text-align:left">systemctl  list-units  –type  target</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有级别</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-units  -t  target  -a</td>
+</tr>
+<tr>
+<td style="text-align:left">获取默认运行级别</td>
+<td style="text-align:left">/etc/inittab</td>
+<td style="text-align:left">systemctl  get-default</td>
+</tr>
+<tr>
+<td style="text-align:left">修改默认运行级别</td>
+<td style="text-align:left">/etc/inittab</td>
+<td style="text-align:left">systemctl  set-default   NAME.target</td>
+</tr>
+<tr>
+<td style="text-align:left">切换至紧急救援模式</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  rescue</td>
+</tr>
+<tr>
+<td style="text-align:left">切换至emergency模式</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  emergency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-3-其它常用快捷命令"><a href="#2-3-其它常用快捷命令" class="headerlink" title="2.3 其它常用快捷命令"></a>2.3 其它常用快捷命令</h3><ul>
+<li>关机： <code>systemctl  halt</code>,  <code>systemctl  poweroff</code></li>
+<li>重启： <code>systemctl  reboot</code></li>
+<li>挂起： <code>systemctl  suspend</code></li>
+<li>快照： <code>systemctl  hibernate</code></li>
+<li>快照并挂起： <code>systemctl  hybrid-sleep</code></li>
+</ul>
+<h2 id="3-service-unit-file-配置"><a href="#3-service-unit-file-配置" class="headerlink" title="3. service unit file 配置"></a>3. service unit file 配置</h2><h3 id="3-1-unit-file-组成"><a href="#3-1-unit-file-组成" class="headerlink" title="3.1 unit file 组成"></a>3.1 unit file 组成</h3><p>unit file 通常由如下 三个部分组成:</p>
+<ol>
+<li>[Unit]：<ul>
+<li>定义与Unit类型无关的通用选项；</li>
+<li>用于提供 unit 的描述信息、unit 行为及依赖关系等；</li>
+</ul>
+</li>
+<li>[Service]：<ul>
+<li>与特定类型相关的专用选项；此处为 Service 类型；</li>
+</ul>
+</li>
+<li>[Install]：<ul>
+<li>定义由<code>systemctl  enable</code>以及<code>systemctl  disable</code>命令在实现服务启用或禁用时用到的一些选项；</li>
+</ul>
+</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># systemctl cat sshd</span></div><div class="line"><span class="comment"># /usr/lib/systemd/system/sshd.service</span></div><div class="line">[Unit]</div><div class="line">Description=OpenSSH server daemon</div><div class="line">Documentation=man:sshd(8) man:sshd_config(5)</div><div class="line">After=network.target sshd-keygen.service</div><div class="line">Wants=sshd-keygen.service</div><div class="line"></div><div class="line">[Service]</div><div class="line">Type=notify</div><div class="line">EnvironmentFile=/etc/sysconfig/sshd</div><div class="line">ExecStart=/usr/sbin/sshd -D <span class="variable">$OPTIONS</span></div><div class="line">ExecReload=/bin/<span class="built_in">kill</span> -HUP <span class="variable">$MAINPID</span></div><div class="line">KillMode=process</div><div class="line">Restart=on-failure</div><div class="line">RestartSec=42s</div><div class="line"></div><div class="line">[Install]</div><div class="line">WantedBy=multi-user.target</div></pre></td></tr></table></figure>
+<h4 id="Unit段"><a href="#Unit段" class="headerlink" title="Unit段"></a>Unit段</h4><ul>
+<li><code>Description</code>：当前服务的简单描述</li>
+<li><code>After</code>：定义unit的启动次序；表示当前unit应该晚于哪些unit启动；其功能与Before相反；</li>
+<li><code>Before</code>：定义sshd.service应该在哪些服务之前启动</li>
+<li><code>Requies</code>：依赖到的其它units；强依赖，被依赖的units无法激活或异常退出时，当前unit即无法激活；</li>
+<li><code>Wants</code>：依赖到的其它units；弱依赖，被依赖的units无法激活时，不影响当 unit 的启动；</li>
+<li><code>Conflicts</code>：定义units间的冲突关系；</li>
+<li>附注：<ul>
+<li>After和Before字段只涉及启动顺序，不涉及依赖关系</li>
+<li>Wants字段与Requires字段只涉及依赖关系，与启动顺序无关，默认情况下是同时启动的</li>
+</ul>
+</li>
+</ul>
+<h4 id="Service段"><a href="#Service段" class="headerlink" title="Service段"></a>Service段</h4><ul>
+<li><code>Type</code>：用于定义影响ExecStart及相关参数的功能的unit进程启动类型；<ul>
+<li><code>simple</code>（默认值）：ExecStart字段启动的进程为主进程</li>
+<li><code>forking</code>：ExecStart字段将以fork()方式启动，此时父进程将会退出，子进程将成为主进程</li>
+<li><code>oneshot</code>：类似于simple，但只执行一次，Systemd 会等它执行完，才启动其他服务</li>
+<li><code>dbus</code>：类似于simple，但会等待 D-Bus 信号后启动</li>
+<li><code>notify</code>：类似于simple，启动结束后会发出通知信号，然后 Systemd 再启动其他服务</li>
+<li><code>idle</code>：类似于simple，但是要等到其他任务都执行完，才会启动该服务。一种使用场合是为让该服务的输出，不与其他服务的输出相混合</li>
+</ul>
+</li>
+<li><code>EnvironmentFile</code>：指定当前服务的环境参数文件</li>
+<li><code>ExecStart</code>：指明启动unit要运行命令或脚本；其中的变量$OPTIONS就来自EnvironmentFile字段指定的环境参数文件</li>
+<li><code>ExecReload</code>：重启服务时执行的命令</li>
+<li><code>ExecStop</code>：停止服务时执行的命令</li>
+<li><code>ExecStartPre</code>：启动服务之前执行的命令</li>
+<li><code>ExecStartPost</code>：启动服务之后执行的命令</li>
+<li><code>ExecStopPost</code>：停止服务之后执行的命令</li>
+<li><code>Restart</code>：定义了服务退出后，Systemd 的重启方式<ul>
+<li><code>no</code>（默认值）：退出后不会重启</li>
+<li><code>on-success</code>：只有正常退出时（退出状态码为0），才会重启</li>
+<li><code>on-failure</code>：非正常退出时（退出状态码非0），包括被信号终止和超时，才会重启</li>
+<li><code>on-abnormal</code>：只有被信号终止和超时，才会重启</li>
+<li><code>on-abort</code>：只有在收到没有捕捉到的信号终止时，才会重启</li>
+<li><code>on-watchdog</code>：超时退出，才会重启</li>
+<li><code>always</code>：不管是什么退出原因，总是重启</li>
+<li>附注: 对于守护进程，推荐设为on-failure。对于那些允许发生错误退出的服务，可以设为on-abnormal</li>
+</ul>
+</li>
+<li><code>KillMode</code>:定义 Systemd 如何停止服务<ul>
+<li><code>control-group</code>（默认值）：当前控制组里面的所有子进程，都会被杀掉</li>
+<li><code>process</code>：只杀主进程</li>
+<li><code>mixed</code>：主进程将收到 SIGTERM 信号，子进程收到 SIGKILL 信号</li>
+<li><code>none</code>：没有进程会被杀掉，只是执行服务的 stop 命令。</li>
+</ul>
+</li>
+<li><code>RestartSec</code>：表示 Systemd 重启服务之前，需要等待的秒数</li>
+</ul>
+<p>对于 sshd 服务而言将KillMode设为process，表示只停止主进程，不停止任何sshd 子进程，即子进程打开的 SSH session 仍然保持连接。这个设置不太常见，但对 sshd 很重要，否则你停止服务的时候，会连自己打开的 SSH session 一起杀掉。Restart设为on-failure，表示任何意外的失败，就将重启sshd。如果 sshd 正常停止（比如执行systemctl stop命令），它就不会重启。</p>
+<p>所有的启动设置之前，都可以加上一个连词号（-），表示”抑制错误”，即发生错误的时候，不影响其他命令的执行。比如，<code>EnvironmentFile=-/etc/sysconfig/sshd</code>（注意等号后面的那个连词号），就表示即使/etc/sysconfig/sshd文件不存在，也不会抛出错误</p>
+<h4 id="Install段"><a href="#Install段" class="headerlink" title="Install段"></a>Install段</h4><ul>
+<li><code>Alias</code>：</li>
+<li><code>RequiredBy</code>：被哪些units所依赖；</li>
+<li><code>WantedBy</code>：表示该服务所在的 Target</li>
+</ul>
+<h3 id="3-2-修改配置文件后重启"><a href="#3-2-修改配置文件后重启" class="headerlink" title="3.2 修改配置文件后重启"></a>3.2 修改配置文件后重启</h3><p>对于新创建的unit文件或修改了的unit文件，要通知systemd重载此配置文件 <code>systemctl  daemon-reload</code></p>
+<h2 id="4-Target-的配置文件"><a href="#4-Target-的配置文件" class="headerlink" title="4.Target 的配置文件"></a>4.Target 的配置文件</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">[root@hp system]$ systemctl cat multi-user.target</div><div class="line"><span class="comment"># /usr/lib/systemd/system/multi-user.target</span></div><div class="line"><span class="comment">#  This file is part of systemd.</span></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="comment">#  systemd is free software; you can redistribute it and/or modify it</span></div><div class="line"><span class="comment">#  under the terms of the GNU Lesser General Public License as published by</span></div><div class="line"><span class="comment">#  the Free Software Foundation; either version 2.1 of the License, or</span></div><div class="line"><span class="comment">#  (at your option) any later version.</span></div><div class="line"></div><div class="line">[Unit]</div><div class="line">Description=Multi-User System</div><div class="line">Documentation=man:systemd.special(7)</div><div class="line">Requires=basic.target</div><div class="line">Conflicts=rescue.service rescue.target</div><div class="line">After=basic.target rescue.service rescue.target</div><div class="line">AllowIsolate=yes</div></pre></td></tr></table></figure>
+<p>Target 配置文件里面没有启动命令</p>
+<ul>
+<li><code>Requires</code>：要求basic.target一起运行。</li>
+<li><code>Conflicts</code>：冲突字段。如果rescue.service或rescue.target正在运行，multi-user.target就不能运行，反之亦然。</li>
+<li><code>After</code>：表示multi-user.target在basic.target 、 rescue.service、 rescue.target之后启动，如果它们有启动的话。</li>
+<li><code>AllowIsolate</code>：允许使用systemctl isolate命令切换到multi-user.target</li>
+</ul>
+
+        </div>
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2018/08/03/linux_mt/14-Linux系统启动流程及内核模块管理/CentOS7-Systemd启动流程/" data-id="cjs0ip87w00bqvjhgsqnylrva" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2018/08/04/linux_mt/14-Linux系统启动流程及内核模块管理/grub系统配置与使用/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            13.4 grub配置与使用
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2018/08/02/linux_mt/14-Linux系统启动流程及内核模块管理/CentOS5-init启动流程/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">13.2 Centos5 init 启动流程</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/02/11/go/go_grammar/index_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2019/02/11/go/go_grammar/index_1/" class="title">字符编码</a></p>
+                            <p class="item-date"><time datetime="2019-02-10T16:00:00.000Z" itemprop="datePublished">2019-02-11</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/01/08/go/go_grammar/go_8/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/go/grammar/go_func.jpg)" alt="8 go 的委托模式" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2019/01/08/go/go_grammar/go_8/" class="title">8 go 的委托模式</a></p>
+                            <p class="item-date"><time datetime="2019-01-07T16:00:00.000Z" itemprop="datePublished">2019-01-08</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/01/07/go/go_grammar/go_7/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/go/grammar/go_func.jpg)" alt="7 go 接口" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2019/01/07/go/go_grammar/go_7/" class="title">7 go 接口</a></p>
+                            <p class="item-date"><time datetime="2019-01-06T16:00:00.000Z" itemprop="datePublished">2019-01-07</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/01/06/go/go_grammar/go_6/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/go/grammar/go_func.jpg)" alt="6 go 方法" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2019/01/06/go/go_grammar/go_6/" class="title">6 go 方法</a></p>
+                            <p class="item-date"><time datetime="2019-01-05T16:00:00.000Z" itemprop="datePublished">2019-01-06</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/01/05/go/go_grammar/go_5/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/go/grammar/go_func.jpg)" alt="5 go 函数" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2019/01/05/go/go_grammar/go_5/" class="title">5 go 函数</a></p>
+                            <p class="item-date"><time datetime="2019-01-04T16:00:00.000Z" itemprop="datePublished">2019-01-05</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">9</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">57</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">140</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">27</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">50</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">27</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">27</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/DNS/">DNS</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LAMP/">LAMP</a><span class="tag-list-count">22</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">30</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux开机启动/">Linux开机启动</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux进阶/">Linux进阶</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shell脚本/">shell脚本</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unittest/">unittest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单元测试/">单元测试</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">40</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/文件共享服务/">文件共享服务</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/文本处理/">文本处理</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/磁盘与文件系统/">磁盘与文件系统</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/缓存系统/">缓存系统</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/自动化运维/">自动化运维</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/负载均衡/">负载均衡</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/防火墙/">防火墙</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高可用/">高可用</a><span class="tag-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/DNS/" style="font-size: 12.14px;">DNS</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/LAMP/" style="font-size: 18.57px;">LAMP</a> <a href="/tags/Linux基础/" style="font-size: 19.29px;">Linux基础</a> <a href="/tags/Linux开机启动/" style="font-size: 15.71px;">Linux开机启动</a> <a href="/tags/Linux进阶/" style="font-size: 14.29px;">Linux进阶</a> <a href="/tags/go语言入门/" style="font-size: 15px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/shell脚本/" style="font-size: 15px;">shell脚本</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/unittest/" style="font-size: 10px;">unittest</a> <a href="/tags/wrapt/" style="font-size: 17.86px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 17.86px;">函数装饰器</a> <a href="/tags/单元测试/" style="font-size: 10px;">单元测试</a> <a href="/tags/数据结构与算法/" style="font-size: 20px;">数据结构与算法</a> <a href="/tags/文件共享服务/" style="font-size: 10px;">文件共享服务</a> <a href="/tags/文本处理/" style="font-size: 13.57px;">文本处理</a> <a href="/tags/磁盘与文件系统/" style="font-size: 12.86px;">磁盘与文件系统</a> <a href="/tags/缓存系统/" style="font-size: 13.57px;">缓存系统</a> <a href="/tags/自动化运维/" style="font-size: 16.43px;">自动化运维</a> <a href="/tags/负载均衡/" style="font-size: 17.14px;">负载均衡</a> <a href="/tags/部署工具/" style="font-size: 10.71px;">部署工具</a> <a href="/tags/防火墙/" style="font-size: 14.29px;">防火墙</a> <a href="/tags/高可用/" style="font-size: 11.43px;">高可用</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2019 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2018/08/03/linux_mt/14-Linux系统启动流程及内核模块管理/CentOS7-Systemd启动流程/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
