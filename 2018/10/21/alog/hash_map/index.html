@@ -21,7 +21,7 @@
 <meta property="og:description" content="散列表原理">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/algo/hash/hash_map.jpg">
-<meta property="og:updated_time" content="2018-12-28T14:00:46.750Z">
+<meta property="og:updated_time" content="2019-02-14T15:05:24.034Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="14 散列表">
 <meta name="twitter:description" content="散列表原理">
@@ -266,7 +266,8 @@
 <li>对于数值类型的对象，我们可以简单的把用于表示数值 X 的各个位所表示的值作为它的哈希码。如果数值的位数超过哈希码的长度，比如将 64 位浮点数哈希为 32 位的整数，可以对前后 32 求和或做异或处理</li>
 <li>对于字符串或元组形式表示的可变长度对象，通常使用多项式哈希和循环移位哈希，这两种方式都会考虑字符串中字符的位置</li>
 </ol>
-<p>多项式哈希码的计算方式如下，其中 i 表示字符串中第 i 个字符，a 是非 0 常数。在处理英文字符串时 33，37，39，41 是合适选择值。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure></p>
+<p>多项式哈希码的计算方式如下，其中 i 表示字符串中第 i 个字符，a 是非 0 常数。在处理英文字符串时 33，37，39，41 是合适 a 值。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">p(t)=x1 + a(x2 + a(x3 + .... + a(xn−1 + axn)))</div></pre></td></tr></table></figure>
 <p>循环移位的 Python 算法如下，在处理英文字符串时 5 位移动能产生最少的散列冲突。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">hash_code</span><span class="params">(s)</span>:</span></div><div class="line">    mask = (<span class="number">1</span> &lt;&lt; <span class="number">32</span>) - <span class="number">1</span></div><div class="line">    h = <span class="number">0</span></div><div class="line">    <span class="keyword">for</span> c <span class="keyword">in</span> s:</div><div class="line">        h = (h &lt;&lt; <span class="number">5</span> &amp; mask) | (h &gt;&gt; <span class="number">27</span>)</div><div class="line">        h += ord(c)</div><div class="line">    <span class="keyword">return</span> h</div></pre></td></tr></table></figure>
 <h4 id="Python-中的哈希码"><a href="#Python-中的哈希码" class="headerlink" title="Python 中的哈希码"></a>Python 中的哈希码</h4><p>Python 中只有不可变的数据类型可以哈希，以确保一个对象的生命周期中其哈希码不变。对于字符串 Python 使用类似于多项式哈希码的技术，精心设计了字符串的哈希码，没有使用异或和相加。使用相似的基于元组每个元素的哈希码的组合技术计算元组的哈希码。对于 frozenset 对象，元素的顺序是无关的，因此一个自然的选择是用异或值计算单个哈希码而不用任何移位。</p>
@@ -276,8 +277,8 @@
 <h3 id="3-3-压缩函数"><a href="#3-3-压缩函数" class="headerlink" title="3.3 压缩函数"></a>3.3 压缩函数</h3><p>一个好的压缩函数应该确保两个不同的哈希码映射到相同索引的可能性为 1/N，工业级别最常用的压缩函数是 MAD(Multiply-Add-Divide)。选择这个压缩函数是为了消除在哈希码集合中的重复模式，并且得到更好的哈希函数。</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">[(ai + b) mod p] mod N</div><div class="line">- N: 散列表内部数组的大小</div><div class="line">- p: 比 N 大的素数</div><div class="line">- a，b 是从区间 [0, p-1] 任意选择的整数，并且 a &gt; 0</div></pre></td></tr></table></figure>
 <h3 id="3-4-散列冲突处理"><a href="#3-4-散列冲突处理" class="headerlink" title="3.4 散列冲突处理"></a>3.4 散列冲突处理</h3><p>散列冲突解决方案中的开放寻址法，有多个变种。常见的包括线性探测，二次探测，双哈希策略。Python 中采用的是迭代地探测桶。这种方法下散列表的负载因子可以达到 2/3。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"># 迭代地探测桶</div><div class="line">A[(h(k) + f(i)) mod N]</div><div class="line">- h(k): 哈希码</div><div class="line">- f(i): 基于伪随机数产生器的函数，它提供一个基于原始哈希码位的可重复的但是随机</div><div class="line">        的，连续的地址探测序列</div></pre></td></tr></table></figure></p>
-<h2 id="4-散列表的简单实现"><a href="#4-散列表的简单实现" class="headerlink" title="4. 散列表的简单实现"></a>4. 散列表的简单实现</h2><p>最后，我们介绍散列表的两种实现，一种使用链表法，另一种使用包含线性探测的开放寻址。</p>
-<h3 id="4-1-公用基类"><a href="#4-1-公用基类" class="headerlink" title="4.1 公用基类"></a>4.1 公用基类</h3><p><strong>参考:</strong></p>
+<h2 id="4-散列表的简单实现"><a href="#4-散列表的简单实现" class="headerlink" title="4. 散列表的简单实现"></a>4. 散列表的简单实现</h2><p>作为散列表实现的简单示例，我们将介绍散列表的两种实现，链表法和线性探测的开放寻址法。限于篇幅，我们把这部分内容放到下一篇文章来讲解。</p>
+<p><strong>参考:</strong></p>
 <ul>
 <li><a href="https://time.geekbang.org/column/126" target="_blank" rel="external">王争老师专栏-数据结构与算法之美</a></li>
 <li><a href="https://book.douban.com/subject/30323938/" target="_blank" rel="external">《数据结构与算法：python语言实现》</a></li>
@@ -289,7 +290,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2018/10/21/alog/hash_map/" data-id="cjs3y5gps001my1hgzm7ywano" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2018/10/21/alog/hash_map/" data-id="cjs7acamx001pokhgr400ejzn" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -427,11 +428,11 @@
         
 <nav id="article-nav">
     
-        <a href="/2018/10/22/linux_mt/31-haproxy/haproxy安装/" id="article-nav-newer" class="article-nav-link-wrap">
+        <a href="/2018/10/22/alog/hash_list/" id="article-nav-newer" class="article-nav-link-wrap">
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            28.1 haproxy 入门
+            15 散列表与链表
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
