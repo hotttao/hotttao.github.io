@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>3 Schema 设计 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="高性能的MySQL" />
+    
+    <meta name="description" content="mysql 的 Schema 设计">
+<meta name="keywords" content="高性能的MySQL">
+<meta property="og:type" content="article">
+<meta property="og:title" content="3 Schema 设计">
+<meta property="og:url" content="http://yoursite.com/2019/10/03/mysql/高性能的mysql/03_schema设计/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="mysql 的 Schema 设计">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-05-24T15:44:32.467Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="3 Schema 设计">
+<meta name="twitter:description" content="mysql 的 Schema 设计">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/存储/">存储</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-mysql/高性能的mysql/03_schema设计" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        3 Schema 设计
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2019/10/03/mysql/高性能的mysql/03_schema设计/" class="article-date">
+            <time datetime="2019-10-02T16:00:00.000Z" itemprop="datePublished">2019-10-03</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/高性能的MySQL/">高性能的MySQL<span class="tag-count">5</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>mysql 的 Schema 设计</p>
+<a id="more"></a>
+<h2 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h2><p>上一节我们简述了 MySQL 中的数据类型，本节我们来说一说 MySQL 的 Schema 设计，包括以下内容:</p>
+<ol>
+<li>MySQL 特有的 Schema 设计问题，这是由 MySQL 特定的实现机制导致的</li>
+<li>Schema 设计的范式和反范式</li>
+<li>为提升读性能，而常采用的技巧，缓存表和汇总表</li>
+</ol>
+<p>最后我们会简单说一下加快 ALTER TABLE 操作速度的方法。下面大部分内容摘自：《高性能MySQL》 — 〔美〕施瓦茨 (Baron Schwartz)  〔美〕扎伊采夫 (Peter Zaitsev)  〔美〕特卡琴科 (Vadim Tkachenko)<br>在豆瓣阅读书店查看：<a href="https://read.douban.com/ebook/35648568/" target="_blank" rel="external">https://read.douban.com/ebook/35648568/</a></p>
+<h2 id="2-MySQL-schema设计中的陷阱"><a href="#2-MySQL-schema设计中的陷阱" class="headerlink" title="2. MySQL schema设计中的陷阱"></a>2. MySQL schema设计中的陷阱</h2><p>有一些问题是由MySQL的实现机制导致的，我们需要避免下面只会在 MySQL 中发生的特定问题:</p>
+<ol>
+<li>太多的列<ul>
+<li>MySQL的存储引擎，需要在服务器层和存储引擎层之间通过行缓冲格式拷贝数据，然后在服务器层将缓冲内容解码成各个列</li>
+<li>从行缓冲中将编码过的列转换成行数据结构的代价依赖于列的数量</li>
+<li>如果计划使用数千个字段，必须意识到服务器的性能运行特征会有一些不同。</li>
+</ul>
+</li>
+<li>太多的关联<ul>
+<li>MySQL限制了每个关联操作最多只能有61张表</li>
+<li>事实上在许多关联少于61张表的情况下，解析和优化查询的代价也会成为MySQL的问题</li>
+<li>经验法则，单个查询最好在12个表以内做关联</li>
+</ul>
+</li>
+<li>NULL 的使用:<ul>
+<li>避免使用NULL的好处，但是也不能走极端</li>
+<li>在一些场景中，使用NULL可能会比某个神奇常数更好，以避免引入Bug</li>
+<li>伪造的全0值可能导致很多问题（可以配置MySQL的SQL_MODE来禁止不可能的日期）</li>
+<li>MySQL会在索引中存储NULL值，而Oracle则不会</li>
+</ul>
+</li>
+</ol>
+<h2 id="2-范式和反范式"><a href="#2-范式和反范式" class="headerlink" title="2. 范式和反范式"></a>2. 范式和反范式</h2><p>范式和反范式反映的是 MySQL 数据冗余程度。在范式化的数据库中，每个事实数据会出现并且只出现一次。相反，在反范式化的数据库中，信息是冗余的，可能会存储在多个地方。范式和反范式有他们各自的有缺点。</p>
+<h3 id="2-1-范式的优缺点"><a href="#2-1-范式的优缺点" class="headerlink" title="2.1 范式的优缺点"></a>2.1 范式的优缺点</h3><p>范式，特别适用于写密集的场景，原因在于:</p>
+<ul>
+<li>当数据较好地范式化时，就只有很少或者没有重复数据，所以只需要修改更少的数据</li>
+<li>很少有多余的数据意味着检索列表数据时更少需要DISTINCT或者GROUP BY语句</li>
+</ul>
+<p>范式化的缺点是通常需要关联。这不但代价昂贵，也可能使一些索引策略无效。例如，范式化可能将列存放在不同的表中，而这些列如果在一个表中本可以属于同一个索引。</p>
+<h3 id="2-2-反范式的优点和缺点"><a href="#2-2-反范式的优点和缺点" class="headerlink" title="2.2 反范式的优点和缺点"></a>2.2 反范式的优点和缺点</h3><p>反范式化的schema因为所有数据都在一张表中，所以有下面这些优点:</p>
+<ol>
+<li>可以很好地避免关联</li>
+<li>当数据比内存大时这可能比关联要快得多，因为这样避免了随机I/O</li>
+<li>单独的表也能使用更有效的索引策略。</li>
+</ol>
+<h3 id="2-3-混用范式化和反范式化"><a href="#2-3-混用范式化和反范式化" class="headerlink" title="2.3 混用范式化和反范式化"></a>2.3 混用范式化和反范式化</h3><p>范式化和反范式化的schema各有优劣，在实际应用中经常需要混用，可能使用部分范式化的schema、缓存表，以及其他技巧。最常见的反范式化数据的方法是复制或者缓存，在不同的表中存储相同的特定列。在MySQL 5.0和更新版本中，可以使用触发器更新缓存值，这使得实现这样的方案变得更简单。另一个从父表冗余一些数据到子表的理由是排序的需要。</p>
+<h2 id="3-缓存表和汇总表"><a href="#3-缓存表和汇总表" class="headerlink" title="3. 缓存表和汇总表"></a>3. 缓存表和汇总表</h2><p>为了提升读查询的速度，经常会需要建一些额外索引，增加冗余列，甚至是创建缓存表和汇总表。下面这方面技巧的专用术语:</p>
+<ul>
+<li>缓存表: 来表示存储那些可以比较简单地从schema其他表获取（但是每次获取的速度比较慢）数据的表</li>
+<li>汇总表: 用来保存使用GROUP BY语句聚合数据的表</li>
+<li>物化视图: 实际上是预先计算并且存储在磁盘上的表，可以通过各种各样的策略刷新和更新</li>
+<li>计数器表: 专用来计数的表</li>
+</ul>
+<p>下面我们来一一介绍这些使用技巧。</p>
+<h3 id="3-1-汇总表"><a href="#3-1-汇总表" class="headerlink" title="3.1 汇总表"></a>3.1 汇总表</h3><p>以网站为例，假设需要计算之前24小时内发送的消息数，我们可以每小时生成一张汇总表，并使用下面的 SQL 进行计算:<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> msg_per_hr (</div><div class="line">   hr DATETIME <span class="keyword">NOT</span> <span class="literal">NULL</span>,</div><div class="line">   cnt <span class="built_in">INT</span> <span class="keyword">UNSIGNED</span> <span class="keyword">NOT</span> <span class="literal">NULL</span>,</div><div class="line">   PRIMARY <span class="keyword">KEY</span>(hr)</div><div class="line">);</div><div class="line"></div><div class="line"></div><div class="line">mysql&gt; SELECT SUM(cnt) FROM msg_per_hr</div><div class="line">    -&gt; WHERE hr BETWEEN</div><div class="line">    -&gt;   CONCAT(LEFT(NOW(), 14), '00:00') - INTERVAL 23 HOUR</div><div class="line">    -&gt;   AND CONCAT(LEFT(NOW(), 14), '00:00') - INTERVAL 1 HOUR;</div><div class="line">mysql&gt; SELECT COUNT(*) FROM message</div><div class="line">    -&gt; WHERE posted &gt;= NOW() - INTERVAL 24 HOUR</div><div class="line">    -&gt;   AND posted &lt; CONCAT(LEFT(NOW(), 14), '00:00') - INTERVAL 23 HOUR;</div><div class="line">mysql&gt; SELECT COUNT(*) FROM message</div><div class="line">    -&gt; WHERE posted &gt;= CONCAT(LEFT(NOW(), 14), '00:00');</div></pre></td></tr></table></figure></p>
+<h3 id="3-2-缓存表"><a href="#3-2-缓存表" class="headerlink" title="3.2 缓存表"></a>3.2 缓存表</h3><p>缓存表的一个有用的技巧是对缓存表使用不同的存储引擎例如，如果主表使用InnoDB，用MyISAM作为缓存表的引擎将会得到更小的索引占用空间，并且可以做全文搜索。有时甚至可以把整个表导出MySQL，插入到专门的搜索系统中获得更高的搜索效率。</p>
+<p>在使用缓存表和汇总表时，必须决定是实时维护数据还是定期重建。哪个更好依赖于应用程序，但是定期重建并不只是节省资源，也可以保持表不会有很多碎片，以及有完全顺序组织的索引（这会更加高效）。</p>
+<p>当重建汇总表和缓存表时，通常需要保证数据在操作时依然可用。这就需要通过使用“影子表”来实现，下面是影子表的使用技巧:</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">mysql&gt; DROP TABLE IF EXISTS my_summary_new, my_summary_old;</div><div class="line">mysql&gt; CREATE TABLE my_summary_new LIKE my_summary;</div><div class="line"><span class="comment">-- populate my_summary_new as desired</span></div><div class="line">mysql&gt; RENAME TABLE my_summary TO my_summary_old, my_summary_new TO my_summary;</div></pre></td></tr></table></figure>
+<h3 id="3-3-物化视图-额外学习"><a href="#3-3-物化视图-额外学习" class="headerlink" title="3.3 物化视图(额外学习)"></a>3.3 物化视图(额外学习)</h3><p>。MySQL并不原生支持物化视图。可以使用开源工具<a href="http://code.google.com/p/flexviews/" target="_blank" rel="external">Flexviews</a> 在 MySQL中实现物化视图。</p>
+<p>对比传统的维护汇总表和缓存表的方法，Flexviews通过提取对源表的更改，可以增量地重新计算物化视图的内容。这意味着不需要通过查询原始数据来更新视图。</p>
+<h3 id="3-2-计数器表"><a href="#3-2-计数器表" class="headerlink" title="3.2 计数器表"></a>3.2 计数器表</h3><p>计数器表可以统计计数，但是计数器表可能会碰到并发问题。</p>
+<p>要获得更高的并发更新性能，一种方案是可以将计数器保存在多行中，每次随机选择一行进行更新。像下面这样</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"># 1. 创建如下计数表</div><div class="line">mysql&gt; CREATE TABLE hit_counter (</div><div class="line">    -&gt;   slot tinyint unsigned not null primary key,</div><div class="line">    -&gt;   cnt int unsigned not null</div><div class="line">    -&gt; ) ENGINE=InnoDB;</div><div class="line"></div><div class="line"># 2. 预先增加100行数据</div><div class="line"># 3. 现在选择一个随机的槽（slot）进行更新</div><div class="line">mysql&gt; UPDATE hit_counter SET cnt = cnt + 1 WHERE slot = RAND() * 100;</div></pre></td></tr></table></figure>
+<p>如果像每天开始一个计数器，可以像下面这样:<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"># 1. 创建下表</div><div class="line">mysql&gt; CREATE TABLE daily_hit_counter (</div><div class="line">    -&gt;   day date not null,</div><div class="line">    -&gt;   slot tinyint unsigned not null,</div><div class="line">    -&gt;   cnt int unsigned not null,</div><div class="line">    -&gt;   primary key(day, slot)</div><div class="line">    -&gt; ) ENGINE=InnoDB;</div><div class="line"></div><div class="line"># 2. 使用 ON DUPLICATE 进行更新</div><div class="line">mysql&gt; INSERT INTO daily_hit_counter(day, slot, cnt)</div><div class="line">    -&gt;   VALUES(CURRENT_DATE, RAND() * 100, 1)</div><div class="line">    -&gt;   ON DUPLICATE KEY UPDATE cnt = cnt + 1;</div><div class="line"></div><div class="line"># 3. 希望减少表的行数，避免表变大，可以写一个周期执行的任务，</div><div class="line"># 合并所有结果到0号槽，并且删除所有其他的槽：</div><div class="line">mysql&gt; UPDATE daily_hit_counter as c</div><div class="line">    -&gt;   INNER JOIN (</div><div class="line">    -&gt;     SELECT day, SUM(cnt) AS cnt, MIN(slot) AS mslot</div><div class="line">    -&gt;     FROM daily_hit_counter</div><div class="line">    -&gt;     GROUP BY day</div><div class="line">    -&gt;    ) AS x USING(day)</div><div class="line">    -&gt; SET c.cnt = IF(c.slot = x.mslot, x.cnt, 0),</div><div class="line">    -&gt;    c.slot = IF(c.slot = x.mslot, 0, c.slot);</div><div class="line">mysql&gt; DELETE FROM daily_hit_counter WHERE slot &lt;&gt; 0 AND cnt = 0;</div></pre></td></tr></table></figure></p>
+<h2 id="4-加速ALTER-TABLE操作"><a href="#4-加速ALTER-TABLE操作" class="headerlink" title="4. 加速ALTER TABLE操作"></a>4. 加速ALTER TABLE操作</h2><p>MySQL的ALTER TABLE操作的性能对大表来说是个大问题。MySQL执行大部分修改表结构操作的方法是用新的结构创建一个空表，从旧表中查出所有数据插入新表，然后删除旧表。这样操作可能需要花费很长时间，如果内存不足而表又很大，而且还有很多索引的情况下尤其如此。</p>
+<p>大部分ALTER TABLE操作将导致MySQL服务中断，常见场景中，避免中断的技巧只有两个:</p>
+<ol>
+<li>一种是先在一台不提供服务的机器上执行ALTER TABLE操作，然后和提供服务的主库进行切换</li>
+<li>另外一种技巧是“影子拷贝”。影子拷贝的技巧是用要求的表结构创建一张和源表无关的新表</li>
+</ol>
+<p>一些工具可以帮助完成影子拷贝工作：</p>
+<ol>
+<li><a href="https://launchpad.net/mysqlatfacebook" target="_blank" rel="external">Facebook数据库运维团队的“online schema change”工具</a></li>
+<li><a href="http://code.openark.org/" target="_blank" rel="external">Shlomi Noach的openark toolkit</a></li>
+<li><a href="http://www.percona.com/software/" target="_blank" rel="external">Percona Toolkit</a></li>
+<li>如果使用Flexviews，也可以通过其CDC工具执行无锁的表结构变更</li>
+</ol>
+<p>一些特殊的 ALTER TABLE 操作则有特殊的优化技巧。</p>
+<h3 id="4-1-更改列的默认值"><a href="#4-1-更改列的默认值" class="headerlink" title="4.1 更改列的默认值"></a>4.1 更改列的默认值</h3><p>默认像下面更改列的默认值会导致表重建:<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"># 1. 所有的MODIFY COLUMN操作都将导致表重建。</div><div class="line">mysql&gt; ALTER TABLE sakila.film</div><div class="line">    -&gt; MODIFY COLUMN rental_duration TINYINT(3) NOT NULL DEFAULT 5;</div><div class="line"></div><div class="line">mysql&gt; SHOW STATUS显</div></pre></td></tr></table></figure></p>
+<p>理论上，MySQL可以跳过创建新表的步骤。列的默认值实际上存在表的.frm文件中，所以可以直接修改这个文件而不需要改动表本身。另外一种方法是通过ALTER COLUMN操作来改变列的默认值：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">mysql&gt; ALTER TABLE sakila.film</div><div class="line">    -&gt; ALTER COLUMN rental_duration SET DEFAULT 5;</div></pre></td></tr></table></figure>
+<p>这个语句会直接修改.frm文件而不涉及表数据。所以，这个操作是非常快的。ALTER TABLE允许使用ALTER COLUMN、MODIFY COLUMN和CHANGE COLUMN语句修改列。这三种操作都是不一样的。</p>
+<h3 id="4-2-只修改-frm文件"><a href="#4-2-只修改-frm文件" class="headerlink" title="4.2 只修改.frm文件"></a>4.2 只修改.frm文件</h3><p>下面要演示的技巧是不受官方支持的，也没有文档记录，并且也可能不能正常工作，采用这些技术需要自己承担风险。建议在执行之前首先备份数据！下面这些操作是有可能不需要重建表的：</p>
+<ol>
+<li>移除（不是增加）一个列的AUTO_INCREMENT属性。</li>
+<li>增加、移除，或更改ENUM和SET常量。如果移除的是已经有行数据用到其值的常量，查询将会返回一个空字串值。</li>
+</ol>
+<p>基本的技术是为想要的表结构创建一个新的.frm文件，然后用它替换掉已经存在的那张表的.frm文件，像下面这样：</p>
+<ol>
+<li>创建一张有相同结构的空表，并进行所需要的修改（例如增加ENUM常量）。</li>
+<li>执行<code>FLUSH TABLES WITH READ LOCK</code> 这将会关闭所有正在使用的表，并且禁止任何表被打开</li>
+<li>交换.frm文件</li>
+<li>执行UNLOCK TABLES来释放第2步的读锁</li>
+</ol>
+<h3 id="4-3-快速创建MyISAM索引"><a href="#4-3-快速创建MyISAM索引" class="headerlink" title="4.3 快速创建MyISAM索引"></a>4.3 快速创建MyISAM索引</h3><p>为了高效地载入数据到MyISAM表中，有一个常用的技巧是先禁用索引、载入数据，然后重新启用索引：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">mysql&gt; ALTER TABLE test.load_data ENABLE KEYS;</div><div class="line"><span class="comment">-- load the data</span></div><div class="line">mysql&gt; ALTER TABLE test.load_data ENABLE KEYS;</div></pre></td></tr></table></figure>
+<p>这个技巧能够发挥作用，是因为构建索引的工作被延迟到数据完全载入以后，这个时候已经可以通过排序来构建索引了。这样做会快很多，并且使得索引树的碎片更少、更紧凑。</p>
+<p>这个办法对唯一索引无效，因为DISABLE KEYS只对非唯一索引有效。MyISAM会在内存中构造唯一索引，并且为载入的每一行检查唯一性。一旦索引的大小超过了有效内存大小，载入操作就会变得越来越慢。</p>
+<p>在现代版本的InnoDB版本中，有一个类似的技巧，这依赖于InnoDB的快速在线索引创建功能。这个技巧是，先删除所有的非唯一索引，然后增加新的列，最后重新创建删除掉的索引。Percona Server可以自动完成这些操作步骤。</p>
+<p>也可以使用像前面说的ALTER TABLE的骇客方法来加速这个操作，但需要多做一些工作并且承担一定的风险。这对从备份中载入数据是很有用的，例如，当已经知道所有数据都是有效的并且没有必要做唯一性检查时就可以这么来操作。下面是操作步骤：</p>
+<ol>
+<li>用需要的表结构创建一张表，但是不包括索引。</li>
+<li>载入数据到表中以构建.MYD文件。</li>
+<li>按照需要的结构创建另外一张空表，这次要包含索引。这会创建需要的.frm和.MYI文件。</li>
+<li>获取读锁并刷新表。</li>
+<li>重命名第二张表的.frm和.MYI文件，让MySQL认为是第一张表的文件。</li>
+<li>释放读锁。</li>
+<li>使用REPAIR TABLE来重建表的索引。该操作会通过排序来构建所有索引，包括唯一索引。<br>这个操作步骤对大表来说会快很多。</li>
+</ol>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2019/10/03/mysql/高性能的mysql/03_schema设计/" data-id="ckal8zdn600aebgu9k2kp20rg" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2019/10/04/mysql/高性能的mysql/04_索引基本原理/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            4 索引基本原理
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2019/10/02/mysql/高性能的mysql/02_mysql数据类型/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">2 MySQL 数据类型</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/25/mysql/MySQL实战45讲/44_Memory存储引擎/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/innodb_data.jpg)" alt="25 MYSQL Memory 存储引擎" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/25/mysql/MySQL实战45讲/44_Memory存储引擎/" class="title">25 MYSQL Memory 存储引擎</a></p>
+                            <p class="item-date"><time datetime="2020-03-24T16:00:00.000Z" itemprop="datePublished">2020-03-25</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">41</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">24</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/MySQL实战45讲/" style="font-size: 18.75px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 16.25px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.25px;">python</a> <a href="/tags/wrapt/" style="font-size: 17.5px;">wrapt</a> <a href="/tags/数据密集型应用/" style="font-size: 12.5px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 20px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 18.75px;">极客时间</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 15px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.75px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2019/10/03/mysql/高性能的mysql/03_schema设计/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
