@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>9 MYSQL 自增值的上线 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="mysql运维" />
+    
+    <meta name="description" content="MySQL 里面的几种自增 id，它们的值达到上限以后，会出现什么情况。">
+<meta name="keywords" content="mysql运维">
+<meta property="og:type" content="article">
+<meta property="og:title" content="9 MYSQL 自增值的上线">
+<meta property="og:url" content="http://yoursite.com/2020/03/09/mysql/MySQL实战45讲/09_自增值上线/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="MySQL 里面的几种自增 id，它们的值达到上限以后，会出现什么情况。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/mysql/MySQL45讲/trx_id.png">
+<meta property="og:updated_time" content="2020-03-30T07:23:51.168Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="9 MYSQL 自增值的上线">
+<meta name="twitter:description" content="MySQL 里面的几种自增 id，它们的值达到上限以后，会出现什么情况。">
+<meta name="twitter:image" content="http://yoursite.com/images/mysql/MySQL45讲/trx_id.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/存储/">存储</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-mysql/MySQL实战45讲/09_自增值上线" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        9 MYSQL 自增值的上线
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/03/09/mysql/MySQL实战45讲/09_自增值上线/" class="article-date">
+            <time datetime="2020-03-08T16:00:00.000Z" itemprop="datePublished">2020-03-09</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/mysql运维/">mysql运维</a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>MySQL 里面的几种自增 id，它们的值达到上限以后，会出现什么情况。</p>
+<a id="more"></a>
+<h2 id="1-表定义自增值-id"><a href="#1-表定义自增值-id" class="headerlink" title="1. 表定义自增值 id"></a>1. 表定义自增值 id</h2><p>表定义的自增值达到上限后的逻辑是：再申请下一个 id 时，得到的值保持不变。因此就会出现主键冲突错误。</p>
+<p>232-1（4294967295）不是一个特别大的数，因此在建表的时候你需要考察你的表是否有可能达到这个上限，如果有可能，就应该创建成 8 个字节的 bigint unsigned。</p>
+<h2 id="2-InnoDB-系统自增-row-id"><a href="#2-InnoDB-系统自增-row-id" class="headerlink" title="2. InnoDB 系统自增 row_id"></a>2. InnoDB 系统自增 row_id</h2><p>如果你创建的 InnoDB 表没有指定主键，那么 InnoDB 会给你创建一个不可见的，长度为 6 个字节的 row_id。</p>
+<p>InnoDB 维护了一个全局的 dict_sys.row_id 值，所有无主键的 InnoDB 表，每插入一行数据，都将当前的 dict_sys.row_id 值作为要插入数据的 row_id，然后把 dict_sys.row_id 的值加 1。</p>
+<p>在代码实现时 row_id 是一个长度为 8 字节的无符号长整型 (bigint unsigned)。但是，InnoDB 在设计时，给 row_id 留的只是 6 个字节的长度，这样写到数据表中时只放了最后 6 个字节，所以 row_id 能写到数据表中的值，就有两个特征：</p>
+<ol>
+<li>row_id 写入表中的值范围，是从 0 到 248-1；</li>
+<li>当 dict_sys.row_id=248时，如果再有插入数据的行为要来申请 row_id，拿到以后再取最后 6 个字节的话就是 0。</li>
+</ol>
+<p>也就是说，写入表的 row_id 是从 0 开始到 248-1。达到上限后，下一个值就是 0，然后继续循环。</p>
+<p>在 InnoDB 逻辑里，申请到 row_id=N 后，就将这行数据写入表中；如果表中已经存在 row_id=N 的行，新写入的行就会覆盖原有的行。</p>
+<p>从这个角度看，我们还是应该在 InnoDB 表中主动创建自增主键。因为，表自增 id 到达上限后，再插入数据时报主键冲突错误，是更能被接受的。</p>
+<p>毕竟覆盖数据，就意味着数据丢失，影响的是数据可靠性；报主键冲突，是插入失败，影响的是可用性。而一般情况下，可靠性优先于可用性。</p>
+<h2 id="3-Xid"><a href="#3-Xid" class="headerlink" title="3. Xid"></a>3. Xid</h2><p>redo log 和 binlog 相配合的时候，提到了它们有一个共同的字段叫作 Xid。</p>
+<p>MySQL 内部维护了一个全局变量 global_query_id，每次执行语句的时候将它赋值给 Query_id，然后给这个变量加 1。如果当前语句是这个事务执行的第一条语句，那么 MySQL 还会同时把 Query_id 赋值给这个事务的 Xid。</p>
+<p>而 global_query_id 是一个纯内存变量，重启之后就清零了。所以你就知道了，在同一个数据库实例中，不同事务的 Xid 也是有可能相同的。</p>
+<p>但是 MySQL 重启之后会重新生成新的 binlog 文件，这就保证了，同一个 binlog 文件里，Xid 一定是惟一的。</p>
+<p>global_query_id 达到上限后，就会继续从 0 开始计数。从理论上讲，还是就会出现同一个 binlog 里面出现相同 Xid 的场景。因为 global_query_id 定义的长度是 8 个字节，这个自增值的上限是 2^64-1。要出现这种情况，必须是下面这样的过程：</p>
+<ol>
+<li>执行一个事务，假设 Xid 是 A；</li>
+<li>接下来执行 264次查询语句，让 global_query_id 回到 A；</li>
+<li>再启动一个事务，这个事务的 Xid 也是 A。</li>
+</ol>
+<p>不过，264这个值太大了，大到你可以认为这个可能性只会存在于理论上。</p>
+<h2 id="4-Innodb-trx-id"><a href="#4-Innodb-trx-id" class="headerlink" title="4. Innodb trx_id"></a>4. Innodb trx_id</h2><p>Xid 和 InnoDB 的 trx_id 是两个容易混淆的概念。</p>
+<ol>
+<li>Xid 是由 server 层维护的。InnoDB 内部使用 Xid，就是为了能够在 InnoDB 事务和 server 之间做关联。</li>
+<li>InnoDB 自己的 trx_id，是另外维护的。这个 trx_id 就是事务id(transaction id)</li>
+</ol>
+<p>InnoDB 内部维护了一个 max_trx_id 全局变量，每次需要申请一个新的 trx_id 时，就获得 max_trx_id 的当前值，然后并将 max_trx_id 加 1。</p>
+<p>InnoDB 数据可见性的核心思想是：每一行数据都记录了更新它的 trx_id，当一个事务读到一行数据的时候，判断这个数据是否可见的方法，就是通过事务的一致性视图与这行数据的 trx_id 做对比。</p>
+<p>对于正在执行的事务，你可以从 information_schema.innodb_trx 表中看到事务的 trx_id。</p>
+<h3 id="4-1-trx-id-的分配策略"><a href="#4-1-trx-id-的分配策略" class="headerlink" title="4.1 trx_id 的分配策略"></a>4.1 trx_id 的分配策略</h3><p><img src="/images/mysql/MySQL45讲/trx_id.png" alt="trx_id"></p>
+<p>session B 里，我从 innodb_trx 表里查出的这两个字段，第二个字段 trx_mysql_thread_id 就是线程 id。显示线程 id，是为了说明这两次查询看到的事务对应的线程 id 都是 5，也就是 session A 所在的线程。</p>
+<p>T2 时刻显示的 trx_id 是一个很大的数；T4 时刻显示的 trx_id 是 1289，看上去是一个比较正常的数字。</p>
+<p>这是因为在 T1 时刻，session A 还没有涉及到更新，是一个只读事务。而对于只读事务，InnoDB 并不会分配 trx_id。也就是说：</p>
+<ol>
+<li>在 T1 时刻，trx_id 的值其实就是 0。而这个很大的数，只是显示用的。</li>
+<li>直到 session A 在 T3 时刻执行 insert 语句的时候，InnoDB 才真正分配了 trx_id。所以，T4 时刻，session B 查到的这个 trx_id 的值就是 1289</li>
+<li>需要注意的是，除了显而易见的修改类语句外，如果在 select 语句后面加上 for update，这个事务也不是只读事务。</li>
+</ol>
+<p>trx_id 的增加:</p>
+<ol>
+<li>update 和 delete 语句除了事务本身，还涉及到标记删除旧数据，也就是要把数据放到 purge 队列里等待后续物理删除，这个操作也会把 max_trx_id+1， 因此在一个事务中至少加 2；</li>
+<li>InnoDB 的后台操作，比如表的索引信息统计这类操作，也是会启动内部事务的，因此你可能看到，trx_id 值并不是按照加 1 递增的。</li>
+</ol>
+<h3 id="4-3-T2-时刻查到的这个很大的数字是怎么来的呢？"><a href="#4-3-T2-时刻查到的这个很大的数字是怎么来的呢？" class="headerlink" title="4.3 T2 时刻查到的这个很大的数字是怎么来的呢？"></a>4.3 T2 时刻查到的这个很大的数字是怎么来的呢？</h3><p>这个数字是每次查询的时候由系统临时计算出来的。它的算法是：把当前事务的 trx 变量的指针地址转成整数，再加上 248。使用这个算法，就可以保证以下两点：</p>
+<ol>
+<li>因为同一个只读事务在执行期间，它的指针地址是不会变的，所以不论是在 innodb_trx 还是在 innodb_locks 表里，同一个只读事务查出来的 trx_id 就会是一样的。</li>
+<li>如果有并行的多个只读事务，每个事务的 trx 变量的指针地址肯定不同。这样，不同的并发只读事务，查出来的 trx_id 就是不同的。</li>
+</ol>
+<h4 id="为什么还要再加上-248呢？"><a href="#为什么还要再加上-248呢？" class="headerlink" title="为什么还要再加上 248呢？"></a>为什么还要再加上 248呢？</h4><p>在显示值里面加上 248，目的是要保证只读事务显示的 trx_id 值比较大，正常情况下就会区别于读写事务的 id。但是，trx_id 跟 row_id 的逻辑类似，定义长度也是 8 个字节。因此，在理论上还是可能出现一个读写事务与一个只读事务显示的 trx_id 相同的情况。不过这个概率很低，并且也没有什么实质危害，可以不管它。</p>
+<h4 id="只读事务不分配-trx-id，有什么好处"><a href="#只读事务不分配-trx-id，有什么好处" class="headerlink" title="只读事务不分配 trx_id，有什么好处"></a>只读事务不分配 trx_id，有什么好处</h4><ol>
+<li>一个好处是，这样做可以减小事务视图里面活跃事务数组的大小。因为当前正在运行的只读事务，是不影响数据的可见性判断的。所以，在创建事务的一致性视图时，InnoDB 就只需要拷贝读写事务的 trx_id。</li>
+<li>另一个好处是，可以减少 trx_id 的申请次数。在 InnoDB 里，即使你只是执行一个普通的 select 语句，在执行过程中，也是要对应一个只读事务的。所以只读事务优化后，普通的查询语句不需要申请 trx_id，就大大减少了并发事务申请 trx_id 的锁冲突。</li>
+</ol>
+<h3 id="4-3-trx-id-到达上线会怎么样"><a href="#4-3-trx-id-到达上线会怎么样" class="headerlink" title="4.3 trx_id 到达上线会怎么样"></a>4.3 trx_id 到达上线会怎么样</h3><p>max_trx_id 会持久化存储，重启也不会重置为 0，那么从理论上讲，只要一个 MySQL 服务跑得足够久，就可能出现 max_trx_id 达到 248-1 的上限，然后从 0 开始的情况。</p>
+<p>当达到这个状态后，MySQL 就会持续出现一个脏读的 bug，我们来复现一下这个 bug。我们来复现这个场景</p>
+<p><img src="/images/mysql/MySQL45讲/trx_error.png" alt="trx_error"></p>
+<ol>
+<li>由于我们已经把系统的 max_trx_id 设置成了 2^48-1，所以在 session A 启动的事务 TA 的低水位就是 248-1</li>
+<li>在 T2 时刻，session B 执行第一条 update 语句的事务 id 就是 2^48-1，而第二条 update 语句的事务 id 就是 0 了，这条 update 语句执行后生成的数据版本上的 trx_id 就是 0。</li>
+<li>在 T3 时刻，session A 执行 select 语句的时候，判断可见性发现，c=3 这个数据版本的 trx_id，小于事务 TA 的低水位，因此认为这个数据可见。</li>
+<li>由于低水位值会持续增加，而事务 id 从 0 开始计数，就导致了系统在这个时刻之后，所有的查询都会出现脏读的。</li>
+<li>并且，MySQL 重启时 max_trx_id 也不会清 0，也就是说重启 MySQL，这个 bug 仍然存在。</li>
+</ol>
+<h2 id="5-thread-id"><a href="#5-thread-id" class="headerlink" title="5. thread_id"></a>5. thread_id</h2><p>thread_id 的逻辑很好理解：系统保存了一个全局变量 thread_id_counter，每新建一个连接，就将 thread_id_counter 赋值给这个新连接的线程变量。</p>
+<p>thread_id_counter 定义的大小是 4 个字节，因此达到 232-1 后，它就会重置为 0，然后继续增加。但是，你不会在 show processlist 里看到两个相同的 thread_id。</p>
+<p>这，是因为 MySQL 设计了一个唯一数组的逻辑，给新线程分配 thread_id 的时候，逻辑代码是这样的：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">do</span> &#123;</div><div class="line">  new_id= thread_id_counter++;</div><div class="line">&#125; <span class="keyword">while</span> (!thread_ids.insert_unique(new_id).second);</div></pre></td></tr></table></figure></p>
+
+        </div>
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/03/09/mysql/MySQL实战45讲/09_自增值上线/" data-id="ckal5ebea00m55su9q92ije3r" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/03/12/mysql/MySQL实战45讲/12_随机/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            12 MySQL如何显示随机消息
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/03/08/mysql/MySQL实战45讲/08_insert锁/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">8 insert 语句的锁</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/04/04/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="61 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/04/04/mysql/MySQL实战45讲/61_分区表/" class="title">61 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-04-03T16:00:00.000Z" itemprop="datePublished">2020-04-04</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/04/03/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="52 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/04/03/mysql/MySQL实战45讲/52_连接管理/" class="title">52 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-04-02T16:00:00.000Z" itemprop="datePublished">2020-04-03</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/04/02/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="51 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/04/02/mysql/MySQL实战45讲/51_grant_privileges/" class="title">51 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-04-01T16:00:00.000Z" itemprop="datePublished">2020-04-02</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/04/01/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="45 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/04/01/mysql/MySQL实战45讲/45_自增主键/" class="title">45 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-31T16:00:00.000Z" itemprop="datePublished">2020-04-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/31/mysql/MySQL实战45讲/44_Memory存储引擎/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/innodb_data.jpg)" alt="44 MYSQL Memory 存储引擎" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/31/mysql/MySQL实战45讲/44_Memory存储引擎/" class="title">44 MYSQL Memory 存储引擎</a></p>
+                            <p class="item-date"><time datetime="2020-03-30T16:00:00.000Z" itemprop="datePublished">2020-03-31</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">46</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">141</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">33</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">27</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">27</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/DNS/">DNS</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LAMP/">LAMP</a><span class="tag-list-count">22</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">31</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux开机启动/">Linux开机启动</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux进阶/">Linux进阶</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql/">mysql</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">37</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shell脚本/">shell脚本</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/supervisor/">supervisor</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tornado/">tornado</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unittest/">unittest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/函数装饰器/">函数装饰器</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单元测试/">单元测试</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/文件共享服务/">文件共享服务</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/文本处理/">文本处理</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/磁盘与文件系统/">磁盘与文件系统</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/缓存系统/">缓存系统</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/自动化运维/">自动化运维</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/负载均衡/">负载均衡</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/部署工具/">部署工具</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/防火墙/">防火墙</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高可用/">高可用</a><span class="tag-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/DNS/" style="font-size: 12px;">DNS</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/LAMP/" style="font-size: 18px;">LAMP</a> <a href="/tags/Linux基础/" style="font-size: 18.67px;">Linux基础</a> <a href="/tags/Linux开机启动/" style="font-size: 15.33px;">Linux开机启动</a> <a href="/tags/Linux进阶/" style="font-size: 14px;">Linux进阶</a> <a href="/tags/go语言入门/" style="font-size: 15.33px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql/" style="font-size: 12.67px;">mysql</a> <a href="/tags/mysql运维/" style="font-size: 19.33px;">mysql运维</a> <a href="/tags/python/" style="font-size: 10px;">python</a> <a href="/tags/shell脚本/" style="font-size: 14.67px;">shell脚本</a> <a href="/tags/supervisor/" style="font-size: 10px;">supervisor</a> <a href="/tags/tornado/" style="font-size: 10px;">tornado</a> <a href="/tags/unittest/" style="font-size: 10px;">unittest</a> <a href="/tags/wrapt/" style="font-size: 17.33px;">wrapt</a> <a href="/tags/函数装饰器/" style="font-size: 17.33px;">函数装饰器</a> <a href="/tags/单元测试/" style="font-size: 10px;">单元测试</a> <a href="/tags/数据密集型应用/" style="font-size: 12px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 20px;">数据结构与算法</a> <a href="/tags/文件共享服务/" style="font-size: 10px;">文件共享服务</a> <a href="/tags/文本处理/" style="font-size: 13.33px;">文本处理</a> <a href="/tags/磁盘与文件系统/" style="font-size: 12.67px;">磁盘与文件系统</a> <a href="/tags/缓存系统/" style="font-size: 13.33px;">缓存系统</a> <a href="/tags/自动化运维/" style="font-size: 16px;">自动化运维</a> <a href="/tags/负载均衡/" style="font-size: 16.67px;">负载均衡</a> <a href="/tags/部署工具/" style="font-size: 10.67px;">部署工具</a> <a href="/tags/防火墙/" style="font-size: 14px;">防火墙</a> <a href="/tags/高可用/" style="font-size: 11.33px;">高可用</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/03/09/mysql/MySQL实战45讲/09_自增值上线/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
