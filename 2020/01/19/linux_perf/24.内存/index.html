@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>4.4 内存 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux性能调优" />
+    
+    <meta name="description" content="本节我们来介绍内存相关的操作系统原理。">
+<meta name="keywords" content="Linux性能调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4.4 内存">
+<meta property="og:url" content="http://yoursite.com/2020/01/19/linux_perf/24.内存/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来介绍内存相关的操作系统原理。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/linux_pf/vritual_memory.png">
+<meta property="og:updated_time" content="2020-06-11T15:10:37.315Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="4.4 内存">
+<meta name="twitter:description" content="本节我们来介绍内存相关的操作系统原理。">
+<meta name="twitter:image" content="http://yoursite.com/images/linux_pf/vritual_memory.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_perf/24.内存" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        4.4 内存
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/01/19/linux_perf/24.内存/" class="article-date">
+            <time datetime="2020-01-18T16:00:00.000Z" itemprop="datePublished">2020-01-19</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>本节我们来介绍内存相关的操作系统原理。<br><a id="more"></a></p>
+<h2 id="1-内存相关的操作原理"><a href="#1-内存相关的操作原理" class="headerlink" title="1. 内存相关的操作原理"></a>1. 内存相关的操作原理</h2><p>我们从下面几个方面入手来讲解内存相关的操作系统原理:</p>
+<ol>
+<li>虚拟内存和页:</li>
+<li>内存架构</li>
+<li>内存管理</li>
+<li>进程地址空间</li>
+</ol>
+<p>最后我们会说一说内存检测的相关指标。</p>
+<h2 id="2-虚拟内存和换页"><a href="#2-虚拟内存和换页" class="headerlink" title="2. 虚拟内存和换页"></a>2. 虚拟内存和换页</h2><p><img src="/images/linux_pf/vritual_memory.png" alt="vritual_memory"><br>虚拟内存是一个抽象概念，它向每个进程和内核提供巨大的、线性的并且私有的地址空间。它简化了软件开发，把物理内存的分配交给操作系统管理。</p>
+<p>从上面的图可以看到进程的地址空间由虚拟内存子系统隐射到主内存和物理交换设备。当内存不够用时，内核需要按需在它们之间移动内存页，称为换页。</p>
+<p>换页分为两种类型:</p>
+<ol>
+<li>为交换共享文件系统的页缓存而产生的文件系统换页</li>
+<li>虚拟内存的匿名换页</li>
+</ol>
+<p><strong>文件系统换页</strong><br>文件系统换页由读写位于内存中的映射文件页引发。映射文件产生自:</p>
+<ol>
+<li>使用文件内存映射 mmap 的应用程序</li>
+<li>使用了页缓存的文件系统</li>
+</ol>
+<p>文件系统页可能因为在主存修改过(“脏的”)在换出时需要写回磁盘。如果没有修改过(干净的)因为磁盘已有副本，换页仅仅需要释放内存即可。</p>
+<p><strong>匿名换页</strong><br>匿名换页涉及进程私有数据: 堆和栈，要求数据保存至交换设备，因为这些数据磁盘没有副本。匿名页换入会给应用程序带来同步延时，因为必然发生读磁盘I/O，换出可能不会直接应用程序性能，因为换出是内核异步执行的。</p>
+<h3 id="2-1-按需换页"><a href="#2-1-按需换页" class="headerlink" title="2.1 按需换页"></a>2.1 按需换页</h3><p>按需换页将CPU创建和映射内存的开销延时到实际访问或需要，而不是初次分配内存时。访问一个未映射的内存页将产生一个缺页异常。</p>
+<p>虚拟内存页存在以下几种状态:</p>
+<ol>
+<li>未分配</li>
+<li>已分配，未映射</li>
+<li>已分配，已映射到主存</li>
+<li>已分配，已映射到物理交换空间(磁盘)</li>
+</ol>
+<p>从 2-&gt;3就是缺页，如果需要磁盘读写就是严重缺页异常，否则就是次缺页异常。从这几种状态出发可以定义另外两个内存时术语:</p>
+<ol>
+<li>常驻集合大小 RSS: 已分配的主存(状态3)大小</li>
+<li>虚拟内存大小: 所有已分配区域(2+3+4)</li>
+</ol>
+<p>除此之外我们还能经常看到另一个内存术语，共享内存 SHR，它标识与其他进程共同使用的共享内存、加载的动态链接库以及程序的代码段等所占用的内存。要注意共享内存 SHR 并不一定是共享的，比方说，程序的代码段、非共享的动态链接库，也都算在 SHR 里。当然，SHR 也包括了进程间真正共享的内存。</p>
+<h2 id="3-内存架构"><a href="#3-内存架构" class="headerlink" title="3.内存架构"></a>3.内存架构</h2><h3 id="3-1-UMA-架构"><a href="#3-1-UMA-架构" class="headerlink" title="3.1 UMA 架构"></a>3.1 UMA 架构</h3><p>内存硬件包括主存，总线，CPU 缓存和 MMU(内存管理单元)。下面展示了一个普通双处理器均匀访问模型(UMA) 系统的主存架构，又称对称多处理器架构 SMP</p>
+<p><img src="/images/linux_pf/UMA.png" alt="UMA"></p>
+<p>通过共享总线，每个 CPU 访问所有内存都有均匀的访问延时。</p>
+<h3 id="3-2-NUMA"><a href="#3-2-NUMA" class="headerlink" title="3.2 NUMA"></a>3.2 NUMA</h3><p>作为对照下面是一个双处理器非均匀访问模型 NUMA 系统，其中采用一个 CPU 互联(CPU 原理一章有提到)。</p>
+<p><img src="/images/linux_pf/NUMA.png" alt="NUMA"></p>
+<p>在 NUMA 架构下，多个处理器被划分到不同 Node 上，对主存的访问时间随着相对 CPU 的位置不同而变化。与 CPU 直接相连的内存称为本地内存。</p>
+<p>既然 NUMA 架构下的每个 Node 都有自己的本地内存空间，那么，在分析内存的使用时，我们也应该针对每个 Node 单独分析。</p>
+<p>可以通过 numactl 命令，来查看处理器在 Node 的分布情况，以及每个 Node 的内存使用情况。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">numactl --hardwar</div><div class="line">available: 1 nodes (0)</div><div class="line">node 0 cpus: 0         <span class="comment"># Node 0 包含的CPU编号</span></div><div class="line">node 0 size: 2047 MB   <span class="comment"># Node 0 内存大小</span></div><div class="line">node 0 free: 534 MB    <span class="comment"># Node 0 剩余内存大小</span></div><div class="line">node distances:</div><div class="line">node   0</div><div class="line">  0:  10</div></pre></td></tr></table></figure>
+<h2 id="4-内存管理"><a href="#4-内存管理" class="headerlink" title="4.内存管理"></a>4.内存管理</h2><p>内存管理软件包括虚拟内存系统，地址转换，换页。与性能相关的内容包括: </p>
+<ol>
+<li>内存释放</li>
+<li>内存分配</li>
+</ol>
+<h3 id="4-1-内存分配"><a href="#4-1-内存分配" class="headerlink" title="4.1 内存分配"></a>4.1 内存分配</h3><p>内存分配器用于内存分配。下图展示了分配器的作用，以及分配器的一些常见类型:</p>
+<ol>
+<li>slab: 内核级分配器</li>
+<li>libc: 用户级分配器的统称，包括 libmalloc, libumem, mumalloc</li>
+<li><strong>Page Allocator</strong>: Linux 用于管理页的伙伴分配器，在下面的空闲链表中会详细介绍</li>
+</ol>
+<p><img src="/images/linux_pf/allocators.png" alt="allocators"></p>
+<h4 id="slab"><a href="#slab" class="headerlink" title="slab"></a>slab</h4><p>内核 slab 分配器管理特定大小的对象缓存，使它们能被快速的回收利用，并且避免页分配开销。这对经常处理固定大小结构的内核内存分配来说特别有效。slab 大小固定，因此可以一次分配 M 个 slab 大小的缓存，也就避免了多次页分配的开销。大小固定类似于数组也便于回收利用。</p>
+<p>Linux 基于 slab 分配器提供了另一个分配器 SLUB。SLUB 为解决多个问题设计，特别是 slab 分配器的复杂性。包括移除对象队列，以及每 CPU 缓存，吧 NUMA 优化留个页分配器(Page Allocator) </p>
+<p>SLUB 现在是 Linux 的默认选项.</p>
+<h4 id="用户级分配器"><a href="#用户级分配器" class="headerlink" title="用户级分配器"></a>用户级分配器</h4><p>有多种用户级分配器，他们的性能也有所差异：</p>
+<ol>
+<li>libc: 不建议使用，性能较差，容易导致内存碎片化</li>
+<li>glibc: 分配基于分配请求的长度，是结合了多种分配策略的高效分配器<ul>
+<li>较小的分配来自内存集合，包括伙伴关系算法合并长度相似的单位</li>
+<li>较大的分配用树高效搜索空间</li>
+<li>非常大的分配转到 mmap()</li>
+</ul>
+</li>
+</ol>
+<h3 id="4-2-内存释放"><a href="#4-2-内存释放" class="headerlink" title="4.2 内存释放"></a>4.2 内存释放</h3><p><img src="/images/linux_pf/free_memory.png" alt="内存释放次序"></p>
+<p>内存过低时，系统会按照上面的高到低的次序释放内存:</p>
+<ol>
+<li>空闲链表: 未使用的页列表，能立即用于分配。通常每个 NUMA 的内存有一个</li>
+<li>回收: 内核释放可以轻易释放的内存</li>
+<li>换页: 对于 Linux 可以配置一个交换倾向的可调参数<code>/proc/sys/vm/swappiness</code>，范围为 0-100，默认值为 40。<ul>
+<li>值越高: 倾向于”换页”来释放内存，此处的换页指匿名换页</li>
+<li>值越低: 倾向于收回页缓存，即文件系统换页</li>
+<li>这就通过在保留热文件系统缓存的同时，换出冷应用程序的内存来提高系统的吞吐量</li>
+</ul>
+</li>
+<li>OOM: 搜索并杀死可牺牲的进程来释放内存。Linux 采用 select_band_process() 搜索后用 omm_kill_process() 杀死进程 </li>
+</ol>
+<h4 id="空闲链表"><a href="#空闲链表" class="headerlink" title="空闲链表"></a>空闲链表</h4><p><img src="/images/linux_pf/free_list_memory.png" alt="内存释放次序"></p>
+<p>类UNIX系统使用空闲链表和页面换出守护进程来管理内存，如上图所示:</p>
+<ol>
+<li>回收的内存添加到空闲链表表头以便将来分配</li>
+<li>通过页面换出守护进程释放的内存被加到表尾。kswapd 释放的内存包括有价值的文件系统缓存，这些文件系统缓存在未被重用前，如有对任一页的请求，它能被取回并从空闲链表中移除</li>
+</ol>
+<p>空闲链表通常由分配器消耗，如内核的 slab 分配器，以及用户空间的 libc malloc。上面的单个空闲链表是一种简化，具体实现依内核版本不同。</p>
+<p>Linux 使用<strong>伙伴分配器</strong>管理页。它以2的幂的方式向不同尺寸的内存分配器提供多个空闲链表。术语伙伴指找到相邻的空闲内存页以被同时分配。</p>
+<h4 id="回收"><a href="#回收" class="headerlink" title="回收"></a>回收</h4><p>回收大多是从内核的<strong>slab 分配器缓存</strong>释放内存。这些缓存包括 slab 大小的未使用内存块，以供重用。回收将这些内存交还给系统进行分配。</p>
+<p>文件系统部分我们会说到内核使用 Slab 机制来管理目录项和索引节点的缓存，/proc/sys/vm/vfs_cache_pressure 可以定义目录项缓存和索引节点缓存的回收倾向，默认值 100，数值越大，就表示越容易回收。</p>
+<h4 id="换页"><a href="#换页" class="headerlink" title="换页"></a>换页</h4><p>页面换出守护进程管理利用换页释放内存。当主存中可用的空闲链表低于阀值时，kswapd就会开始页扫描。页扫描仅会按需启动，通常平衡的系统不会经常做页扫描并且仅以短期爆发方式扫描。因此如果页扫描多于几秒通常是内存压力问题的预兆。</p>
+<p>Linux 的页面换出守护进程称作 kswapd()，如下图所示，它扫描非活动和活动内存的 LRU 页列表以释放页面。</p>
+<p><img src="/images/linux_pf/kswapd.png" alt="kswapd"></p>
+<p>页的活动列表和非活动列表采用 LRU 方式工作，kswapd 先扫描非活动列表，然后按需扫描活动列表。扫描会遍历列表检查页面，找出可以释放的页面:</p>
+<ol>
+<li>如果是干净的页直接释放</li>
+<li>如果是脏页会需要先将脏页写回磁盘然后释放。<br>kswapd 只有在系统严重不足才会选择脏页释放，其他情况下脏页由 flush 内核线程写回磁盘。脏页的管理详见文件系统的操作系统原理部分。</li>
+</ol>
+<p>kswapd 的激活基于空闲内存和两个提供滞后的阀值。如下图所示:</p>
+<ol>
+<li>一旦空闲内存达到最低阀值，kswapd 运行于同步模式，按需求释放内存页(内核排除在外)，此时只有内核才可以分配内存。</li>
+<li>最低阀值通过 vm.min_free_kbytes 设置，其他阀值基于此按比例放大两倍，三倍。</li>
+</ol>
+<p><img src="/images/linux_pf/kswapd_wakeup.png" alt="kswapd_wakeup"></p>
+<p>在 NUMA 架构下，三个内存阈值（页最小阈值、页低阈值和页高阈值），都可以通过内存域在 proc 文件系统中的接口 /proc/zoneinfo 来查看。</p>
+<p>某个 Node 内存不足时，系统可以从其他 Node 寻找空闲内存，也可以从本地内存中回收内存。具体选哪种模式，你可以通过 <code>/proc/sys/vm/zone_reclaim_mode</code> 来调整。它支持以下几个选项：</p>
+<ol>
+<li>默认的 0 ，也就是刚刚提到的模式，表示既可以从其他 Node 寻找空闲内存，也可以从本地回收内存。</li>
+<li>1、2、4 都表示只回收本地内存，2 表示可以回写脏数据回收内存，4 表示可以用 Swap 方式回收内存。</li>
+</ol>
+<h4 id="OOM"><a href="#OOM" class="headerlink" title="OOM"></a>OOM</h4><p>OOM（Out of Memory），其实是内核的一种保护机制。它监控进程的内存使用情况，并且使用 oom_score 为每个进程的内存使用情况进行评分：</p>
+<ol>
+<li>一个进程消耗的内存越大，oom_score 就越大</li>
+<li>一个进程运行占用的 CPU 越多，oom_score 就越小</li>
+</ol>
+<p>这样，进程的 oom_score 越大，代表消耗的内存越多，也就越容易被 OOM 杀死。</p>
+<p>可以通过 /proc 文件系统，手动设置进程的 oom_adj ，从而调整进程的 oom_score。oom_adj 的范围是 <code>[-17, 15]</code>，数值越大，表示进程越容易被 OOM 杀死；数值越小，表示进程越不容易被 OOM 杀死，其中 -17 表示禁止 OOM。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 调整 sshd 进程的 oom_adj</span></div><div class="line"><span class="built_in">echo</span> -16 &gt; /proc/$(pidof sshd)/oom_adj</div></pre></td></tr></table></figure>
+<h2 id="5-进程地址空间"><a href="#5-进程地址空间" class="headerlink" title="5. 进程地址空间"></a>5. 进程地址空间</h2><p><img src="/images/linux_pf/virtual_address.png" alt="virtual_address"></p>
+<p>用户空间内存，从低到高分别是五种不同的内存段。</p>
+<ol>
+<li>只读段，包括代码和常量等</li>
+<li>数据段，包括全局变量等</li>
+<li>堆，包括动态分配的内存，从低地址开始向上增长，堆上的内存是匿名页</li>
+<li>文件映射段，包括动态库、共享内存等，从高地址开始向下增长，</li>
+<li>栈，包括局部变量和函数调用的上下文等。栈的大小是固定的，一般是 8 MB</li>
+</ol>
+<p>堆和文件映射段的内存是动态分配的。比如使用 C 标准库</p>
+<ol>
+<li>malloc(): 可以在堆动态分配内存</li>
+<li>mmap(): 可以在文件映射段动态分配内存</li>
+</ol>
+<p>对于大多数分配器，free()  不会将内存换给操作系统，相反会保留它们以备将来分配。这意味着对会不停增长，进程的常驻内存只会增加，并且是正常现象。</p>
+<p>使用 mmap() 分配，使用 munmap() 释放的内存则会归还给操作系统。 </p>
+<h2 id="6-内存监测指标"><a href="#6-内存监测指标" class="headerlink" title="6. 内存监测指标"></a>6. 内存监测指标</h2><p>与内存相关的专业术语或者指标包括:</p>
+<ol>
+<li>内存统计: 包括各种内存的使用统计</li>
+<li>缓存命中率</li>
+<li>内存泄漏</li>
+<li>swap 的影响</li>
+</ol>
+<h3 id="6-1-内存统计"><a href="#6-1-内存统计" class="headerlink" title="6.1 内存统计"></a>6.1 内存统计</h3><p>各种内存的统计信息记录在下面几个文件中:</p>
+<ul>
+<li><code>/proc/meminfo</code>: 系统各内存统计</li>
+<li><code>/proc/zoneinfo</code>: 各 NUMA Node 内存以及页缓存统计信息</li>
+<li><code>/proc/pid</code>: 进程的各项统计信息</li>
+<li><code>/proc/buddyinfo</code>: 内核页面伙伴分配器统计信息</li>
+</ul>
+<h4 id="meminfo"><a href="#meminfo" class="headerlink" title="meminfo"></a>meminfo</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"> cat /proc/meminfo</div><div class="line">MemTotal:        2895444 kB</div><div class="line">MemFree:         2498868 kB</div><div class="line">MemAvailable:    2535384 kB</div><div class="line">Buffers:            3108 kB</div><div class="line">Cached:           165872 kB</div><div class="line">SwapCached:            0 kB</div><div class="line">Active:           115656 kB</div><div class="line">Inactive:         126632 kB</div><div class="line">Active(anon):      73964 kB</div><div class="line">Inactive(anon):     9412 kB</div><div class="line">Active(file):      41692 kB</div><div class="line">Inactive(file):   117220 kB</div><div class="line">Unevictable:           0 kB</div><div class="line">.....</div></pre></td></tr></table></figure>
+<p>其中:</p>
+<ol>
+<li>Buffers 是内核缓冲区用到的内存</li>
+<li>Cache 是内核页缓存</li>
+<li>Reclaimable 是 Slab 的一部分。Slab 包括两部分，其中的可回收部分，用 SReclaimable 记录；而不可回收部分，用 SUnreclaim 记录。</li>
+</ol>
+<p>执行 <code>man proc</code> 我们可以看到这些指标的准确含义，有关 Buffers 和 Cached 的区别我们在文件系统一节再详述。</p>
+<h4 id="zoneinfo"><a href="#zoneinfo" class="headerlink" title="zoneinfo"></a>zoneinfo</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"> head -15 /proc/zoneinfo</div><div class="line">Node 0, zone      DMA</div><div class="line">  pages free     1937</div><div class="line">        min      95</div><div class="line">        low      118</div><div class="line">        high     142</div><div class="line">        scanned  0</div><div class="line">        spanned  4095</div><div class="line">        present  3998</div><div class="line">        managed  3977</div><div class="line">    nr_free_pages 1937</div><div class="line">    nr_alloc_batch 24</div><div class="line">    nr_inactive_anon 26</div><div class="line">    nr_active_anon 158</div><div class="line">    nr_inactive_file 579</div><div class="line">    nr_active_file 1040</div><div class="line">....</div></pre></td></tr></table></figure>
+<p>其中:</p>
+<ol>
+<li>pages 处的 min、low、high，就是上面提到的三个内存阈值，而 free 是剩余内存页数，它跟后面的 nr_free_pages 相同。</li>
+<li>nr_zone_active_anon 和 nr_zone_inactive_anon，分别是活跃和非活跃的匿名页数。</li>
+<li>nr_zone_active_file 和 nr_zone_inactive_file，分别是活跃和非活跃的文件页数。</li>
+</ol>
+<p>后面我们看到的诸如 top，free，sar 命令输出的内存统计信息基本上都是基于这两个文件。</p>
+<h3 id="6-2-缓存命中率"><a href="#6-2-缓存命中率" class="headerlink" title="6.2 缓存命中率"></a>6.2 缓存命中率</h3><p>所谓缓存命中率，是指直接通过缓存获取数据的请求次数，占所有数据请求次数的百分比。</p>
+<p>不过 Linux 系统中并没有直接提供查询缓存命中率的接口。基于 Linux 内核的 eBPF（extended Berkeley Packet Filters）机制的软件包<a href="https://github.com/iovisor/bcc/blob/master/INSTALL.md#centos---source" target="_blank" rel="external">bcc</a> 提供了查询缓存命中率的工具:</p>
+<ol>
+<li>cachestat 提供了整个操作系统缓存的读写命中情况。</li>
+<li>cachetop 提供了每个进程的缓存命中情况。</li>
+</ol>
+<p>最后，Buffers 和 Cache 都是操作系统来管理的，应用程序并不能直接控制这些缓存的内容和生命周期。所以，在应用程序开发中，一般要用专门的缓存组件，来进一步提升性能。比如，程序内部可以使用堆或者栈明确声明内存空间，来存储需要缓存的数据。再或者，使用 Redis 这类外部缓存服务，优化数据的访问效率。</p>
+<h3 id="6-3-内存泄漏"><a href="#6-3-内存泄漏" class="headerlink" title="6.3 内存泄漏"></a>6.3 内存泄漏</h3><p>堆和文件映射段由应用程序自己来分配和管理，如果应用程序没有正确释放内存，就会造成内存泄漏。内存泄漏的危害这么大，因此我们需要有能检测内存泄漏的方法 – memleak。memleak 同样是位于 bcc工具包中的命令。</p>
+<h3 id="6-4-swap-影响"><a href="#6-4-swap-影响" class="headerlink" title="6.4 swap 影响"></a>6.4 swap 影响</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 间隔1秒输出一组数据</span></div><div class="line"><span class="comment"># -r表示显示内存使用情况，-S表示显示Swap使用情况</span></div><div class="line">$ sar -r -S 1</div><div class="line"></div><div class="line"><span class="comment"># -d 表示高亮变化的字段</span></div><div class="line"><span class="comment"># -A 表示仅显示Normal行以及之后的15行输出</span></div><div class="line">$ watch -d grep -A 15 <span class="string">'Normal'</span> /proc/zoneinfo</div><div class="line">Node 0, zone   Normal</div><div class="line">  pages free     21328</div><div class="line">        min      14896</div><div class="line">        low      18620</div><div class="line">        high     22344</div><div class="line">        spanned  1835008</div><div class="line">        present  1835008</div><div class="line">        managed  1796710</div><div class="line">        protection: (0, 0, 0, 0, 0)</div><div class="line">      nr_free_pages 21328</div><div class="line">      nr_zone_inactive_anon 79776</div><div class="line">      nr_zone_active_anon 206854</div><div class="line">      nr_zone_inactive_file 918561</div><div class="line">      nr_zone_active_file 496695</div><div class="line">      nr_zone_unevictable 2251</div><div class="line">      nr_zone_write_pending 0</div></pre></td></tr></table></figure>
+<p>像上面这样，使用后面讲到的诸如<code>sar, free, cachetop</code> 命令可以帮我找到Swap 发生的根源。但另一个问题是 Swap 到底影响了哪些应用程序呢？ 通过 /proc/pid/status 中的 VmSwap 字段，我们可以查到进程 Swap 换出的虚拟内存大小:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 按VmSwap使用量对进程排序，输出进程名称、进程ID以及SWAP用量</span></div><div class="line">$ <span class="keyword">for</span> file <span class="keyword">in</span> /proc/*/status ; <span class="keyword">do</span> awk <span class="string">'/VmSwap|Name|^Pid/&#123;printf $2 " " $3&#125;END&#123; print ""&#125;'</span> <span class="variable">$file</span>; <span class="keyword">done</span> | sort -k 3 -n -r | head</div><div class="line">dockerd 2226 10728 kB</div><div class="line">docker-containe 2251 8516 kB</div><div class="line">snapd 936 4020 kB</div><div class="line">networkd-dispat 911 836 kB</div><div class="line">polkitd 1004 44 kB</div></pre></td></tr></table></figure>
+<p>或者直接使用 <code>smem --sort swap</code>可以直接将进程按照swap使用量排序显示。</p>
+<p>最后要想从根本上降低 swap 带来的影响可以按需使用下面几种方法:</p>
+<ol>
+<li>禁止 Swap，现在服务器的内存足够大，所以除非有必要，禁用 Swap 就可以了。随着云计算的普及，大部分云平台中的虚拟机都默认禁止 Swap。</li>
+<li>如果实在需要用到 Swap，可以尝试降低 swappiness 的值，减少内存回收时 Swap 的使用倾向。</li>
+<li>响应延迟敏感的应用，如果它们可能在开启 Swap 的服务器中运行，你还可以用库函数 mlock() 或者 mlockall() 锁定内存，阻止它们的内存换出。</li>
+</ol>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/01/19/linux_perf/24.内存/" data-id="ckbjfxn00005k1ku9f3e6gcxl" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/01/20/linux_perf/25_内存监控命令/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            4.5 内存监测工具
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/01/18/linux_perf/23_CPU动态追踪/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">4.3 CPU 动态追踪</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/01/19/linux_perf/24.内存/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

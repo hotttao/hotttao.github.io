@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>4.5 内存监测工具 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux性能调优" />
+    
+    <meta name="description" content="本节我们来介绍内存相关的监测工具。">
+<meta name="keywords" content="Linux性能调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4.5 内存监测工具">
+<meta property="og:url" content="http://yoursite.com/2020/01/20/linux_perf/25_内存监控命令/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来介绍内存相关的监测工具。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/linux_pf/memory_quota.png">
+<meta property="og:updated_time" content="2020-06-10T15:50:10.457Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="4.5 内存监测工具">
+<meta name="twitter:description" content="本节我们来介绍内存相关的监测工具。">
+<meta name="twitter:image" content="http://yoursite.com/images/linux_pf/memory_quota.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_perf/25_内存监控命令" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        4.5 内存监测工具
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/01/20/linux_perf/25_内存监控命令/" class="article-date">
+            <time datetime="2020-01-19T16:00:00.000Z" itemprop="datePublished">2020-01-20</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>本节我们来介绍内存相关的监测工具。<br><a id="more"></a></p>
+<h2 id="1-命令总览"><a href="#1-命令总览" class="headerlink" title="1. 命令总览"></a>1. 命令总览</h2><p>下面的图片摘录自<a href="https://time.geekbang.org/column/intro/140" target="_blank" rel="external">极客时间专栏-Linux性能优化实战</a>，分别从下面 3 个方面总结了内存相关的性能检测工具:</p>
+<ol>
+<li>从内存的性能指标出发，根据指标找工具</li>
+<li>从工具出发，根据工具找指标</li>
+<li>根据工具指标之间的内在联系，掌握内存分析的套路</li>
+</ol>
+<p><img src="/images/linux_pf/memory_quota.png" alt="memory_quota"><br><img src="/images/linux_pf/memory_command.png" alt="memory_command"><br><img src="/images/linux_pf/memory_relation.png" alt="memory_relation"></p>
+<p>有些工具是通用的分析工具，后面会在单独的章节中详细说明他们的使用。本节会介绍如下内存专用的分析工具的使用</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Linux</th>
+<th style="text-align:left">Solaris</th>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">vmstat</td>
+<td style="text-align:left">vmstat</td>
+<td style="text-align:left">虚拟和物理内存统计信息</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">slabtop</td>
+<td style="text-align:left">::kmastat</td>
+<td style="text-align:left">内核块分配统计信息</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">pmap</td>
+<td style="text-align:left">pmap</td>
+<td style="text-align:left">进程地址空间统计信息</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">pcstat</td>
+<td style="text-align:left">pcstat</td>
+<td style="text-align:left">查看文件在内存中的缓存大小以及缓存比例</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">ps</td>
+<td style="text-align:left">ps</td>
+<td style="text-align:left">进程状态</td>
+<td style="text-align:left">通用命令，位于独立的一节中</td>
+</tr>
+<tr>
+<td style="text-align:left">top</td>
+<td style="text-align:left">prstat</td>
+<td style="text-align:left">监控进程内存使用</td>
+<td style="text-align:left">通用命令，位于独立的一节中</td>
+</tr>
+<tr>
+<td style="text-align:left">sar</td>
+<td style="text-align:left">sar</td>
+<td style="text-align:left">内存，swap使用统计信息</td>
+<td style="text-align:left">通用命令，位于独立的一节中</td>
+</tr>
+<tr>
+<td style="text-align:left">Systemtap</td>
+<td style="text-align:left">Dtrace</td>
+<td style="text-align:left">动态追踪</td>
+<td style="text-align:left">通用命令，位于独立的一节中</td>
+</tr>
+</tbody>
+</table>
+<p>除此之外，还包括以下内容:</p>
+<ol>
+<li>内存调优</li>
+</ol>
+<h2 id="2-内存统计命令"><a href="#2-内存统计命令" class="headerlink" title="2. 内存统计命令"></a>2. 内存统计命令</h2><h3 id="2-1-vmstat"><a href="#2-1-vmstat" class="headerlink" title="2.1 vmstat"></a>2.1 vmstat</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">&gt; vmstat</div><div class="line">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----</div><div class="line"> r  b   swpd   free   buff  cache   si   so    bi    bo   <span class="keyword">in</span>   cs us sy id wa st  </div><div class="line"> 2  0      0 1077816   2116 620312    0    0    65    43   34   53  0  0 99  0  0</div><div class="line"><span class="comment"># 说明:</span></div><div class="line"><span class="comment"># 除了 r 列外，第一行是系统启动以来的总结信息</span></div><div class="line"></div><div class="line">&gt; vmstat -a</div><div class="line">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----</div><div class="line"> r  b   swpd   free  inact active   si   so    bi    bo   <span class="keyword">in</span>   cs us sy id wa st</div><div class="line"> 2  0      0 342188 472012 815924    0    0    68    84  160   72  9  1 90  0  0</div><div class="line"></div><div class="line">&gt; vmstat -s</div><div class="line">  1882152 K total memory</div><div class="line">   250252 K used memory</div><div class="line">   815892 K active memory</div><div class="line">   472012 K inactive memory</div><div class="line">   341924 K free memory</div><div class="line">      172 K buffer memory</div><div class="line">  1289804 K swap cache</div><div class="line">  2097148 K total swap</div><div class="line">        0 K used swap</div><div class="line">  2097148 K free swap</div><div class="line">    99051 non-nice user cpu ticks</div><div class="line">        0 nice user cpu ticks</div><div class="line">    12143 system cpu ticks</div><div class="line">   998690 idle cpu ticks</div><div class="line">      360 IO-wait cpu ticks</div><div class="line">        0 IRQ cpu ticks</div><div class="line">      358 softirq cpu ticks</div><div class="line">        0 stolen cpu ticks</div><div class="line">   758858 pages paged <span class="keyword">in</span></div><div class="line">   934798 pages paged out</div><div class="line">        0 pages swapped <span class="keyword">in</span></div><div class="line">        0 pages swapped out</div><div class="line">  1777012 interrupts</div><div class="line">   803881 CPU context switches</div><div class="line">1586602557 boot time</div><div class="line">    31172 forks</div></pre></td></tr></table></figure>
+<p>vmstat [t [n]]</p>
+<ul>
+<li>作用: 虚拟内存统计命令</li>
+<li>参数:<ul>
+<li>-t：采样间隔</li>
+<li>-n：采样次数，可选，默认值是1</li>
+<li>-S: -Sm 以MB 为单位显示结果</li>
+<li>-a: 输出非活动和活动页缓存的明细</li>
+<li>-s: 以列表显示内存统计信息</li>
+</ul>
+</li>
+<li>输出: <ul>
+<li>r: 可运行线程数，所有等待加上正在运行的线程数，不包括处于不可中断睡眠状态的线程</li>
+<li>cpu: <ul>
+<li>系统全局范围内的平均负载</li>
+<li>第一行统计的系统启动以来的平均负载 – 新版本可能不会显示</li>
+<li>其余行统计的是时间间隔周期内的平均负载</li>
+</ul>
+</li>
+<li>memory:<ul>
+<li>swpd: 交换出的内存量</li>
+<li>free: 空闲可用内存</li>
+<li>buff: 用于缓冲缓存的内存</li>
+<li>cache: 用于页缓存的内存</li>
+</ul>
+</li>
+<li>swap: <ul>
+<li>si: 换入的内存</li>
+<li>so: 换出的内存</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-2-slabtop"><a href="#2-2-slabtop" class="headerlink" title="2.2 slabtop"></a>2.2 slabtop</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">&gt; sudo slabtop -sc</div><div class="line"> Active / Total Objects (% used)    : 1079865 / 1085229 (99.5%)  <span class="comment"># slab 管理的对象数量</span></div><div class="line"> Active / Total Slabs (% used)      : 27647 / 27647 (100.0%)     <span class="comment"># Slab 数量</span></div><div class="line"> Active / Total Caches (% used)     : 69 / 97 (71.1%)            <span class="comment"># 缓存的 slab 数量</span></div><div class="line"> Active / Total Size (% used)       : 151423.96K / 153971.68K (98.3%) <span class="comment"># slab 管理的内存大小</span></div><div class="line"> Minimum / Average / Maximum Object : 0.01K / 0.14K / 8.00K</div><div class="line"></div><div class="line">  OBJS ACTIVE  USE OBJ SIZE  SLABS OBJ/SLAB CACHE SIZE NAME</div><div class="line"> 50440  50440 100%    0.94K   6305        8     50440K xfs_inode</div><div class="line"> 81879  81087  99%    0.19K   3899       21     15596K dentry</div><div class="line"> 15392  15266  99%    1.00K   1924        8     15392K kmalloc-1024</div><div class="line">139737 139737 100%    0.10K   3583       39     14332K buffer_head</div><div class="line"> 16419  16419 100%    0.58K   1263       13     10104K inode_cache</div><div class="line"> 17262  17262 100%    0.57K   1233       14      9864K radix_tree_node</div></pre></td></tr></table></figure>
+<p>slabtop:</p>
+<ul>
+<li>作用: 内核内存信息统计，等同于 vmstat -m </li>
+<li>来源: slab 统计信息来自 /proc/slabinfo</li>
+<li>参数<ul>
+<li>-d n：每n秒更新一次显示的信息，默认是每3秒；</li>
+<li>-s S：指定排序标准进行排序；</li>
+<li>-o：显示一次后退出</li>
+<li>-V：显示版本</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-3-pmap"><a href="#2-3-pmap" class="headerlink" title="2.3 pmap"></a>2.3 pmap</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">&gt; sudo pmap -x 792|head</div><div class="line">792:   /usr/bin/python2 -Es /usr/sbin/firewalld --nofork --nopid</div><div class="line">Address           Kbytes     RSS   Dirty Mode  Mapping</div><div class="line">0000000000400000       4       4       0 r-x-- python2.7</div><div class="line">0000000000600000       4       4       4 r---- python2.7</div><div class="line">0000000000601000       4       4       4 rw--- python2.7</div><div class="line">00000000017b4000    8800    8684    8684 rw---   [ anon ]</div><div class="line">....</div><div class="line"></div><div class="line">&gt; sudo pmap -d 792 |head</div><div class="line">792:   /usr/bin/python2 -Es /usr/sbin/firewalld --nofork --nopid</div><div class="line">Address           Kbytes Mode  Offset           Device    Mapping</div><div class="line">0000000000400000       4 r-x-- 0000000000000000 0fd:00000 python2.7</div><div class="line">0000000000600000       4 r---- 0000000000000000 0fd:00000 python2.7</div><div class="line">0000000000601000       4 rw--- 0000000000001000 0fd:00000 python2.7</div><div class="line">00000000017b4000    8800 rw--- 0000000000000000 000:00000   [ anon ]</div><div class="line">00007fa0ac000000     132 rw--- 0000000000000000 000:00000   [ anon ]</div><div class="line">.....</div><div class="line">mapped: 359028K    writeable/private: 30856K    shared: 36K</div></pre></td></tr></table></figure>
+<p>pmap  PID</p>
+<ul>
+<li>作用: 列出进程的内存映射，显示它们的大小，权限和映射对象</li>
+<li>参数:<ul>
+<li>-x：显示扩展格式；</li>
+<li>-d：显示设备格式；</li>
+<li>-q：不显示头尾行；</li>
+<li>-V：显示指定版本</li>
+</ul>
+</li>
+<li>输出:<ul>
+<li>pid -X<ul>
+<li>Address: 映射的起始地址</li>
+<li>Kbytes: 虚拟内存大小</li>
+<li>RSS: 主存大小</li>
+<li>Dirty: 脏页大小</li>
+<li>Mode: 映像权限: r=read, w=write, x=execute, s=shared, p=private  (copy on write) </li>
+<li>Mapping: 映像的文件,[anon]为已分配内存 [stack]为程序堆栈</li>
+</ul>
+</li>
+<li>pid -d<ul>
+<li>Offset: 文件偏移</li>
+<li>Device: 设备名</li>
+<li>mapped: 进程映射的虚拟地址空间大小，也就是该进程预先分配的虚拟内存大小，即ps出的vsz </li>
+<li>writeable/private: 进程所占用的私有地址空间大小，也就是该进程实际使用的内存大小   </li>
+<li>shared: 表示进程和其他进程共享的内存大小</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-4-pcstat"><a href="#2-4-pcstat" class="headerlink" title="2.4 pcstat"></a>2.4 pcstat</h3><p>pcstat 是一个基于 Go 语言开发的工具，所以安装它之前，首先需要<a href="https://rainbowmango.gitbook.io/go/chapter11/1.1-install" target="_blank" rel="external">安装 Go 语言</a>。由于不可描述的原因，go 包的安装可能会遇到问题，建议像下面这样设置一下代理后在安装:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># go 安装</span></div><div class="line"><span class="built_in">cd</span> /usr/<span class="built_in">local</span></div><div class="line">wget https://dl.google.com/go/go1.14.4.linux-amd64.tar.gz</div><div class="line">tar -C /usr/<span class="built_in">local</span> -xzf go1.14.4.linux-amd64.tar.gz</div><div class="line"><span class="built_in">echo</span> <span class="string">'export PATH=$PATH:/usr/local/go/bin'</span> &gt; /etc/profile.d/go.sh</div><div class="line"></div><div class="line"><span class="comment"># 设置代理 https://goproxy.io/zh/</span></div><div class="line">go env -w GO111MODULE=on</div><div class="line">go env -w GOPROXY=https://goproxy.io,direct</div><div class="line"></div><div class="line"><span class="comment"># 安装 pcstat</span></div><div class="line">go get golang.org/x/sys/unix</div><div class="line">go get github.com/tobert/pcstat/pcstat</div></pre></td></tr></table></figure>
+<p><code>pcstat</code></p>
+<ul>
+<li>作用: 查看文件在内存中的缓存大小以及缓存比例</li>
+<li>参数:</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">$ pcstat /bin/ls</div><div class="line">+---------+----------------+------------+-----------+---------+</div><div class="line">| Name    | Size (bytes)   | Pages      | Cached    | Percent |</div><div class="line">|---------+----------------+------------+-----------+---------|</div><div class="line">| /bin/ls | 133792         | 33         | 0         | 000.000 |</div><div class="line">+---------+----------------+------------+-----------+---------+</div></pre></td></tr></table></figure>
+<p>指标含义:</p>
+<ol>
+<li>Cached: /bin/ls 在缓存中的大小</li>
+<li>Percent: 缓存的百分比</li>
+</ol>
+<h3 id="2-5-smem"><a href="#2-5-smem" class="headerlink" title="2.5 smem"></a>2.5 smem</h3><h3 id="2-6-其他命令"><a href="#2-6-其他命令" class="headerlink" title="2.6 其他命令"></a>2.6 其他命令</h3><table>
+<thead>
+<tr>
+<th style="text-align:left">命令</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">dmesg</td>
+<td style="text-align:left">检查 OOM</td>
+</tr>
+<tr>
+<td style="text-align:left">valgrind</td>
+<td style="text-align:left">包含一个 memcheck 性能分析套件，可用于发现泄漏，<br>会有严重的系统开销</td>
+</tr>
+<tr>
+<td style="text-align:left">swapon</td>
+<td style="text-align:left">添加和观察swap分区</td>
+</tr>
+<tr>
+<td style="text-align:left">iostat</td>
+<td style="text-align:left">如果 swap 是物理磁盘或块，可用此命令观测系统是否在换页</td>
+</tr>
+<tr>
+<td style="text-align:left">/proc/zoneinfo</td>
+<td style="text-align:left">内存区域 NUMA 节点的统计信息<br>NUMA 非均匀访存模型</td>
+</tr>
+<tr>
+<td style="text-align:left">/proc/buddyinfo</td>
+<td style="text-align:left">内核页面伙伴分配器统计信息<br>伙伴分配器:Linux 的页面分配器</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-内存调优"><a href="#3-内存调优" class="headerlink" title="3. 内存调优"></a>3. 内存调优</h2><p>最重要的内存调优是保证应用程序保留在主存中，并且避免换页和交换经常发生。</p>
+<h3 id="3-1-可调参数"><a href="#3-1-可调参数" class="headerlink" title="3.1 可调参数"></a>3.1 可调参数</h3><p>Documention/sysctl/vm.txt 的内核源码文档介绍了多种内存可调参数。常用示例如下</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">参数</th>
+<th style="text-align:left">默认值</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">vm.dirty_background_ratio</td>
+<td style="text-align:left">10</td>
+<td style="text-align:left">触发pdflush后台回写的脏页百分比</td>
+</tr>
+<tr>
+<td style="text-align:left">vm.dirty_ratio</td>
+<td style="text-align:left">20</td>
+<td style="text-align:left">触发一个写入进程开始回写脏页比例</td>
+</tr>
+<tr>
+<td style="text-align:left">vm.dirty_expire_centisecs</td>
+<td style="text-align:left">3000</td>
+<td style="text-align:left">使用pdflush的脏存储器最小时间</td>
+</tr>
+<tr>
+<td style="text-align:left">vm.dirty_writeback_centisecs</td>
+<td style="text-align:left">5000</td>
+<td style="text-align:left">pdflush 活跃时间间隔，0为停用</td>
+</tr>
+<tr>
+<td style="text-align:left">vm.min_free_kbytes</td>
+<td style="text-align:left">dynamic</td>
+<td style="text-align:left">设置期望的空闲内存大小，dynamic为系统自动设置</td>
+</tr>
+<tr>
+<td style="text-align:left">vm.overcommit_memory</td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">0: 利用探索算法允许合理的过度使用<br>1: 一致过度使用<br>3: 不允许过度使用<br></td>
+</tr>
+<tr>
+<td style="text-align:left">vm.swappiness</td>
+<td style="text-align:left">60</td>
+<td style="text-align:left">相对于页面高速缓存回收更倾向于用交换释放内存的程度<br>高数值更倾向于交换应用程序而保留页缓存</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-2-配置大页面"><a href="#3-2-配置大页面" class="headerlink" title="3.2 配置大页面"></a>3.2 配置大页面</h3><p>更大的页面能通过提高 TLB 缓存命令率，来提升内存 IO 性能。现在处理器支持多个页面大小。设置大页面(巨页面)参考文档hugetlbpage.txt。关于大页面的使用详见文档</p>
+<h3 id="3-3-分配器"><a href="#3-3-分配器" class="headerlink" title="3.3 分配器"></a>3.3 分配器</h3><p>应用程序的用户级分配器可以在编译阶段选择，也可以在执行时用 LD_PRELOAD 环境变量设置。</p>
+<h3 id="3-4-资源控制"><a href="#3-4-资源控制" class="headerlink" title="3.4 资源控制"></a>3.4 资源控制</h3><p>主存限制和虚拟内存限制，可通过 ulimit 实现。Linux cgroup 内存子系统可提供多种附加控制:</p>
+<ol>
+<li>memory.memsw.limit_in_bytes: 允许的最大内存和交换空间</li>
+<li>memory.limit_in_bytes: 允许的最大用户内存，包括文件缓存</li>
+<li>memory.swappiness: 类似 vm.swappiness，作用于 cgroups</li>
+<li>memory.oom_control: 设置为 0，允许 OOM 应用于此 cgroup，1 不允许 </li>
+</ol>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/01/20/linux_perf/25_内存监控命令/" data-id="ckbjfxn06005o1ku95otcgf86" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/01/21/linux_perf/26_内存动态追踪/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            4.6 动态追踪
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/01/19/linux_perf/24.内存/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">4.4 内存</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/01/20/linux_perf/25_内存监控命令/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>6.1 案例-容器问题 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux性能调优" />
+    
+    <meta name="description" content="本节我们来学习Linux性能优化的第二个案例容器问题。来自极客时间专栏-Linux性能优化实战-46讲">
+<meta name="keywords" content="Linux性能调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="6.1 案例-容器问题">
+<meta property="og:url" content="http://yoursite.com/2020/02/14/linux_perf/51_容器问题/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来学习Linux性能优化的第二个案例容器问题。来自极客时间专栏-Linux性能优化实战-46讲">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-06-17T14:18:53.392Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="6.1 案例-容器问题">
+<meta name="twitter:description" content="本节我们来学习Linux性能优化的第二个案例容器问题。来自极客时间专栏-Linux性能优化实战-46讲">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_perf/51_容器问题" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        6.1 案例-容器问题
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/02/14/linux_perf/51_容器问题/" class="article-date">
+            <time datetime="2020-02-13T16:00:00.000Z" itemprop="datePublished">2020-02-14</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>本节我们来学习Linux性能优化的第二个案例容器问题。来自<a href="https://time.geekbang.org/column/article/84953" target="_blank" rel="external">极客时间专栏-Linux性能优化实战-46讲</a><br><a id="more"></a></p>
+<h2 id="1-容器问题简介"><a href="#1-容器问题简介" class="headerlink" title="1. 容器问题简介"></a>1. 容器问题简介</h2><p>容器封装了环境了依赖，给运维部署带来了非常大的遍历。但是任何技术都不是银弹。这些新技术，在带来诸多便捷功能之外，也带来了更高的复杂性，比如性能降低、架构复杂、排错困难等等。</p>
+<p>容器对应用程序的影响体现在以下几个方面:</p>
+<ol>
+<li>容器本身通过 cgroups 进行资源隔离，所以，在分析时要考虑 cgroups 对应用程序的影响。</li>
+<li>容器的文件系统、网络协议栈等跟主机隔离。虽然在容器外面，我们也可以分析容器的行为，不过有时候，进入容器的命名空间内部，可能更为方便。</li>
+<li>资源隔离导致的另一个问题是，很多动态追踪工具因为获取不到应用程序的符号链接文件，而我们通常也不会在容器内安装过多的性能排查工具，这样就导致了排查问题受阻</li>
+<li>容器的运行可能还会依赖于其他组件，比如各种网络插件（比如 CNI）、存储插件（比如 CSI）、设备插件（比如 GPU）等，让容器的性能分析更加复杂。如果你需要分析容器性能，别忘了考虑它们对性能的影响。</li>
+</ol>
+<h3 id="1-1-案例准备"><a href="#1-1-案例准备" class="headerlink" title="1.1 案例准备"></a>1.1 案例准备</h3><p>本节我们使用一个 tomcat 服务器作为实例，来看看容器对服务的影响。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 镜像准备</span></div><div class="line">git <span class="built_in">clone</span> https://github.com/feiskyer/linux-perf-examples.git</div><div class="line"><span class="built_in">cd</span> tomcat</div><div class="line"><span class="built_in">cd</span> nat</div><div class="line">sudo make build</div><div class="line"></div><div class="line"><span class="comment"># 2. 容器启动</span></div><div class="line">$ docker run --name tomcat --cpus 0.1 -m 512M -p 8080:8080 -itd feisky/tomcat:8</div></pre></td></tr></table></figure>
+<p>docker 命令参数:</p>
+<ul>
+<li>-m 512M: 限制容器内存为 512M</li>
+<li>–cpus 0.1: 限制容器的 CPU 使用率</li>
+</ul>
+<h3 id="1-2-问题发现"><a href="#1-2-问题发现" class="headerlink" title="1.2 问题发现"></a>1.2 问题发现</h3><p>容器启动后，我们去请求 tomcat 服务:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 请求tomcat 服务</span></div><div class="line">$ curl localhost:8080</div><div class="line">curl: (56) Recv failure: Connection reset by peer</div><div class="line"></div><div class="line"><span class="comment"># 2. 查看 tomcat 容器日志</span></div><div class="line">$ docker logs -f tomcat</div><div class="line">Using CATALINA_BASE:   /usr/<span class="built_in">local</span>/tomcat</div><div class="line">Using CATALINA_HOME:   /usr/<span class="built_in">local</span>/tomcat</div><div class="line">Using CATALINA_TMPDIR: /usr/<span class="built_in">local</span>/tomcat/temp</div><div class="line">Using JRE_HOME:        /docker-java-home/jre</div><div class="line">Using CLASSPATH:       /usr/<span class="built_in">local</span>/tomcat/bin/bootstrap.jar:/usr/<span class="built_in">local</span>/tomcat/bin/tomcat-juli.jar</div><div class="line"></div><div class="line"><span class="comment"># 3. 查看 tomcat 容器状态</span></div><div class="line">$ docker ps -a</div><div class="line">CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                            PORTS               NAMES</div><div class="line">0f2b3fcdd257        feisky/tomcat:8     <span class="string">"catalina.sh run"</span>   2 minutes ago       Exited (137) About a minute ago                       tomcat</div><div class="line"></div><div class="line"></div><div class="line"><span class="comment"># 显示容器状态，jq用来格式化json输出</span></div><div class="line">$ docker inspect tomcat -f <span class="string">'&#123;&#123;json .State&#125;&#125;'</span> | jq</div><div class="line">&#123;</div><div class="line">  <span class="string">"Status"</span>: <span class="string">"exited"</span>,</div><div class="line">  <span class="string">"Running"</span>: <span class="literal">false</span>,</div><div class="line">  <span class="string">"Paused"</span>: <span class="literal">false</span>,</div><div class="line">  <span class="string">"Restarting"</span>: <span class="literal">false</span>,</div><div class="line">  <span class="string">"OOMKilled"</span>: <span class="literal">true</span>,</div><div class="line">  <span class="string">"Dead"</span>: <span class="literal">false</span>,</div><div class="line">  <span class="string">"Pid"</span>: 0,</div><div class="line">  <span class="string">"ExitCode"</span>: 137,</div><div class="line">  <span class="string">"Error"</span>: <span class="string">""</span>,</div><div class="line">  ...</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>上面列示的命令是我们查看容器服务常用的命令。显然容器已经被 OOMKilled 了。问题是我们为 tomcat 分配了 512M 内存，大于 tomcat 应用所需的内存256M(容器内的 tomcat 程序只申请了一个 256M 的数组)，为什么容器会 OOMKilled 呢？</p>
+<h3 id="1-3-dmesg-查看-OOM-异常"><a href="#1-3-dmesg-查看-OOM-异常" class="headerlink" title="1.3 dmesg 查看 OOM 异常"></a>1.3 dmesg 查看 OOM 异常</h3><p>系统会把相关的 OOM 信息，记录到日志中，通过 dmesg 命令我们可以定位 OOM 的异常信息:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">$ dmesg</div><div class="line">[193038.106393] java invoked oom-killer: gfp_mask=0x14000c0(GFP_KERNEL), nodemask=(null), order=0, oom_score_adj=0</div><div class="line">[193038.106396] java cpuset=0f2b3fcdd2578165ea77266cdc7b1ad43e75877b0ac1889ecda30a78cb78bd53 mems_allowed=0</div><div class="line">[193038.106402] CPU: 0 PID: 27424 Comm: java Tainted: G  OE    4.15.0-1037 <span class="comment">#39-Ubuntu</span></div><div class="line">[193038.106404] Hardware name: Microsoft Corporation Virtual Machine/Virtual Machine, BIOS 090007  06/02/2017</div><div class="line">[193038.106405] Call Trace:</div><div class="line">[193038.106414]  dump_stack+0x63/0x89</div><div class="line">[193038.106419]  dump_header+0x71/0x285</div><div class="line">[193038.106422]  oom_kill_process+0x220/0x440</div><div class="line">[193038.106424]  out_of_memory+0x2d1/0x4f0</div><div class="line">[193038.106429]  mem_cgroup_out_of_memory+0x4b/0x80     <span class="comment"># 内存超 cgroups 限制</span></div><div class="line">[193038.106432]  mem_cgroup_oom_synchronize+0x2e8/0x320</div><div class="line">[193038.106435]  ? mem_cgroup_css_online+0x40/0x40</div><div class="line">[193038.106437]  pagefault_out_of_memory+0x36/0x7b</div><div class="line">[193038.106443]  mm_fault_error+0x90/0x180</div><div class="line">[193038.106445]  __do_page_fault+0x4a5/0x4d0</div><div class="line">[193038.106448]  do_page_fault+0x2e/0xe0</div><div class="line">[193038.106454]  ? page_fault+0x2f/0x50</div><div class="line">[193038.106456]  page_fault+0x45/0x50</div><div class="line">[193038.106459] RIP: 0033:0x7fa053e5a20d</div><div class="line">[193038.106460] RSP: 002b:00007fa0060159e8 EFLAGS: 00010206</div><div class="line">[193038.106462] RAX: 0000000000000000 RBX: 00007fa04c4b3000 RCX: 0000000009187440</div><div class="line">[193038.106463] RDX: 00000000943aa440 RSI: 0000000000000000 RDI: 000000009b223000</div><div class="line">[193038.106464] RBP: 00007fa006015a60 R08: 0000000002000002 R09: 00007fa053d0a8a1</div><div class="line">[193038.106465] R10: 00007fa04c018b80 R11: 0000000000000206 R12: 0000000100000768</div><div class="line">[193038.106466] R13: 00007fa04c4b3000 R14: 0000000100000768 R15: 0000000010000000</div><div class="line">[193038.106468] Task <span class="keyword">in</span> /docker/0f2b3fcdd2578165ea77266cdc7b1ad43e75877b0ac1889ecda30a78cb78bd53 killed as a result of <span class="built_in">limit</span> of /docker/0f2b3fcdd2578165ea77266cdc7b1ad43e75877b0ac1889ecda30a78cb78bd53</div><div class="line">[193038.106478] memory: usage 524288kB, <span class="built_in">limit</span> 524288kB, failcnt 77</div><div class="line">[193038.106480] memory+swap: usage 0kB, <span class="built_in">limit</span> 9007199254740988kB, failcnt 0</div><div class="line">[193038.106481] kmem: usage 3708kB, <span class="built_in">limit</span> 9007199254740988kB, failcnt 0</div><div class="line">[193038.106481] Memory cgroup stats <span class="keyword">for</span> /docker/0f2b3fcdd2578165ea77266cdc7b1ad43e75877b0ac1889ecda30a78cb78bd53: cache:0KB rss:520580KB rss_huge:450560KB shmem:0KB mapped_file:0KB dirty:0KB writeback:0KB inactive_anon:0KB active_anon:520580KB inactive_file:0KB active_file:0KB unevictable:0KB</div><div class="line">[193038.106494] [ pid ]   uid  tgid total_vm      rss pgtables_bytes swapents oom_score_adj name</div><div class="line">[193038.106571] [27281]     0 27281  1153302   134371  1466368        0             0 java</div><div class="line">[193038.106574] Memory cgroup out of memory: Kill process 27281 (java) score 1027 or sacrifice child</div><div class="line">[193038.148334] Killed process 27281 (java) total-vm:4613208kB, anon-rss:517316kB, file-rss:20168kB, shmem-rss:0kB</div><div class="line">[193039.607503] oom_reaper: reaped process 27281 (java), now anon-rss:0kB, file-rss:0kB, shmem-rss:0kB</div></pre></td></tr></table></figure>
+<p> total-vm:4613208kB, anon-rss:517316kB, file-rss:20168kB 表示总的虚拟内存，匿名页常驻内存和页缓存。为什么 Tomcat 会申请这么多的堆内存呢？</p>
+<h3 id="1-4-JVM-配置问题"><a href="#1-4-JVM-配置问题" class="headerlink" title="1.4 JVM 配置问题"></a>1.4 JVM 配置问题</h3><p> JVM 根据系统的内存总量，来自动管理堆内存，不明确配置的话，堆内存的默认限制是物理内存的四分之一。</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 重新启动容器</span></div><div class="line">$ docker rm -f tomcat</div><div class="line">$ docker run --name tomcat --cpus 0.1 -m 512M -p 8080:8080 -itd feisky/tomcat:8</div><div class="line"></div><div class="line"><span class="comment"># 查看堆内存，注意单位是字节</span></div><div class="line">$ docker <span class="built_in">exec</span> tomcat java -XX:+PrintFlagsFinal -version | grep HeapSize</div><div class="line">    uintx ErgoHeapSizeLimit                         = 0                                   &#123;product&#125;</div><div class="line">    uintx HeapSizePerGCThread                       = 87241520                            &#123;product&#125;</div><div class="line">    uintx InitialHeapSize                          := 132120576                           &#123;product&#125;</div><div class="line">    uintx LargePageHeapSizeThreshold                = 134217728                           &#123;product&#125;</div><div class="line">    uintx MaxHeapSize                              := 2092957696                          &#123;product&#125;</div></pre></td></tr></table></figure>
+<p> 可以看到，初始堆内存的大小（InitialHeapSize）是 126MB，而最大堆内存则是 1.95GB，这可比容器限制的 512 MB 大多了。</p>
+<p> 之所以会这么大，其实是因为，容器内部看不到 Docker 为它设置的内存限制。虽然我们限制了容器的最大内存 512M，但是，从容器内部看到的限制，却并不是 512M。</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">$ docker <span class="built_in">exec</span> tomcat free -m</div><div class="line">              total        used        free      shared  buff/cache   available</div><div class="line">Mem:           7977         521        1941           0        5514        7148</div><div class="line">Swap:             0           0           0</div></pre></td></tr></table></figure>
+<p>问题找到了，现在只要给 JVM 正确配置内存限制为 512M 就可以了。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 删除问题容器</span></div><div class="line">$ docker rm -f tomcat</div><div class="line"><span class="comment"># 运行新的容器</span></div><div class="line">$ docker run --name tomcat --cpus 0.1 -m 512M -e JAVA_OPTS=<span class="string">'-Xmx512m -Xms512m'</span> -p 8080:8080 -itd feisky/tomcat:8</div></pre></td></tr></table></figure>
+<p>在 Docker 容器中运行 Java 应用，一定要确保，在设置容器资源限制的同时，配置好 JVM 的资源选项（比如堆内存等）。当然，如果你可以升级 Java 版本，那么升级到 Java 10 ，就可以自动解决类似问题了。</p>
+<h3 id="1-5-CPU-限制问题"><a href="#1-5-CPU-限制问题" class="headerlink" title="1.5 CPU 限制问题"></a>1.5 CPU 限制问题</h3><p>现在我们重新测试，看看 tomcat 服务是否已经正常:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 请求 tomcat 服务</span></div><div class="line">$ <span class="keyword">for</span> ((i=0;i&lt;30;i++)); <span class="keyword">do</span> curl localhost:8080; sleep 1; <span class="keyword">done</span></div><div class="line">curl: (56) Recv failure: Connection reset by peer</div><div class="line">curl: (56) Recv failure: Connection reset by peer</div><div class="line">Hello, wolrd!</div><div class="line"></div><div class="line">Hello, wolrd!</div><div class="line"></div><div class="line">Hello, wolrd!</div><div class="line"></div><div class="line"><span class="comment"># 查看容器日志</span></div><div class="line">$ docker logs -f tomcat</div><div class="line">...</div><div class="line">18-Feb-2019 12:52:00.823 INFO [localhost-startStop-1] org.apache.catalina.startup.HostConfig.deployDirectory Deploying web application directory [/usr/<span class="built_in">local</span>/tomcat/webapps/manager]</div><div class="line">18-Feb-2019 12:52:01.422 INFO [localhost-startStop-1] org.apache.catalina.startup.HostConfig.deployDirectory Deployment of web application directory [/usr/<span class="built_in">local</span>/tomcat/webapps/manager] has finished <span class="keyword">in</span> [598] ms</div><div class="line">18-Feb-2019 12:52:01.920 INFO [main] org.apache.coyote.AbstractProtocol.start Starting ProtocolHandler [<span class="string">"http-nio-8080"</span>]</div><div class="line">18-Feb-2019 12:52:02.323 INFO [main] org.apache.coyote.AbstractProtocol.start Starting ProtocolHandler [<span class="string">"ajp-nio-8009"</span>]</div><div class="line">18-Feb-2019 12:52:02.523 INFO [main] org.apache.catalina.startup.Catalina.start Server startup <span class="keyword">in</span> 22798 ms</div></pre></td></tr></table></figure>
+<p>日志显示 tomcat 启动过程，居然需要 22 秒。那么 tomcat 启动过程到底慢在哪呢？top 应该是我们很自然想到的第一个命令，但是我们需要查看的仅仅是 tomcat 服务，所以我们可以使用 pidstat 命令。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 删除旧容器</span></div><div class="line">$ docker rm -f tomcat</div><div class="line"><span class="comment"># 运行新容器</span></div><div class="line">$ docker run --name tomcat --cpus 0.1 -m 512M -e JAVA_OPTS=<span class="string">'-Xmx512m -Xms512m'</span> -p 8080:8080 -itd feisky/tomcat:8</div><div class="line"><span class="comment"># 查询新容器中进程的Pid</span></div><div class="line">$ PID=$(docker inspect tomcat -f <span class="string">'&#123;&#123;.State.Pid&#125;&#125;'</span>)</div><div class="line"><span class="comment"># 执行 pidstat</span></div><div class="line">$ pidstat -t -p <span class="variable">$PID</span> 1</div><div class="line">12:59:28      UID      TGID       TID    %usr %system  %guest   %<span class="built_in">wait</span>    %CPU   CPU  Command</div><div class="line">12:59:29        0     29850         -   10.00    0.00    0.00    0.00   10.00     0  java</div><div class="line">12:59:29        0         -     29850    0.00    0.00    0.00    0.00    0.00     0  |__java</div><div class="line">12:59:29        0         -     29897    5.00    1.00    0.00   86.00    6.00     1  |__java</div><div class="line">...</div><div class="line">12:59:29        0         -     29905    3.00    0.00    0.00   97.00    3.00     0  |__java</div><div class="line">12:59:29        0         -     29906    2.00    0.00    0.00   49.00    2.00     1  |__java</div><div class="line">12:59:29        0         -     29908    0.00    0.00    0.00   45.00    0.00     0  |__java</div></pre></td></tr></table></figure>
+<p>输出显示等待运行的使用率（%wait）非常高，这说明，这些线程大部分时间都在等待调度，而不是真正的运行。原因很简单，因为我们设置了 <code>--cpus 0.1</code> 的限制。所以放开 CPU 限制即可解决 tomcat 启动慢的问题。</p>
+<p>在容器云的环境，我们通常都要预先评估应用程序的性能，然后据此设置容器的资源限制。没有资源限制，意味着容器可以占用整个系统的资源。这样，一旦任何应用程序发生异常，就可能拖垮整个环境。</p>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/02/14/linux_perf/51_容器问题/" data-id="ckbjfz6nk0001lwu9sr3pdpyo" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/03/01/mysql/MySQL实战45讲/01_mysql基础架构/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            1 MYSQL 基础架构
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/02/14/linux_perf/44_systemtap_lwt/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">5.4 systemtap-lwtools</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/02/14/linux_perf/51_容器问题/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

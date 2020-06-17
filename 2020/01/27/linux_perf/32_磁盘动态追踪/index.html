@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>4.12 磁盘动态追踪 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux性能调优" />
+    
+    <meta name="description" content="本节我们来介绍磁盘的动态追踪技术">
+<meta name="keywords" content="Linux性能调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4.12 磁盘动态追踪">
+<meta property="og:url" content="http://yoursite.com/2020/01/27/linux_perf/32_磁盘动态追踪/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来介绍磁盘的动态追踪技术">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-06-10T14:53:22.685Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="4.12 磁盘动态追踪">
+<meta name="twitter:description" content="本节我们来介绍磁盘的动态追踪技术">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_perf/32_磁盘动态追踪" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        4.12 磁盘动态追踪
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/01/27/linux_perf/32_磁盘动态追踪/" class="article-date">
+            <time datetime="2020-01-26T16:00:00.000Z" itemprop="datePublished">2020-01-27</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>本节我们来介绍磁盘的动态追踪技术<br><a id="more"></a></p>
+<h2 id="1-Systemtab-磁盘追踪"><a href="#1-Systemtab-磁盘追踪" class="headerlink" title="1. Systemtab 磁盘追踪"></a>1. Systemtab 磁盘追踪</h2><p>Dtrace/Systemtab 能从内核角度检查磁盘 I/O 时间，包括:</p>
+<ol>
+<li>块设备接口 I/O</li>
+<li>I/O 调度器事件</li>
+<li>目标驱动 I/O</li>
+<li>设备驱动 I/O</li>
+</ol>
+<h3 id="1-1-Dtrace"><a href="#1-1-Dtrace" class="headerlink" title="1.1 Dtrace"></a>1.1 Dtrace</h3><p>下面列出了用来跟踪磁盘 I/O 的Dtrace provider</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">层次</th>
+<th style="text-align:left">稳定 provider</th>
+<th style="text-align:left">不稳定 provider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">应用程序</td>
+<td style="text-align:left">取决于应用</td>
+<td style="text-align:left">pid</td>
+</tr>
+<tr>
+<td style="text-align:left">系统库</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">pid</td>
+</tr>
+<tr>
+<td style="text-align:left">系统调用</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">syscall</td>
+</tr>
+<tr>
+<td style="text-align:left">VFS</td>
+<td style="text-align:left">fsinfo</td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">文件系统</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">块设备接口</td>
+<td style="text-align:left">io</td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">目标驱动</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">设备驱动</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">fbt</td>
+</tr>
+</tbody>
+</table>
+<h4 id="io-provider"><a href="#io-provider" class="headerlink" title="io provider"></a>io provider</h4><p>io provider 使得外界可以从块设备几口的角度进行观察，以支持工作负载特征归纳和延时分析。其提供了如下的探测器:</p>
+<ol>
+<li>io:::start: 一个I/O请求被发到设备上</li>
+<li>io:::end: 一个 I/O请求在设备上完成(完成中断)</li>
+<li>io:::wait-start: 一个线程开始等待一个 I/O 请求</li>
+<li>io:::wait-down: 一个线程等完了一个 I/O 请求</li>
+</ol>
+<p>探测器有一些稳定的参数提供 I/O 的详细信息，如下所示:<br>|语法|作用|说明|<br>|:—|:—|:—|<br>|args[0]-&gt;b_count|I/O 大小(字节数)||<br>|args[0]-&gt;b_blkno|设备 I/O 偏移量(块)||<br>|args[0]-&gt;b_flags|位元标志位，包括表示读I/O的B_READ||<br>|args[0]-&gt;b_error|错误状态||<br>|args[0]-&gt;dev_statname|设备实例名+实例/小编号||<br>|args[0]-&gt;dev_pathname|设备路径名||<br>|args[0]-&gt;fi_pathname|文件系统名||<br>|args[0]-&gt;fi_fs|文件系统类型||</p>
+<p>I/O方向(读写) 可以使用表达式 <code>args[0]-&gt;b_flags &amp; B_READ ? &quot;read&quot;: &quot;write&quot;</code></p>
+<h3 id="1-2-Systemtap"><a href="#1-2-Systemtap" class="headerlink" title="1.2 Systemtap"></a>1.2 Systemtap</h3><p>Systemtap 提供了用于跟踪磁盘 I/O 的 ioblock.stp tapset，其包含了下面这些探针:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">DTrace</th>
+<th style="text-align:left">Systemtap</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">io:::start</td>
+<td style="text-align:left">ioblock.request</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">io:::done</td>
+<td style="text-align:left">ioblock.end</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ioblock-request"><a href="#ioblock-request" class="headerlink" title="ioblock.request"></a>ioblock.request</h4><p>ioblock.request 内置了下面的变量来提供 I/O 的详细信息。<br>|变量|内容|<br>|:—|:—|<br>|name      | probe point 名称|<br>|devname   | 设备名称|<br>|ino       | inode number of the mapped file|<br>|sector    | beginning sector for the entire bio|<br>|flags     | see below<br>BIO_UPTODATE    0       ok after I/O completion<br>BIO_RW_BLOCK    1       RW_AHEAD set, and read/write would block<br>BIO_EOF         2       out-out-bounds error<br>BIO_SEG_VALID   3       nr_hw_seg valid<br> BIO_CLONED      4       doesn’t own data<br>BIO_BOUNCED     5       bio is a bounce bio<br>BIO_USER_MAPPED 6       contains user pages<br>BIO_EOPNOTSUPP  7       not supported|<br>|rw        | binary trace for read/write request|<br>|vcnt      | bio vector count which represents number of array element (page, offset, length)<br> which make up this I/O request|<br>|idx       | offset into the bio vector array|<br>|phys_segments | number of segments in this bio after physical address coalescing is performed|<br>|hw_segments |   number of segments after physical and DMA remapping hardware <br>coalescing is performed|<br>|size      | total size in bytes|<br>|bdev      | target block device|<br>|bdev_contains | points to the device object which contains the partition <br>(when bio structure represents a partition)|<br>|p_start_sect |  points to the start sector of the partition structure of the device|</p>
+<h4 id="ioblock-end"><a href="#ioblock-end" class="headerlink" title="ioblock.end"></a>ioblock.end</h4><p>除了上面这些变量，ioblock.end 还提供了下面这些变量来提供I/O的结果<br>|变量|内容|<br>|:—|:—|<br>|bytes_done |number of bytes transferred|<br>|error|0 on succes|</p>
+<h2 id="2-磁盘跟踪示例"><a href="#2-磁盘跟踪示例" class="headerlink" title="2. 磁盘跟踪示例"></a>2. 磁盘跟踪示例</h2><p>下面的 Dtrace 脚本位于 <a href="https://github.com/opendtrace/toolkit/blob/master/Disk/seeksize.d" target="_blank" rel="external">https://github.com/opendtrace/toolkit/blob/master/Disk/seeksize.d</a></p>
+<h3 id="2-1-事件跟踪"><a href="#2-1-事件跟踪" class="headerlink" title="2.1 事件跟踪"></a>2.1 事件跟踪</h3><p>以下跟踪的是每一个磁盘I/O请求<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># dtrace:</span></div><div class="line">&gt; dtrace -n <span class="string">'io:::start &#123;printf("%d %s %d", pid, execname, args[0]-&gt;b_bcount);&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># stap</span></div><div class="line">&gt; stap -ve <span class="string">'probe ioblock.request &#123;printf("%d %s %d\n", pid(), execname(), size)&#125;'</span></div></pre></td></tr></table></figure></p>
+<h3 id="2-2-按照应用程序名汇总磁盘-I-O-大小"><a href="#2-2-按照应用程序名汇总磁盘-I-O-大小" class="headerlink" title="2.2 按照应用程序名汇总磁盘 I/O 大小"></a>2.2 按照应用程序名汇总磁盘 I/O 大小</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># dtrace:</span></div><div class="line">&gt; dtrace -n <span class="string">'io:::start &#123;@[execname]=quantize(arg[0]-&gt;b_bcount)&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># stap</span></div><div class="line">&gt; stap -ve <span class="string">'global s;probe ioblock.request &#123;s[execname()] &lt;&lt;&lt; size&#125;</span></div><div class="line"><span class="string">                     probe end &#123;foreach (k in s)&#123;printf("%s\n", k);print(@hist_log(s[k]))&#125;;&#125;'</span></div></pre></td></tr></table></figure>
+<h3 id="2-3-I-O-寻道汇总"><a href="#2-3-I-O-寻道汇总" class="headerlink" title="2.3 I/O 寻道汇总"></a>2.3 I/O 寻道汇总</h3><p>下面的脚本跟踪同一应用程序，同一设备的连续 I/O 之间寻道距离，按照进程输出直方图。</p>
+<h4 id="dtrace-脚本"><a href="#dtrace-脚本" class="headerlink" title="dtrace 脚本"></a>dtrace 脚本</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#!/usr/sbin/dtrace -s</span></div><div class="line">dtrace:::BEGIN</div><div class="line">&#123;</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"Tracing... Hit Ctrl-C to end.\n"</span>);</div><div class="line">&#125;</div><div class="line"></div><div class="line">self int last[dev_t];</div><div class="line"></div><div class="line">/*</div><div class="line"> * Process io start</div><div class="line"> */</div><div class="line">io:genunix::start</div><div class="line">/self-&gt;last[args[0]-&gt;b_edev] != 0/</div><div class="line">&#123;</div><div class="line">	/* calculate seek distance */</div><div class="line">	this-&gt;last = self-&gt;last[args[0]-&gt;b_edev];</div><div class="line">	this-&gt;dist = (int)(args[0]-&gt;b_blkno - this-&gt;last) &gt; 0 ?</div><div class="line">	    args[0]-&gt;b_blkno - this-&gt;last : this-&gt;last - args[0]-&gt;b_blkno;</div><div class="line"></div><div class="line">	/* store details */</div><div class="line">	@Size[pid, curpsinfo-&gt;pr_psargs] = quantize(this-&gt;dist);</div><div class="line">&#125;</div><div class="line"></div><div class="line">io:genunix::start</div><div class="line">&#123;</div><div class="line">	/* save last position of disk head */</div><div class="line">	self-&gt;last[args[0]-&gt;b_edev] = args[0]-&gt;b_blkno +</div><div class="line">	    args[0]-&gt;b_bcount / 512;</div><div class="line">&#125;</div><div class="line"></div><div class="line">/*</div><div class="line"> * Print final report</div><div class="line"> */</div><div class="line">dtrace:::END</div><div class="line">&#123;</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"\n%8s  %s\n"</span>, <span class="string">"PID"</span>, <span class="string">"CMD"</span>);</div><div class="line">	printa(<span class="string">"%8d  %S\n%@d\n"</span>, @Size);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="stap-脚本"><a href="#stap-脚本" class="headerlink" title="stap 脚本"></a>stap 脚本</h3><p>未完成</p>
+<h3 id="2-3-I-O-延时汇总"><a href="#2-3-I-O-延时汇总" class="headerlink" title="2.3 I/O 延时汇总"></a>2.3 I/O 延时汇总</h3><p>下面的脚本跟踪块I/O开始和结束的时间<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># dtrace</span></div><div class="line">&gt; dtrace -n <span class="string">'io:::start </span></div><div class="line"><span class="string">             &#123;start[arg0] = timestamp;&#125;</span></div><div class="line"><span class="string">             io:::done /start[arg0]/ </span></div><div class="line"><span class="string">             &#123;@["block I/O(ns)"] = quantize(timestamp - start[arg0]);start[arg0] = 0&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># stap</span></div><div class="line">&gt; stap -ve <span class="string">'global t,s; </span></div><div class="line"><span class="string">            probe ioblock.request </span></div><div class="line"><span class="string">            &#123;t[$bio] = gettimeofday_ns();&#125;</span></div><div class="line"><span class="string">            probe ioblock.end</span></div><div class="line"><span class="string">            &#123;if (t[$bio])</span></div><div class="line"><span class="string">                &#123;s &lt;&lt;&lt; gettimeofday_ns() - t[$bio];delete t[$bio];&#125;</span></div><div class="line"><span class="string">            &#125;</span></div><div class="line"><span class="string">           probe end&#123;print(@hist_log(s))&#125;'</span></div></pre></td></tr></table></figure></p>
+<h2 id="3-高级工具"><a href="#3-高级工具" class="headerlink" title="3.高级工具"></a>3.高级工具</h2><p>磁盘常用的高级跟踪脚本:</p>
+<ol>
+<li>DTrace: <a href="https://github.com/opendtrace/toolkit" target="_blank" rel="external">https://github.com/opendtrace/toolkit</a></li>
+<li>Systemp: <a href="https://sourceware.org/systemtap/SystemTap_Beginners_Guide/mainsect-disk.html" target="_blank" rel="external">https://sourceware.org/systemtap/SystemTap_Beginners_Guide/mainsect-disk.html</a></li>
+</ol>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/01/27/linux_perf/32_磁盘动态追踪/" data-id="ckbjfxn0j006c1ku98qf006sv" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/01/28/linux_perf/32_网络/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            4.13 网络
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/01/26/linux_perf/31_磁盘监测命令/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">4.11 磁盘监测命令</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/01/27/linux_perf/32_磁盘动态追踪/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>4.7 动态追踪 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux性能调优" />
+    
+    <meta name="description" content="本节我们来介绍文件系统相关的操作系统原理。文件系统性能比磁盘性能更加重要。文件系统通过缓存，缓冲以及异步I/O等手段来缓和了磁盘延时对应用程序的影响。">
+<meta name="keywords" content="Linux性能调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4.7 动态追踪">
+<meta property="og:url" content="http://yoursite.com/2020/01/22/linux_perf/27_文件系统/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来介绍文件系统相关的操作系统原理。文件系统性能比磁盘性能更加重要。文件系统通过缓存，缓冲以及异步I/O等手段来缓和了磁盘延时对应用程序的影响。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/linux_pf/io_stack.png">
+<meta property="og:updated_time" content="2020-06-11T14:24:46.288Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="4.7 动态追踪">
+<meta name="twitter:description" content="本节我们来介绍文件系统相关的操作系统原理。文件系统性能比磁盘性能更加重要。文件系统通过缓存，缓冲以及异步I/O等手段来缓和了磁盘延时对应用程序的影响。">
+<meta name="twitter:image" content="http://yoursite.com/images/linux_pf/io_stack.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_perf/27_文件系统" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        4.7 动态追踪
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/01/22/linux_perf/27_文件系统/" class="article-date">
+            <time datetime="2020-01-21T16:00:00.000Z" itemprop="datePublished">2020-01-22</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>本节我们来介绍文件系统相关的操作系统原理。文件系统性能比磁盘性能更加重要。文件系统通过缓存，缓冲以及异步I/O等手段来缓和了磁盘延时对应用程序的影响。<br><a id="more"></a></p>
+<h2 id="1-文件系统相关的操作原理"><a href="#1-文件系统相关的操作原理" class="headerlink" title="1. 文件系统相关的操作原理"></a>1. 文件系统相关的操作原理</h2><p>我们从下面几个方面入手来讲解文件系统相关的操作系统原理:</p>
+<ol>
+<li>文件系统I/O栈</li>
+<li>文件系统缓存</li>
+<li>I/O的多种方式</li>
+</ol>
+<p>最后我们会说一说文件系统检测的相关指标。</p>
+<h2 id="2-文件系统-I-O-栈"><a href="#2-文件系统-I-O-栈" class="headerlink" title="2. 文件系统 I/O 栈"></a>2. 文件系统 I/O 栈</h2><p>下面是文件系统I/O栈的一般模型，具体的模块和层次依赖于使用的操作系统。</p>
+<p><img src="/images/linux_pf/io_stack.png" alt="io_stack"></p>
+<ul>
+<li>Volume Manager: 卷管理器</li>
+<li>Block Device Interface: 块设备接口</li>
+<li>Host Bus Adaptor Driver: 主机总线适配器驱动</li>
+<li>Disk Devices: 磁盘设备 </li>
+</ul>
+<h3 id="2-1-VFS"><a href="#2-1-VFS" class="headerlink" title="2.1 VFS"></a>2.1 VFS</h3><p>虚拟文件系统 VFS 是一个文件系统类型作抽象的内核界面。VFS 接口让内核添加新的文件系统时更加简单。</p>
+<p><img src="/images/linux_pf/vfs.png" alt="vfs"></p>
+<p>VFS 接口可以作为测量文件系统性能的通用平台，能够利用操作系统提供的统计信息，静态及动态追踪技术。</p>
+<h2 id="3-文件系统缓存"><a href="#3-文件系统缓存" class="headerlink" title="3. 文件系统缓存"></a>3. 文件系统缓存</h2><p>UNIX 原本只有缓冲区高速缓存，如今 Linux 和 Solaris 都有多种缓存。</p>
+<h3 id="3-1-Solaris-的文件系统缓存"><a href="#3-1-Solaris-的文件系统缓存" class="headerlink" title="3.1 Solaris 的文件系统缓存"></a>3.1 Solaris 的文件系统缓存</h3><p>下图是基于 Solaris 系统的文件系统缓存的概览。</p>
+<p><img src="/images/linux_pf/files_system_cache.png" alt="files_system_cache"></p>
+<p>其中有三种缓存是文件系统里通用的，其他的都是每个文件系统特有的，这三种缓存包括:</p>
+<ol>
+<li>Old Buffer Cache: 旧式的缓冲区高速缓存</li>
+<li>page Cache: 页缓存</li>
+<li>DNLC: 目录名查找缓存</li>
+</ol>
+<h4 id="旧式的缓冲区高速缓存-buffer-cache"><a href="#旧式的缓冲区高速缓存-buffer-cache" class="headerlink" title="旧式的缓冲区高速缓存(buffer cache)"></a>旧式的缓冲区高速缓存(buffer cache)</h4><p>最初 UNIX 在块设备接口使用缓冲区高速缓存来缓存<strong>磁盘设备块</strong>。页缓存的加入带来了优化问题，比如:</p>
+<ol>
+<li>如何平衡二者之间的负载</li>
+<li>双重缓存和同步开销</li>
+</ol>
+<p>这些问题后来基本被 SunOS 中的统一缓冲区高速缓存解决了，方法是使用<strong>页缓存来存储缓冲区高速缓存</strong></p>
+<p>在 Solaris 旧式的缓冲区高速缓存依然存在，不过仅用于 UFS inode 和文件系统的元数据，这些数据通过它们的块号寻址，与文件无关。</p>
+<h4 id="页缓存"><a href="#页缓存" class="headerlink" title="页缓存"></a>页缓存</h4><p>页缓存就是我们在内存一章所说的文件系统页缓存。它缓存了虚拟内存页面映射过的文件系统页面。</p>
+<h4 id="DNLC"><a href="#DNLC" class="headerlink" title="DNLC"></a>DNLC</h4><p>DNLC 目录名查找缓存记录了目录项到 vnode 的映射关系。用于加速文件的查找。</p>
+<h3 id="3-2-Linux-的文件系统缓存"><a href="#3-2-Linux-的文件系统缓存" class="headerlink" title="3.2 Linux 的文件系统缓存"></a>3.2 Linux 的文件系统缓存</h3><p>与 Solaris 类似，Linux 也经历旧式的缓冲区高速缓存到统一缓冲区高速缓存的过程。方法也是类似的，即缓冲区高速缓存被存在了页缓存中。</p>
+<p>缓冲区高速缓存的功能仍在，用于缓存文件系统的元数据，提升了块设备I/O的性能。</p>
+<p><img src="/images/linux_pf/linux_file_cache.png" alt="linux_file_cache"></p>
+<h4 id="写回缓存"><a href="#写回缓存" class="headerlink" title="写回缓存"></a>写回缓存</h4><p>写回缓存的原理是当数据写入主存(页缓存)后，就认为写入已经结束并返回，之后再异步的把数据刷入磁盘。文件系统写入”脏页”的过程称为刷新，就是我们经常说的刷脏页。</p>
+<p>刷新的机制牺牲了可靠性，因为基于DRAM的主存是不可靠的，主机掉电写入的数据就会丢失。应用程序可能认为数据写入完成，但是实际上未被写入，甚至不完整写入。如果文件系统的元数据遭到破坏，可能无法加载，对业务造成严重的影响。</p>
+<p>为了平衡系统对于速度和可靠性的需求，文件系统默认采用<strong>写回缓存</strong>，但同时提供了同步写的选项绕过这个机制。</p>
+<h4 id="页缓存管理"><a href="#页缓存管理" class="headerlink" title="页缓存管理"></a>页缓存管理</h4><p>文件系统使用的内存脏页由内核线程写回到磁盘，现在这个写回线程为 flusher thread，线程名为 flush，每个设备分配一个线程。这样能平衡每个设备的负载，提高吞吐量。</p>
+<p>写脏页的时机包括:</p>
+<ol>
+<li>过了一段时间(30s)</li>
+<li>调用了 sync()，fsync(), msync() 等系统调用</li>
+<li>过多的脏页(dirty_ratio)</li>
+<li>页缓存没有可用的页面</li>
+</ol>
+<p>如果系统内存不足，另一个内核线程，页面换出守护进程kswapd() 会定位并安排把脏页面写入到磁盘上，腾出可重用的内存页面。</p>
+<h4 id="目录项缓存和-inode-缓存"><a href="#目录项缓存和-inode-缓存" class="headerlink" title="目录项缓存和 inode 缓存"></a>目录项缓存和 inode 缓存</h4><p>目录项缓存记录了从目录项到 VFS inode 的映射关系。inode 缓存缓存的对象是 VFS inode，每一个都描述了文件系统一个对象的属性。</p>
+<p>内核使用 Slab 机制，管理目录项和索引节点的缓存。通过 <code>/proc/slabinfo</code> 可以查看到各种 inode与目录项缓存的大小:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">$ cat /proc/slabinfo | grep -E <span class="string">'^#|dentry|inode'</span> </div><div class="line"><span class="comment"># name            &lt;active_objs&gt; &lt;num_objs&gt; &lt;objsize&gt; &lt;objperslab&gt; &lt;pagesperslab&gt; : tunables &lt;limit&gt; &lt;batchcount&gt; &lt;sharedfactor&gt; : slabdata &lt;active_slabs&gt; &lt;num_slabs&gt; &lt;sharedavail&gt; </span></div><div class="line">xfs_inode              0      0    960   17    4 : tunables    0    0    0 : slabdata      0      0      0 </div><div class="line">... </div><div class="line">ext4_inode_cache   32104  34590   1088   15    4 : tunables    0    0    0 : slabdata   2306   2306      0hugetlbfs_inode_cache     13     13    624   13    2 : tunables    0    0    0 : slabdata      1      1      0 </div><div class="line">sock_inode_cache    1190   1242    704   23    4 : tunables    0    0    0 : slabdata     54     54      0 </div><div class="line">shmem_inode_cache   1622   2139    712   23    4 : tunables    0    0    0 : slabdata     93     93      0 </div><div class="line">proc_inode_cache    3560   4080    680   12    2 : tunables    0    0    0 : slabdata    340    340      0 </div><div class="line">inode_cache        25172  25818    608   13    2 : tunables    0    0    0 : slabdata   1986   1986      0 </div><div class="line">dentry             76050 121296    192   21    1 : tunables    0    0    0 : slabdata   5776   5776      0</div></pre></td></tr></table></figure>
+<p>指标含义:</p>
+<ol>
+<li>inode_cache: VFS 索引节点缓存</li>
+<li>dentry 行表示目录项缓存</li>
+<li>其余的则是各种文件系统的索引节点缓存。</li>
+</ol>
+<h3 id="3-3-buffer-和-cache"><a href="#3-3-buffer-和-cache" class="headerlink" title="3.3 buffer 和 cache"></a>3.3 buffer 和 cache</h3><p>目前为止我们在两个地方提到了 buffer，cache:</p>
+<ol>
+<li>第一地方是页缓存，我们说页缓存统一了缓冲区高速缓存(buffer cache)。</li>
+<li>第二地方是内存一节我们提到 <code>/proc/meminfo</code> 文件记录了各种内存指标的统计信息，其中包括 Buffers 和 Cached</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">cat /proc/meminfo</div><div class="line">MemTotal:        2895444 kB</div><div class="line">MemFree:         2498868 kB</div><div class="line">MemAvailable:    2535384 kB</div><div class="line">Buffers:            3108 kB</div><div class="line">Cached:           165872 kB</div><div class="line">.....</div></pre></td></tr></table></figure>
+<p>那么问题是buffer, cache, 页缓存与Buffers, Cached 之间到底有什么关系。</p>
+<p><code>man proc</code> 可以看到 <code>/proc/meminfo</code> 文件内各个字段的准确含义:</p>
+<ol>
+<li>Buffers: <ul>
+<li>是对原始磁盘块的临时存储，也就是用来缓存磁盘的数据，通常不会特别大（20MB 左右）。</li>
+<li>通过 Buffer 内核就可以把分散的写集中起来，统一优化磁盘的写入，比如可以把多次小的写合并成单次大的写等等</li>
+</ul>
+</li>
+<li>Cached: 是从磁盘读取文件的页缓存，也就是用来缓存从文件读取的数据</li>
+</ol>
+<p>以前看到的文章说 Buffer 是对将要写入磁盘数据的缓存，Cache 是对从文件读取数据的缓存。但事实上:</p>
+<ol>
+<li>Buffers 既可以用作“将要写入磁盘数据的缓存”，也可以用作“从磁盘读取数据的缓存”。</li>
+<li>Cached 既可以用作“从文件读取数据的页缓存”，也可以用作“写文件的页缓存”</li>
+</ol>
+<p>简单来说， Buffers 是对磁盘数据的缓存，而 Cached 是文件数据的缓存，它们既会用在读请求中，也会用在写请求中。</p>
+<p>页缓存统一了缓冲区高速缓存(buffer cache) 但是并没有改变它的作用: </p>
+<ol>
+<li>缓冲区高速缓存(buffer cache)用来缓存<strong>磁盘设备块的写和读</strong>，</li>
+<li>被用作缓冲区高速缓存(buffer cache) 的页缓存保存的是磁盘设备块</li>
+<li>对磁盘的直接读写，数据以磁盘设备块，保存在用作缓冲区高速缓存(buffer cache) 的页缓存中</li>
+<li>对文件系统的读写，数据以文件内容，保存在页缓存中</li>
+<li>文件内容和磁盘设备块不会同时保存，因此才避免了双重缓存和同步开销</li>
+<li>Buffers 统计的是用作缓冲区高速缓存(buffer cache) 的页缓存大小</li>
+<li>Cached 统计的是文件系统的页缓存大小</li>
+</ol>
+<p>最后需要说明的是，free，top，vmstat，显示的 buffer/cache 依计算规则不同而有所不同，但是数据都来自<code>/proc/meminfo</code> 文件。</p>
+<h2 id="4-I-O-的多种方式"><a href="#4-I-O-的多种方式" class="headerlink" title="4. I/O 的多种方式"></a>4. I/O 的多种方式</h2><h3 id="4-1-顺序与随机I-O"><a href="#4-1-顺序与随机I-O" class="headerlink" title="4.1 顺序与随机I/O"></a>4.1 顺序与随机I/O</h3><p>按照I/O的文件偏移量，I/O分为:</p>
+<ol>
+<li>顺序 I/O: 顺序I/O里每个 I/O 都开始于上一个 I/O 结束的地址</li>
+<li>随机 I/O: 随机 I/O则找不出I/O之间的关系</li>
+</ol>
+<p>由于存储设备的性能特性，顺序I/O的速度要远远高于随机I/O。文件系统可以测量逻辑I/O的访问模式，从中识别出顺序I/O，然后通过预取或者预读来提高性能。</p>
+<h4 id="预取"><a href="#预取" class="headerlink" title="预取"></a>预取</h4><p>预取指当文件系统检测出当前为顺序读负载时，在应用程序请求前向磁盘发出读指令，以填充文件系统缓存。如果应用程序真的发出顺序读请求，就会命中缓存。</p>
+<p>预期一旦命中读性能将会有显著提升，但是如果预测不准，文件系统会发起应用程序不需要的I/O，不仅污染了缓存，也消耗了磁盘和I/O传输的资源。</p>
+<p>预取一般被认为是预读。Linux 的 readahead(2) 系统调用允许应用程序显示的预热文件系统缓存，此时二者就不同了。</p>
+<h3 id="4-2-同步写和非阻塞I-O"><a href="#4-2-同步写和非阻塞I-O" class="headerlink" title="4.2 同步写和非阻塞I/O"></a>4.2 同步写和非阻塞I/O</h3><p>在前面的文件系统缓存，我们提到了文件系统的写回缓存和 buffer 机制，为了控制文件写入过程，操作系统提供了同步写。同步用于指绕过写回缓存机制，写操作必须等待至所有的数据以及必要的文件系统元数据完整的写入到存储设备中。写操作支持如下标识:</p>
+<ol>
+<li>O_DSYNC: 表示，写操作必须要等文件数据写入磁盘后，才能返回；</li>
+<li>O_SYNC: 则是在 O_DSYNC 基础上，要求文件元数据也要写入磁盘后，才能返回。</li>
+</ol>
+<h3 id="4-3-裸I-O和直接I-O"><a href="#4-3-裸I-O和直接I-O" class="headerlink" title="4.3 裸I/O和直接I/O"></a>4.3 裸I/O和直接I/O</h3><p><img src="/images/linux_pf/raw_io.jpg" alt="raw_io"></p>
+<ol>
+<li>裸I/O: <ul>
+<li>如上图所示，绕过整个文件系统，直接发送磁盘地址</li>
+<li>数据库会使用裸I/O，因为它们能比文件系统更好地缓存自己的数据</li>
+</ul>
+</li>
+<li>直接I/O: <ul>
+<li>绕过缓存使用文件系统</li>
+<li>可用于备份文件系统，放置污染文件系统缓存<br>裸I/O和直接I/O还可以用于那些在进程堆里自建缓存的应用程序，避免双重缓存的问题。kafka 应该就是舍弃了堆缓存，直接使用了操作系统的页缓存。</li>
+</ul>
+</li>
+</ol>
+<h3 id="4-4-内存映射文件"><a href="#4-4-内存映射文件" class="headerlink" title="4.4 内存映射文件"></a>4.4 内存映射文件</h3><p>内存映射文件可以把文件映射到进程地址空间，并直接存取内存地址的方法来提高文件系统I/O性能。这样可以避免调用 read() 和 write() 存取文件数据时产生的系统调用和上下文切换开下。</p>
+<p>如果内核支持直接复制文件数据缓冲到进程进程地址空间，那么还能防止<strong>数据被复制两次</strong>。(It can also avoid<br>double copying of data, if the kernel supports direct copying of the file data buffer<br>to the process address space)<br>(数据为什么会复制两次: 意思是如果 mmap 映射的文件正在被另一进程写，它们是无法共享相同的页缓存的？)</p>
+<p>内存映射文件通过系统调用 mmap() 创建，通过 munmap() 销毁，映射可以通过 madvise() 调整。</p>
+<p>如果系统问题是由于磁盘设备高I/O延时所至，用 mmap() 消除小小的系统调用是无济于事的。</p>
+<p>在多处理器上使用内存映射文件的缺点在于同步每个 CPU MMU 的开销。尤其是跨 CPU 的映射删除调用(TLB 击落)。延时 TLB 更新可能把影响最小化，这取决于内核和映射项。(A disadvantage of using mappings on multiprocessor systems can be the overhead to keep each CPU MMU in sync, specifically the CPU cross calls to remove<br>mappings (TLB shootdowns). Depending on the kernel and mapping, these may be<br>minimized by delaying TLB updates (lazy shootdowns) [Vahalia 96])</p>
+<h3 id="4-5-逻辑I-O-与物理I-O"><a href="#4-5-逻辑I-O-与物理I-O" class="headerlink" title="4.5 逻辑I/O 与物理I/O"></a>4.5 逻辑I/O 与物理I/O</h3><ul>
+<li>逻辑I/O 指向文件系统发起的I/O</li>
+<li>物理I/O: 磁盘I/O<br>与应用程序I/O相比，磁盘I/O有时显得无关、间接、放大或者缩小。</li>
+</ul>
+<h2 id="6-文件系统监测指标"><a href="#6-文件系统监测指标" class="headerlink" title="6. 文件系统监测指标"></a>6. 文件系统监测指标</h2><p>与 CPU 相关的专业术语或者指标包括:</p>
+<ol>
+<li>文件系统延时</li>
+<li></li>
+</ol>
+<h3 id="6-1-文件系统延时"><a href="#6-1-文件系统延时" class="headerlink" title="6.1 文件系统延时"></a>6.1 文件系统延时</h3><p>文件系统延时指的是一个文件系统逻辑从开始到结束的时间，它包括消耗在文件系统，内核磁盘I/O子系统以及等待磁盘设备(物理I/O)的时间。</p>
+<p>文件系统延时是否会影响应用程序，取决于应用程序的 I/O 方式，同步I/O会有直接影响，非阻塞I/O或异步I/O则不会。文件系统一直以来未开放查看文件系统延时的接口。相反提供了磁盘设备级别的指标信息。但是多数情况下这些指标跟应用程序并无直接关系。原因同样是实际发生的物理I/O并不与应用程序的执行同步。</p>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/01/22/linux_perf/27_文件系统/" data-id="ckbjfxn0b005v1ku93rohsuga" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/01/23/linux_perf/28_文件系统监测命令/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            4.8 文件系统监测命令
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/01/21/linux_perf/26_内存动态追踪/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">4.6 动态追踪</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/01/22/linux_perf/27_文件系统/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

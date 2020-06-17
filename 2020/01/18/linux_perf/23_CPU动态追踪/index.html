@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>4.3 CPU 动态追踪 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Linux性能调优" />
+    
+    <meta name="description" content="本节我们来介绍 CPU 动态追踪技术，包括 perf，systemtap，dtrace">
+<meta name="keywords" content="Linux性能调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4.3 CPU 动态追踪">
+<meta property="og:url" content="http://yoursite.com/2020/01/18/linux_perf/23_CPU动态追踪/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来介绍 CPU 动态追踪技术，包括 perf，systemtap，dtrace">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-06-06T11:44:49.180Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="4.3 CPU 动态追踪">
+<meta name="twitter:description" content="本节我们来介绍 CPU 动态追踪技术，包括 perf，systemtap，dtrace">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/运维/">运维</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-linux_perf/23_CPU动态追踪" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        4.3 CPU 动态追踪
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/01/18/linux_perf/23_CPU动态追踪/" class="article-date">
+            <time datetime="2020-01-17T16:00:00.000Z" itemprop="datePublished">2020-01-18</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>本节我们来介绍 CPU 动态追踪技术，包括 perf，systemtap，dtrace<br><a id="more"></a></p>
+<h2 id="1-Systemtap-进行-CPU-分析"><a href="#1-Systemtap-进行-CPU-分析" class="headerlink" title="1. Systemtap 进行 CPU 分析"></a>1. Systemtap 进行 CPU 分析</h2><p>Systemtap 可以用来剖析用户级和内核级的 CPU 用量，也能跟踪</p>
+<ol>
+<li>函数执行</li>
+<li>CPU 交叉调用</li>
+<li>中断</li>
+<li>内核调度器</li>
+</ol>
+<p>这些功能支持负载特征分析、剖析、下钻分析和延时分析。</p>
+<h3 id="1-1-内核剖析"><a href="#1-1-内核剖析" class="headerlink" title="1.1 内核剖析"></a>1.1 内核剖析</h3><h4 id="Dtrace"><a href="#Dtrace" class="headerlink" title="Dtrace"></a>Dtrace</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># solaris</span></div><div class="line"><span class="comment"># 1. 以 997Hz 频率取样内核栈</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr0/ &#123; @[stack()] = count()&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 2. 以 997Hz 频率取样内核栈，仅输出最频繁的 10 个</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr0/ &#123; @[stack()] = count()&#125; END &#123; trunc(@, 10); &#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 3. 以 997Hz 频率取样内核栈，每个栈只取 5 个帧</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr0/ &#123; @[stack(5)] = count()&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 4. 以 997Hz 频率取样在 CPU 上运行的函数</span></div><div class="line">dtrace -n <span class="string">'profile-997 /arg0/ @[func(arg0)] = count()'</span></div><div class="line"></div><div class="line"><span class="comment"># 5. 以 997Hz 频率取样在 CPU 上运行的模块</span></div><div class="line">dtrace -n <span class="string">'profile-997 /arg0/ @[mod(arg0)] = count()'</span></div></pre></td></tr></table></figure>
+<h4 id="Systemtap"><a href="#Systemtap" class="headerlink" title="Systemtap"></a>Systemtap</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1.以 997Hz 频率取样内核栈</span></div><div class="line">stap -d kernel -ve <span class="string">'global s; probe timer.profile &#123; s[backtrace()] &lt;&lt;&lt; 1 &#125;</span></div><div class="line"><span class="string">                     probe end &#123;foreach (i in s+)&#123; print_stack(i);</span></div><div class="line"><span class="string">                                                   printf("\t%d\n", @count(s[i]));&#125;&#125;'</span></div><div class="line"><span class="comment"># 2. 以 997Hz 频率取样内核栈，仅输出最频繁的 10 个</span></div><div class="line">stap -d kernel -ve <span class="string">'global s; probe timer.hz(997) &#123; s[backtrace()] &lt;&lt;&lt; 1 &#125;</span></div><div class="line"><span class="string">                    probe end &#123; foreach (i in s- limit 10)</span></div><div class="line"><span class="string">                                &#123;print_stack(i); printf("\t%d\n", @count([s[i]]));&#125;</span></div><div class="line"><span class="string">                    &#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 4. 以 997Hz 频率取样在 CPU 上运行的函数 - 未确认</span></div><div class="line">stap -d kernel -ve <span class="string">'global s; probe timer.profile &#123; s[caller()] &lt;&lt;&lt; 1 &#125;</span></div><div class="line"><span class="string">                     probe end &#123;foreach (i in s+)&#123;printf("\t%s - %d\n", i, @count(s[i]));&#125;&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 5. 以 997Hz 频率取样在 CPU 上运行的模块 - 未确认</span></div><div class="line">stap -d kernel -ve <span class="string">'global s; probe timer.profile &#123; s[module_name()] &lt;&lt;&lt; 1 &#125;</span></div><div class="line"><span class="string">                     probe end &#123;foreach (i in s+)&#123;printf("\t%s - %d\n", i, @count(s[i]));&#125;&#125;'</span></div></pre></td></tr></table></figure>
+<h3 id="2-用户剖析"><a href="#2-用户剖析" class="headerlink" title="2. 用户剖析"></a>2. 用户剖析</h3><h4 id="Dtrace-1"><a href="#Dtrace-1" class="headerlink" title="Dtrace"></a>Dtrace</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># solaris</span></div><div class="line"><span class="comment"># 1. 以 997Hz 频率取样进程的用户栈</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr1 &amp;&amp; pid == 123/ &#123; @[ustack()] = count()&#125;'</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr1 &amp;&amp; execname == "sshd"/ &#123; @[ustack()] = count()&#125;'</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr1/ &#123; @[execname, ustack()] = count()&#125;'</span> <span class="comment"># 取样所有进程的用户栈</span></div><div class="line"></div><div class="line"><span class="comment"># 无 arg1 筛选，此时统计将包括用户栈被冻结的时间(一般是系统调用期间)</span></div><div class="line">dtrace -n <span class="string">'profile-997 /pid == 123/ &#123; @[ustack()] = count()&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 2. 以 997Hz 频率取样用户栈，仅输出最频繁的 10 个</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr1 &amp;&amp; pid == 123/ &#123; @[ustack()] = count()&#125; END &#123; trunc(@, 10); &#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 3. 以 997Hz 频率取样用户栈，每个栈只取 5 个帧</span></div><div class="line">dtrace -n <span class="string">'profile-997 /agr1 &amp;&amp; pid == 123/ &#123; @[ustack(5)] = count()&#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># 4. 以 997Hz 频率取样用户栈，仅输出在 CPU 上运行的函数名</span></div><div class="line">dtrace -n <span class="string">'profile-997 /arg1 &amp;&amp; pid == 123/ @[ufunc(arg1)] = count()'</span></div><div class="line"></div><div class="line"><span class="comment"># 5. 以 997Hz 频率取样用户栈，仅输出在 CPU 上运行的模块名</span></div><div class="line">dtrace -n <span class="string">'profile-997 /arg1 &amp;&amp; pid == 123/ @[umod(arg1)] = count()'</span></div><div class="line"></div><div class="line"><span class="comment"># 6.以 997Hz 频率取样用户进程的运行 CPU</span></div><div class="line">dtrace -n <span class="string">'profile-997 /pid == 123/ &#123;@[cpu] == count()&#125;'</span></div></pre></td></tr></table></figure>
+<h4 id="Systemtap-1"><a href="#Systemtap-1" class="headerlink" title="Systemtap"></a>Systemtap</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 未确认</span></div><div class="line">stap -ve <span class="string">'global s; probe timer.hz(97) &#123;if (execname() == "mysqld") &#123;s[ubacktrace()] &lt;&lt;&lt; 1 &#125;&#125;</span></div><div class="line"><span class="string">                probe end &#123; foreach (i in s- limit 10)</span></div><div class="line"><span class="string">                            &#123;print_ustack(i); printf("\t%d\n", @count(s[i]));&#125;</span></div><div class="line"><span class="string">                &#125;'</span></div></pre></td></tr></table></figure>
+<h3 id="3-函数跟踪"><a href="#3-函数跟踪" class="headerlink" title="3. 函数跟踪"></a>3. 函数跟踪</h3><p>统计函数的 CPU 时间<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Dtrace</span></div><div class="line">dtrace -n <span class="string">'fbt::zio_checksum_generate:entry &#123;self-&gt;v = vtimestamp;&#125;</span></div><div class="line"><span class="string">           fbt::zio_checksum_generate:return /self-&gt;v/ </span></div><div class="line"><span class="string">             &#123;@["ns"] = quantize(vtimestamp - self-&gt;v);self-&gt;v=0 &#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># Systemtap</span></div><div class="line">stap -ve <span class="string">'global s; probe kernel.function("sys_open").return &#123;s &lt;&lt;&lt; gettimeofday_ns() - @entry(gettimeofday_ns());&#125;</span></div><div class="line"><span class="string">                    probe end &#123;print(@hist_log(s))&#125;'</span></div></pre></td></tr></table></figure></p>
+<h3 id="4-CPU-交叉调用"><a href="#4-CPU-交叉调用" class="headerlink" title="4. CPU 交叉调用"></a>4. CPU 交叉调用</h3><p>打印CPU交叉调用以及这些调用的代码路径<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Dtrace</span></div><div class="line">dtrace -n <span class="string">'sysinfo:::xcalls &#123; @[stack()] = count(); &#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># Systemtap</span></div><div class="line">stap -d kernel -ve <span class="string">'global s;probe scheduler.migrate &#123;s[backtrace()] &lt;&lt;&lt; 1&#125;</span></div><div class="line"><span class="string">                    probe end &#123; foreach (i in s- limit 10)</span></div><div class="line"><span class="string">                              &#123;print_stack(i); printf("\t%d\n", @count([s[i]]));&#125;</span></div><div class="line"><span class="string">                    &#125;'</span></div></pre></td></tr></table></figure></p>
+<h3 id="5-中断"><a href="#5-中断" class="headerlink" title="5. 中断"></a>5. 中断</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Dtrace 通过 intrstat 命令</span></div><div class="line">intrstat 1</div><div class="line"></div><div class="line"><span class="comment"># Systemtap</span></div><div class="line"><span class="built_in">cd</span> /usr/share/systemtap/tapset/linux/</div><div class="line">vim irq.stp</div><div class="line">    probe irq_handler.exit = kernel.trace(<span class="string">"irq_handler_exit"</span>) ?</div><div class="line">        &#123;</div><div class="line">                irq = <span class="variable">$irq</span></div><div class="line">                // the tracepoint doesn<span class="string">'t have the struct definition, so we must @cast</span></div><div class="line"><span class="string">                action = &amp; @cast($action, "irqaction", "kernel&lt;linux/interrupt.h&gt;")</span></div><div class="line"><span class="string">                ret = $ret</span></div><div class="line"><span class="string">                handler = action-&gt;handler</span></div><div class="line"><span class="string">                flags = action-&gt;flags</span></div><div class="line"><span class="string">                flags_str = irqflags_str(flags)</span></div><div class="line"><span class="string">                dev_name = action-&gt;name</span></div><div class="line"><span class="string">                dev_id = action-&gt;dev_id</span></div><div class="line"><span class="string">                next_irqaction = action-&gt;next</span></div><div class="line"><span class="string">                dir = action-&gt;dir</span></div><div class="line"><span class="string">                thread_fn = action-&gt;thread_fn</span></div><div class="line"><span class="string">                thread = action-&gt;thread</span></div><div class="line"><span class="string">                thread_flags = action-&gt;thread_flags</span></div><div class="line"><span class="string">        &#125;</span></div><div class="line"><span class="string"></span></div><div class="line"><span class="string">stap -ve '</span>global s; probe irq_handler.exit &#123; s[dev_id] &lt;&lt;&lt; 1&#125;</div><div class="line">                    probe end &#123; foreach (i <span class="keyword">in</span> s+) &#123;<span class="built_in">printf</span>(<span class="string">"%s: %d\n"</span>, i, s[i])&#125;&#125;<span class="string">'</span></div></pre></td></tr></table></figure>
+<h3 id="6-调度器跟踪"><a href="#6-调度器跟踪" class="headerlink" title="6. 调度器跟踪"></a>6. 调度器跟踪</h3><h4 id="Dtrace-2"><a href="#Dtrace-2" class="headerlink" title="Dtrace"></a>Dtrace</h4><p>sched provider 提供了对内核 CPU 调度器的跟踪操作。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 跟踪 sshd 在 CPU 上的运行时间</span></div><div class="line">dtrace -n <span class="string">'sched::on-cpu /execname == "sshd"/ &#123;self-&gt;ts = timestamp;&#125;</span></div><div class="line"><span class="string">           sched::off-cpu / self-&gt;ts / &#123; @["ns"] = quantize(timestamp - self-&gt;ts);</span></div><div class="line"><span class="string">               self-&gt;ts = 0;</span></div><div class="line"><span class="string">           &#125;'</span></div></pre></td></tr></table></figure></p>
+<h5 id="Systemtap-2"><a href="#Systemtap-2" class="headerlink" title="Systemtap"></a>Systemtap</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 跟踪 sshd 在 CPU 上的运行时间</span></div><div class="line">stap -ve <span class="string">'global s, t; probe scheduler.cpu_on &#123; if (execname() == "sshd") &#123; t[tid()] = gettimeofday_ns(); &#125;&#125;</span></div><div class="line"><span class="string">                       probe scheduler.cpu_off &#123; if (t[tid()]) &#123;s &lt;&lt;&lt; gettimeofday_ns() - t[tid()];delete t[tid()]&#125;&#125;</span></div><div class="line"><span class="string">                       probe end&#123;print(@hist_log(s))&#125;'</span></div></pre></td></tr></table></figure>
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/01/18/linux_perf/23_CPU动态追踪/" data-id="ckbjfxmzw005h1ku9jxe4ho2o" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/01/19/linux_perf/24.内存/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            4.4 内存
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/01/17/linux_perf/22_CPU监测命令/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">4.2 CPU 监测工具</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="title">29 MYSQL 分区表</a></p>
+                            <p class="item-date"><time datetime="2020-03-28T16:00:00.000Z" itemprop="datePublished">2020-03-29</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/kill_failure.png)" alt="28 MySQL 连接管理" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/28/mysql/MySQL实战45讲/52_连接管理/" class="title">28 MySQL 连接管理</a></p>
+                            <p class="item-date"><time datetime="2020-03-27T16:00:00.000Z" itemprop="datePublished">2020-03-28</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/grant_connect.png)" alt="27 MYSQL flush privileges" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/27/mysql/MySQL实战45讲/51_grant_privileges/" class="title">27 MYSQL flush privileges</a></p>
+                            <p class="item-date"><time datetime="2020-03-26T16:00:00.000Z" itemprop="datePublished">2020-03-27</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2020 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/01/18/linux_perf/23_CPU动态追踪/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
