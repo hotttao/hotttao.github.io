@@ -20,12 +20,12 @@
 <meta property="og:site_name" content="宋涛的博客">
 <meta property="og:description" content="为了调试和追踪程序的运行过程，Linux 提供了众多的分析工具，本节我们先对它们做一个宏观概览。">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="http://yoursite.com/images/linux_pf/linux-probes.png">
-<meta property="og:updated_time" content="2020-05-30T05:33:35.494Z">
+<meta property="og:image" content="http://yoursite.com/images/linux_pf/perf_events_map.png">
+<meta property="og:updated_time" content="2020-06-18T15:54:49.811Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="1.2 Linux 性能调优概览">
 <meta name="twitter:description" content="为了调试和追踪程序的运行过程，Linux 提供了众多的分析工具，本节我们先对它们做一个宏观概览。">
-<meta name="twitter:image" content="http://yoursite.com/images/linux_pf/linux-probes.png">
+<meta name="twitter:image" content="http://yoursite.com/images/linux_pf/perf_events_map.png">
     
 
     
@@ -166,7 +166,7 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">37</span></a>
     </div>
 
             </div>
@@ -182,15 +182,26 @@
 <li>分析问题进程，找出其占用过量资源的原因。</li>
 </ol>
 <p>所谓追踪技术本质上就是获取<strong>操作系统记录</strong>中程序运行的各种信息，所以尽管工具多种多样，但本质上都是查询操作系统”数据”的工具。在了解这些工具之前，我们非常有必要先去看看操作系统都提供了哪些数据查询接口，即操作系统提供给我们的观测来源。</p>
-<h2 id="2-观测来源"><a href="#2-观测来源" class="headerlink" title="2. 观测来源"></a>2. 观测来源</h2><p>观测来源包括两个方面:</p>
+<h2 id="2-观测源"><a href="#2-观测源" class="headerlink" title="2. 观测源"></a>2. 观测源</h2><p><img src="/images/linux_pf/perf_events_map.png" alt="perf_events_map"><br>Linux 中的观测源被称为 event ，它是不同内核工具框架的统一接口，上面的图片说明了 event 来源:</p>
 <ol>
-<li>观测的内容: 操作系统会记录哪些信息</li>
-<li>观测接口: 如何获取这些信息</li>
+<li>Hardware Events: CPU性能监视计数器 PMCs</li>
+<li>Software Events: 这些是基于内核计数器的低级事件。例如，CPU迁移、主次缺页异常等等。</li>
+<li>Kernel Tracepoint Events: 硬编码在内核中的静态内核级的检测点，即静态探针</li>
+<li>User Statically-Defined Tracing (USDT): 这些是用户级程序和应用程序的静态跟踪点。</li>
+<li>Dynamic Tracing: 可以被放置在任何地方的动态探针。对于内核软件，它使用kprobes框架。对于用户级软件，uprobes。</li>
+<li>Timed Profiling: 以指定频率收集的快照。这通常用于CPU使用情况分析，其工作原理是周期性的产生时钟中断事件。</li>
 </ol>
-<h3 id="2-1-观测源"><a href="#2-1-观测源" class="headerlink" title="2.1 观测源"></a>2.1 观测源</h3><h4 id="PMU-CPU-性能计数器-和-内核计数器"><a href="#PMU-CPU-性能计数器-和-内核计数器" class="headerlink" title="PMU(CPU 性能计数器) 和 内核计数器"></a>PMU(CPU 性能计数器) 和 内核计数器</h4><p>CPU的PMU计数器是大部分CPU都有的功能。它们可以用来统计比如L1 Cache失效的次数，分支预测失败的次数等。PMU可以在这些计数器的计数超过一个特定的值的时候产生一个中断，这个中断，我们可以用和时钟一样的方法，来抽样判断系统中哪个函数发生了最多的Cache失效，分支预测失效等。</p>
-<p>除了 PMU 外，内核也维护了各种统计数据，称为计数器，包括 CPU migrations(处理器迁移次数), minor faults(soft page faults), major faults(hard page faults) 等等。</p>
-<p>我们把诸如 Cache 失效等硬件相关的事件称为 <strong>Hardware event</strong>，把诸如 minor faults 软件相关的事件称为 <strong>Software Events</strong>。PMU 和内核维护的计数器，通过 /proc 和 /sys 虚拟文件系统对外提供的。</p>
-<h4 id="和延时核算"><a href="#和延时核算" class="headerlink" title="和延时核算"></a>和延时核算</h4><p>如果开启了Linux 的CONFIG_TASK_DELAY_ACCT 选项，Linux 会跟踪每个任务的延时包括:</p>
+<p>内核维护了部分事件的计数器，通过 /proc 和 /sys 文件系统对外输出。</p>
+<ul>
+<li>/proc 是一个提供内核统计信息的文件系统接口，将内核和进程的统计数据用目录树的形式暴露给用户空间。</li>
+<li>/sys 最初设计用于提供设备驱动的统计信息，不过现在已经扩展到了提供所有信息的统计，/sys 同时也是调整内核参数的入口。</li>
+</ul>
+<p>我们也可以各种分析工具，使用抽样的方式收集这些事件发生时内核的上下文信息。</p>
+<h3 id="2-1-PMCs"><a href="#2-1-PMCs" class="headerlink" title="2.1 PMCs"></a>2.1 PMCs</h3><p>PMCs 又称 PMU 全称为硬件计数器，也叫做性能监视计数器(pmmc)或性能仪表计数器(PICs)。它监测低层次的处理器活动，例如，CPU周期，指令退役，内存失速周期，二级缓存丢失，等等。其中一些将作为硬件缓存事件列出。</p>
+<p>PMU计数器大部分CPU都有的功能。它可以在这些计数器的计数超过一个特定的值的时候产生一个中断，这个中断，我们可以用和时钟一样的方法，来抽样判断系统中哪个函数发生了最多的Cache失效，分支预测失效等。</p>
+<p>典型的处理器将以以下方式实现pmc:在可用的数千个pmc中，只能同时记录几个pmc。这是因为它们是处理器上的固定硬件资源(寄存器的有限数量)，并且被编程为开始计算所选事件。</p>
+<h3 id="2-2-Software-Events"><a href="#2-2-Software-Events" class="headerlink" title="2.2 Software Events"></a>2.2 Software Events</h3><p>除了 PMU 外，内核也维护了各种统计数据，称为计数器，包括 CPU migrations(处理器迁移次数), minor faults(soft page faults), major faults(hard page faults) 等等。这些数据一般都通过 /proc 文件系统对外输出。</p>
+<p>如果开启了Linux 的CONFIG_TASK_DELAY_ACCT 选项，Linux 会跟踪每个任务的延时包括:</p>
 <ol>
 <li>调度器延时: 等待 CPU 的延时</li>
 <li>块 I/O: 等待块 I/O 的延时</li>
@@ -198,24 +209,39 @@
 <li>内存回收: 等待内存回收的延时</li>
 </ol>
 <p>用户空间的工具通过 taskstats 可以读取这些统计数据，部分统计数据也会通过 /proc 对外提供。</p>
-<h4 id="静态探针"><a href="#静态探针" class="headerlink" title="静态探针"></a>静态探针</h4><p>静态探针 tracepoints 又称为事件，是散落在内核源代码中的一些 hook，开启后，它们便可以在特定的代码被运行到时被触发。可以用来跟踪特定的事件。</p>
+<h3 id="2-3-Kernel-Tracepoints"><a href="#2-3-Kernel-Tracepoints" class="headerlink" title="2.3 Kernel Tracepoints"></a>2.3 Kernel Tracepoints</h3><p>静态探针 tracepoints ，是散落在内核源代码中的一些 hook，开启后，它们便可以在特定的代码被运行到时被触发。可以用来跟踪特定的事件。</p>
 <p>如果你看过内核源码，经常会看到下面这种 trace_开头的函数调用：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> (likely(prev != next)) &#123;</div><div class="line">                rq-&gt;nr_switches++;</div><div class="line">                rq-&gt;curr = next;</div><div class="line">                ++*switch_count;</div><div class="line"></div><div class="line">                trace_sched_switch(preempt, prev, next);  # trace_ 开头的函数调用</div><div class="line">                rq = context_switch(rq, prev, next, cookie); <span class="comment">/* unlocks the rq */</span></div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line">                lockdep_unpin_lock(&amp;rq-&gt;lock, cookie);</div><div class="line">                raw_spin_unlock_irq(&amp;rq-&gt;lock);</div><div class="line">        &#125;</div></pre></td></tr></table></figure></p>
 <p>trace_sched_switch 就是一个事件，程序执行到这个地方就会把这个点（就是一个整数，而不是函数名），加上后面的三个参数（preempt, prev, next)都写到缓冲区中。ftrace 可以读取并保存这些信息，perf 可以在事件被触发时收到通知，dtrace 和 systemtap 可以在事件触发时执行指定的 “action”。</p>
-<h3 id="1-4-动态探针"><a href="#1-4-动态探针" class="headerlink" title="1.4 动态探针"></a>1.4 动态探针</h3><p><img src="/images/linux_pf/linux-probes.png" alt="probes"></p>
-<p>kprobes 和 uprobes 机制就是我们所说的动态探针。它们可以在指定的探测点(比如函数的某行, 函数的入口地址和出口地址, 或者内核的指定地址处)插入一组处理程序。</p>
-<p>静态探针是在编译之前就已经存在代码中的。动态探针是在编译之后软件运行时才加入的，本质上是<strong>内核地址空间的现场修改(live patching)</strong>，所采用的的技术会因处理器类型的不同而有所不同。这也是静态探针和动态探针的区别所在。</p>
-<p>kprobes 主要用于调试内核，uprobes 类似 kprobes, 不过主要用户空间的追踪调试。</p>
-<p>总结一下，上面我们提到了四个主要的信息来源:</p>
+<p>这些跟踪点被硬编码在内核的有用的位置上，以便更高层次的行为可以很容易地被跟踪。例如，系统调用、TCP事件、文件系统I/O、磁盘I/O等等。它们被分组到跟踪点库中;例如，“sock:”表示套接字事件，“sched:”表示CPU调度器事件。跟踪点的一个关键价值是它们应该有一个稳定的API，因此如果您编写的工具在一个内核版本上使用它们，那么它们也应该适用于以后的版本。</p>
+<p>Tracepoints 通常通过放置在 include/trace/events/*.XXX 中的宏添加到内核代码中来实现。</p>
+<p>下面是 Linux4.10 系统上对 tracepoint 库和数量的统计。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">&gt; perf list | awk -F: <span class="string">'/Tracepoint event/ &#123; lib[$1]++ &#125; END &#123;</span></div><div class="line"><span class="string">    for (l in lib) &#123; printf "  %-16.16s %d\n", l, lib[l] &#125; &#125;'</span> | sort | column</div><div class="line">    alarmtimer     4	    i2c            8	    page_isolation 1	    swiotlb        1</div><div class="line">    block          19	    iommu          7	    pagemap        2	    syscalls       614</div><div class="line">    btrfs          51	    irq            5	    power          22	    task           2</div><div class="line">    cgroup         9	    irq_vectors    22	    printk         1	    thermal        7</div><div class="line">    clk            14	    jbd2           16	    random         15	    thermal_power_ 2</div><div class="line">    cma            2	    kmem           12	    ras            4	    timer          13</div><div class="line">    compaction     14	    libata         6	    raw_syscalls   2	    tlb            1</div><div class="line">    cpuhp          3	    mce            1	    rcu            1	    udp            1</div><div class="line">    dma_fence      8	    mdio           1	    regmap         15	    vmscan         15</div><div class="line">    exceptions     2	    migrate        2	    regulator      7	    vsyscall       1</div><div class="line">    ext4           95	    mmc            2	    rpm            4	    workqueue      4</div><div class="line">    fib            3	    module         5	    <span class="built_in">sched</span>          24	    writeback      30</div><div class="line">    fib6           1	    mpx            5	    scsi           5	    x86_fpu        14</div><div class="line">    filelock       10	    msr            3	    sdt_node       1	    xen            35</div><div class="line">    filemap        2	    napi           1	    signal         2	    xfs            495</div><div class="line">    ftrace         1	    net            10	    skb            3	    xhci-hcd       9</div><div class="line">    gpio           2	    nmi            1	    sock           2</div><div class="line">    huge_memory    4	    oom            1	    spi            7</div></pre></td></tr></table></figure>
+<p>这些包括:</p>
 <ol>
-<li>Hardware event</li>
-<li>Software Events</li>
-<li>transpoint 静态探针</li>
-<li>kprobes/uprobes 提供查看内核调用栈和用户栈的动态探针</li>
+<li>block: 块设备I/O</li>
+<li>ext4: 文件系统操作</li>
+<li>kmem: 内核内存分配事件</li>
+<li>random: 内核随机数生成器事件</li>
+<li>sched: CPU调度器事件</li>
+<li>random: 系统调用的进入和返回</li>
+<li>task: 任务事件</li>
 </ol>
-<p>这四个信息来源就是各种 Linux 性能分析工具主要的信息来源。</p>
-<h3 id="2-2-观测接口"><a href="#2-2-观测接口" class="headerlink" title="2.2 观测接口"></a>2.2 观测接口</h3><h4 id="proc-和-sys"><a href="#proc-和-sys" class="headerlink" title="/proc 和 /sys"></a>/proc 和 /sys</h4><p>/proc 是一个提供内核统计信息的文件系统接口。将内核和进程的统计数据用目录树的形式暴露给用户空间。<br>/sys 最初设计用于提供设备驱动的统计信息，不过现在已经扩展到了提供所有信息的统计。/sys 同时也是调整内核参数的入口。</p>
-<p>基本上所有的 PMU 和内核计数器都是通过 /proc 和 /sys 对外输出</p>
-<h4 id="动态收集"><a href="#动态收集" class="headerlink" title="动态收集"></a>动态收集</h4><p>静态和动态探针的信息是动态产生的，不同的分析工具会有不同的收集和保存这些信息的方式，我们会在讲解不同分析工具时一一讲解。</p>
+<p>在每次内核升级之后，都有必要检查跟踪点列表，看看是否有新的跟踪点。添加它们是经过充分考虑的，包括评估有多少人会使用它们。需要实现一个平衡:我将包括尽可能少的探测，以充分满足常见需求，任何不寻常或不常见的情况都可以留给动态跟踪。</p>
+<p>有关使用跟踪点的示例，请参见<a href="http://www.brendangregg.com/perf.html#StaticKernelTracing" target="_blank" rel="external">静态内核跟踪</a>。</p>
+<h3 id="2-4-User-Level-Statically-Defined-Tracing-USDT"><a href="#2-4-User-Level-Statically-Defined-Tracing-USDT" class="headerlink" title="2.4 User-Level Statically Defined Tracing (USDT)"></a>2.4 User-Level Statically Defined Tracing (USDT)</h3><p>与内核跟踪点类似，这些跟踪点是硬编码的(通常通过将宏放置在应用程序源代码中)，并作为稳定的API呈现(事件名称和参数)。许多应用程序已经包括跟踪点，这些跟踪点是为了支持DTrace而添加的。然而，许多这些应用程序在Linux上默认情况下并不编译它们。通常需要使用—with-dtrace标志自己编译应用程序。</p>
+<p>例如，用这个版本的Node.js编译USDT事件:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">$ sudo apt-get install systemtap-sdt-dev       <span class="comment"># adds "dtrace", used by node build</span></div><div class="line">$ wget https://nodejs.org/dist/v4.4.1/node-v4.4.1.tar.gz</div><div class="line">$ tar xvf node-v4.4.1.tar.gz </div><div class="line">$ <span class="built_in">cd</span> node-v4.4.1</div><div class="line">$ ./configure --with-dtrace</div><div class="line">$ make -j 8</div></pre></td></tr></table></figure>
+<p>检查产生的二进制程序是否包含了 USDT 探测点:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ readelf -n node</div></pre></td></tr></table></figure>
+<p>有关使用USDT事件的示例，请参见<a href="http://www.brendangregg.com/perf.html#StaticUserTracing" target="_blank" rel="external">静态用户跟踪</a>。</p>
+<h3 id="2-5-Dynamic-Tracing"><a href="#2-5-Dynamic-Tracing" class="headerlink" title="2.5 Dynamic Tracing"></a>2.5 Dynamic Tracing</h3><p>跟踪点和动态跟踪之间的区别如下图所示，它说明了通用跟踪点库的覆盖范围:</p>
+<p><img src="/images/linux_pf/perf_tracepoints_1700.png" alt="perf_tracepoints_1700"></p>
+<p>静态探针跟动态探针之间的区别在于: 静态探针是在编译之前就已经存在代码中的。动态探针是在编译之后软件运行时才加入的，本质上是<strong>内核地址空间的现场修改(live patching)</strong>，所采用的的技术会因处理器类型的不同而有所不同。</p>
+<p>虽然动态跟踪可以看到所有东西，但它也是一个不稳定的接口，因为它检测的是原始代码。这意味着您开发的任何动态跟踪工具在内核补丁或更新之后可能会中断。首先尝试使用静态跟踪点，因为它们的接口应该更加稳定。它们也更容易使用和理解，因为它们是为跟踪最终用户而设计的。</p>
+<p>动态跟踪的一个好处是，它可以在活动的系统上启用，而不需要重新启动任何东西。您可以使用一个已经运行的内核或应用程序，然后开始动态检测，它(安全地)在内存中修补指令以添加检测。这意味着在您开始使用此功能之前，此功能的开销或税收为零。这一刻，您的二进制文件还在以全速运行，而下一刻，它又在运行一些您动态添加的额外的检测指令。当您使用完动态跟踪会话后，这些指令最终应该被删除。</p>
+<p>在使用动态跟踪和执行额外指令时的开销，与插装事件的频率乘以在每个插装上所做的工作有关。</p>
+<h4 id="kprobes-和-uprobes"><a href="#kprobes-和-uprobes" class="headerlink" title="kprobes 和 uprobes"></a>kprobes 和 uprobes</h4><p>kprobes 和 uprobes 机制就是我们所说的动态探针。它们可以在指定的探测点(比如函数的某行, 函数的入口地址和出口地址, 或者内核的指定地址处)插入一组处理程序。kprobes 主要用于调试内核，uprobes 类似 kprobes, 不过主要用户空间的追踪调试。它们作用的位置如下图所示:</p>
+<p><img src="/images/linux_pf/linux-probes.png" alt="probes"></p>
 <h2 id="3-观测工具"><a href="#3-观测工具" class="headerlink" title="3. 观测工具"></a>3. 观测工具</h2><p>按照使用的观测源的不同，我们可以将调优工具分为以下三种:</p>
 <ol>
 <li>计数器类</li>
@@ -230,8 +256,7 @@
 <li>execsnoop: 跟踪新进程(位于后面要讲的高级工具中)</li>
 </ol>
 <p>跟踪捕获数据会有 CPU 开销，还需要存储空间存放数据，会拖慢跟踪对象，因此在使用时需要注意工具自身对观测对象的影响。</p>
-<h3 id="3-3-剖析"><a href="#3-3-剖析" class="headerlink" title="3.3 剖析"></a>3.3 剖析</h3><p>剖析通过对目标收集采样或快照来归纳目标特征。跟踪是查看事件的详细数据，剖析可以理解为对事件的统计，以了解系统和程序当前运行的全貌。</p>
-<p>各种静态和动态追踪技术是完成跟踪和剖析的主要工具。也是我们接下来要介绍的难点内容。</p>
+<h3 id="3-3-剖析"><a href="#3-3-剖析" class="headerlink" title="3.3 剖析"></a>3.3 剖析</h3><p>剖析通过对目标收集采样或快照来归纳目标特征。跟踪是查看事件的详细数据，剖析可以理解为对事件的统计，以了解系统和程序当前运行的全貌。各种静态和动态追踪技术是完成跟踪和剖析的主要工具。也是我们接下来要介绍的难点内容。</p>
 <h2 id="4-静态和动态追踪技术"><a href="#4-静态和动态追踪技术" class="headerlink" title="4. 静态和动态追踪技术"></a>4. 静态和动态追踪技术</h2><p>每一个追踪技术都要解决:</p>
 <ol>
 <li>以什么方式获取信息 – 原理</li>
@@ -270,16 +295,6 @@
 <tr>
 <td style="text-align:left">eBPF</td>
 <td style="text-align:left"></td>
-<td style="text-align:left"></td>
-</tr>
-<tr>
-<td style="text-align:left">LTTng</td>
-<td style="text-align:left"></td>
-<td style="text-align:left"></td>
-</tr>
-<tr>
-<td style="text-align:left">ktap</td>
-<td style="text-align:left"></td>
 </tr>
 </tbody>
 </table>
@@ -295,7 +310,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2020/01/02/linux_perf/02_Linux追踪技术概览/" data-id="ckbjfxmz800461ku9dxdqivhb" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2020/01/02/linux_perf/02_Linux追踪技术概览/" data-id="ckbkz0wn6004cwcu924bdfsig" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -468,6 +483,26 @@
                     <li>
                         
                         <div class="item-thumbnail">
+                            <a href="/2020/06/18/brendangregg/02_perf_example/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/linux_pf/perf_tracepoints_1700.png)" alt="2. perf Examples" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2020/06/18/brendangregg/02_perf_example/" class="title">2. perf Examples</a></p>
+                            <p class="item-date"><time datetime="2020-06-17T16:00:00.000Z" itemprop="datePublished">2020-06-18</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
                             <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
     
     
@@ -545,26 +580,6 @@
                         </div>
                     </li>
                 
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
-    
-    
-        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
-                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
-                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
-                        </div>
-                    </li>
-                
             </ul>
         </div>
     </div>
@@ -574,7 +589,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">176</span></li></ul>
         </div>
     </div>
 
@@ -584,7 +599,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
         </div>
     </div>
 
@@ -594,7 +609,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">37</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
         </div>
     </div>
 
@@ -604,7 +619,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
         </div>
     </div>
 

@@ -21,7 +21,7 @@
 <meta property="og:description" content="perf 感觉像是一个完全版的 top，可以帮助我们看到操作系统运行的全貌。perf 的使用非常复杂，本文只是一个入门，推荐大家去阅读大神 Brendangregg 的文章perf Examples。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/linux_pf/perf_events_map.png">
-<meta property="og:updated_time" content="2020-06-01T13:46:07.194Z">
+<meta property="og:updated_time" content="2020-06-18T15:55:40.189Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="2.2 perf 的原理与使用">
 <meta name="twitter:description" content="perf 感觉像是一个完全版的 top，可以帮助我们看到操作系统运行的全貌。perf 的使用非常复杂，本文只是一个入门，推荐大家去阅读大神 Brendangregg 的文章perf Examples。">
@@ -166,7 +166,7 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">38</span></a>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">37</span></a>
     </div>
 
             </div>
@@ -175,20 +175,103 @@
         <div class="article-entry" itemprop="articleBody">
             <p>perf 感觉像是一个完全版的 top，可以帮助我们看到操作系统运行的全貌。perf 的使用非常复杂，本文只是一个入门，推荐大家去阅读大神 Brendangregg 的文章<a href="http://www.brendangregg.com/perf.html" target="_blank" rel="external">perf Examples</a>。</p>
 <a id="more"></a>
-<h2 id="1-perf-简介"><a href="#1-perf-简介" class="headerlink" title="1. perf 简介"></a>1. perf 简介</h2><p>perf的原理是这样的：每隔一个固定的时间，就在CPU上（每个核上都有）产生一个中断，在中断上看看，当前是哪个pid，哪个函数，然后给对应的pid和函数加一个统计值，这样，我们就知道CPU有百分几的时间在某个pid，或者某个函数上了。</p>
-<p>这种方式可以推广到各种事件，比如上一个博文我们介绍的ftrace的事件，你也可以在这个事件发生的时候上来冒个头，看看击中了谁，然后算出分布，我们就知道谁会引发特别多的那个事件了。</p>
+<h2 id="1-perf-简介"><a href="#1-perf-简介" class="headerlink" title="1. perf 简介"></a>1. perf 简介</h2><h3 id="1-1-perf-event"><a href="#1-1-perf-event" class="headerlink" title="1.1 perf event"></a>1.1 perf event</h3><p><img src="/images/linux_pf/perf_events_map.png" alt="perf_events_map"></p>
+<p>perf 的使用依赖我们前面所说的 <strong>event(事件)</strong>。event 是不同内核工具框架的统一接口，上面的图片说明了 event 来源:</p>
+<ol>
+<li>Hardware Events: CPU性能监视计数器 PMCs</li>
+<li>Software Events: 这些是基于内核计数器的低级事件。例如，CPU迁移、主次缺页异常等等。</li>
+<li>Kernel Tracepoint Events: 硬编码在内核中的静态内核级的检测点，即静态探针</li>
+<li>User Statically-Defined Tracing (USDT): 这些是用户级程序和应用程序的静态跟踪点。</li>
+<li>Dynamic Tracing: 可以被放置在任何地方的动态探针。对于内核软件，它使用kprobes框架。对于用户级软件，uprobes。</li>
+<li>Timed Profiling: 使用<code>perf -FHz</code>选项以指定频率收集的快照。这通常用于CPU使用情况分析，其工作原理是周期性的产生时钟中断事件。</li>
+</ol>
+<p>list子命令列出当前可用的事件，使用动态跟踪时，就是在扩展下面这个列表。这个列表中的 probe:tcp_sendmsg 探针就是动态插入 tcp_sendmsg() 的示例。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># perf list</span></div><div class="line">List of pre-defined events (to be used <span class="keyword">in</span> -e):</div><div class="line">  cpu-cycles OR cycles                               [Hardware event]</div><div class="line">  instructions                                       [Hardware event]</div><div class="line">  cache-references                                   [Hardware event]</div><div class="line">  cache-misses                                       [Hardware event]</div><div class="line">  branch-instructions OR branches                    [Hardware event]</div><div class="line">  branch-misses                                      [Hardware event]</div><div class="line">  bus-cycles                                         [Hardware event]</div><div class="line">  stalled-cycles-frontend OR idle-cycles-frontend    [Hardware event]</div><div class="line">  stalled-cycles-backend OR idle-cycles-backend      [Hardware event]</div><div class="line">  ref-cycles                                         [Hardware event]</div><div class="line">  cpu-clock                                          [Software event]</div><div class="line">  task-clock                                         [Software event]</div><div class="line">  page-faults OR faults                              [Software event]</div><div class="line">  L1-dcache-loads                                    [Hardware cache event]</div><div class="line">  L1-dcache-load-misses                              [Hardware cache event]</div><div class="line">  L1-dcache-stores                                   [Hardware cache event]</div><div class="line">[...]</div><div class="line">  rNNN                                               [Raw hardware event descriptor]</div><div class="line">  cpu/t1=v1[,t2=v2,t3 ...]/modifier                  [Raw hardware event descriptor]</div><div class="line">   (see <span class="string">'man perf-list'</span> on how to encode it)</div><div class="line">  mem:&lt;addr&gt;[:access]                                [Hardware breakpoint]</div><div class="line">  probe:tcp_sendmsg                                  [Tracepoint event]</div><div class="line">[...]</div><div class="line">  <span class="built_in">sched</span>:sched_process_exec                           [Tracepoint event]</div><div class="line">  <span class="built_in">sched</span>:sched_process_fork                           [Tracepoint event]</div><div class="line">  <span class="built_in">sched</span>:sched_process_wait                           [Tracepoint event]</div><div class="line">  <span class="built_in">sched</span>:sched_wait_task                              [Tracepoint event]</div><div class="line">  <span class="built_in">sched</span>:sched_process_exit                           [Tracepoint event]</div><div class="line">[...]</div><div class="line"><span class="comment"># perf list | wc -l</span></div><div class="line">     657</div></pre></td></tr></table></figure>
+<h4 id="采样事件"><a href="#采样事件" class="headerlink" title="采样事件"></a>采样事件</h4><p><code>perf -FHz</code> 是这样的：perf 每隔一个固定的时间，就在CPU上（每个核上都有）产生一个中断，在中断上看看，当前是哪个pid，哪个函数，然后给对应的pid和函数加一个统计值，这样，我们就知道CPU有百分几的时间在某个pid，或者某个函数上了。</p>
+<p>这种方式可以推广到各种事件，此时使用的不再是 <code>-FHz</code> 指定的频率，而是 <code>-e</code> 参数指定的各种 event。当指定的事件发生的时候，perf 就会上来冒个头，看看击中了谁，然后算出分布，我们就知道谁会引发特别多的那个事件了。</p>
 <p>所以本质上 perf 属于一种抽样统计。既然是抽样统计我们就要警惕抽样带来的抽样误差。每次看perf report的报告，首先要去注意一下总共收集了多少个点，如果你只有几十个点，你这个报告就可能很不可信了。</p>
-<h2 id="2-perf-的原理"><a href="#2-perf-的原理" class="headerlink" title="2. perf 的原理"></a>2. perf 的原理</h2><p><img src="/images/linux_pf/perf_events_map.png" alt="perf_events_map"></p>
-<p>perf 可以利用我们所说的所有四种 event，可以直接跟踪到整个系统的所有程序（而不仅仅是内核），所以perf通常是我们分析的第一步。上面是 perf 的架构图。</p>
-<h3 id="2-1-idle"><a href="#2-1-idle" class="headerlink" title="2.1 idle"></a>2.1 idle</h3><p>现代CPU基本上已经不用忙等的方式进入等待了，所以，如果CPU在idle，击中任务也会停止，所以，在Idle上是没有点的。看到Idle函数本身的点并非CPU Idle的点，而是准备进入Idle前后花的时间。所以，perf的统计不能用来让你分析CPU占用率的。ftrace和top等工具才能看CPU占用率，perf是不行的。</p>
-<h3 id="2-2-中断"><a href="#2-2-中断" class="headerlink" title="2.2 中断"></a>2.2 中断</h3><p>perf还有一个问题是对中断的要求，perf很多事件都依赖中断，但Linux内核是可以关中断的，关中断以后，你就无法击中关中断的点了，你的中断会被延迟到开中断的时候，所以，在这样的平台上，你会看到很多开中断之后的函数被密集击中。但它们是无辜的。但更糟糕的是，如果在关中断的时候，发生了多个事件，由于中断控制器会合并相同的中断，你就会失去多次事件，让你的统计发生错误。</p>
+<h3 id="1-2-perf-事件说明"><a href="#1-2-perf-事件说明" class="headerlink" title="1.2 perf 事件说明"></a>1.2 perf 事件说明</h3><h4 id="软件事件"><a href="#软件事件" class="headerlink" title="软件事件"></a>软件事件</h4><p>perf提供了少量固定的软件事件，这些也记录在手册页perf_event_open(2) 中。软件事件可能有一个默认的周期。这意味着当使用它们进行抽样时，是在对事件的子集进行抽样，而不是跟踪每个事件。你可以通过 perf record -vv 查看:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># perf record -vv -e context-switches /bin/true</span></div><div class="line">Using CPUID GenuineIntel-6-55</div><div class="line">------------------------------------------------------------</div><div class="line">perf_event_attr:</div><div class="line">  <span class="built_in">type</span>                             1</div><div class="line">  size                             112</div><div class="line">  config                           0x3</div><div class="line">  &#123; sample_period, sample_freq &#125;   4000</div><div class="line">  sample_type                      IP|TID|TIME|PERIOD</div><div class="line">  disabled                         1</div><div class="line">  inherit                          1</div><div class="line">  mmap                             1</div><div class="line">  comm                             1</div><div class="line">  freq                             1</div><div class="line">  enable_on_exec                   1</div><div class="line">[...]</div></pre></td></tr></table></figure>
+<p>有关这些字段的描述，请参见perf_event_open(2)手册页。这个默认的意思是内核调整采样率，以便它每秒捕获大约4000个上下文切换事件。如果你真的想把它们全部记录下来，请使用-c1:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># perf record -vv -e context-switches -c 1 /bin/true</span></div><div class="line">Using CPUID GenuineIntel-6-55</div><div class="line">------------------------------------------------------------</div><div class="line">perf_event_attr:</div><div class="line">  <span class="built_in">type</span>                             1</div><div class="line">  size                             112</div><div class="line">  config                           0x3</div><div class="line">  &#123; sample_period, sample_freq &#125;   1</div><div class="line">  sample_type                      IP|TID|TIME</div><div class="line">  disabled                         1</div><div class="line">  inherit                          1</div><div class="line">  mmap                             1</div><div class="line">  comm                             1</div><div class="line">  enable_on_exec                   1</div></pre></td></tr></table></figure>
+<p>首先使用perf stat检查事件的速率，这样您就可以估计将要捕获的数据量。在默认情况下对子集进行采样可能是一件好事，特别是对于上下文切换这样的高频率事件。许多其他事件(比如跟踪点)的默认值都是1。对于许多软件和硬件事件，您将遇到非1的缺省值。</p>
+<p>其他事件参见前文”Linux 性能调优概览”中的说明</p>
+<h3 id="1-3-perf-使用注意事项"><a href="#1-3-perf-使用注意事项" class="headerlink" title="1.3 perf 使用注意事项"></a>1.3 perf 使用注意事项</h3><h4 id="idle-进程"><a href="#idle-进程" class="headerlink" title="idle 进程"></a>idle 进程</h4><p>现代CPU基本上已经不用忙等的方式进入等待了，所以，如果CPU在idle，击中任务也会停止，所以，在Idle上是没有点的。看到Idle函数本身的点并非CPU Idle的点，而是准备进入Idle前后花的时间。所以，perf的统计不能用来让你分析CPU占用率的。ftrace和top等工具才能看CPU占用率，perf是不行的。</p>
+<h4 id="中断"><a href="#中断" class="headerlink" title="中断"></a>中断</h4><p>perf还有一个问题是对中断的要求，perf很多事件都依赖中断，但Linux内核是可以关中断的，关中断以后，你就无法击中关中断的点了，你的中断会被延迟到开中断的时候，所以，在这样的平台上，你会看到很多开中断之后的函数被密集击中。但它们是无辜的。但更糟糕的是，如果在关中断的时候，发生了多个事件，由于中断控制器会合并相同的中断，你就会失去多次事件，让你的统计发生错误。</p>
 <p>现代的Intel平台，基本上已经把PMU中断都切换为NMI中断了（不可屏蔽），所以前面这个问题不存在。但在大部分ARM/ARM64平台上，这个问题都没有解决，所以看这种平台的报告，都要特别小心，特别是你看到_raw_spin_unlock()一类的函数击中极高，你就要怀疑一下你的测试结果了（注意，这个结果也是能用的，只是看你怎么用）。</p>
-<h3 id="3-perf-的使用"><a href="#3-perf-的使用" class="headerlink" title="3. perf 的使用"></a>3. perf 的使用</h3><h3 id="3-1-perf-安装"><a href="#3-1-perf-安装" class="headerlink" title="3.1 perf 安装"></a>3.1 perf 安装</h3><p>perf的源代码就是Linux的源代码目录中，因为它在相当程度上和内核是关联的。一般Linux 的各种发行版本都会安装好与内核相对应的 perf 命令。perf 有两种安装方式</p>
+<h2 id="2-perf-使用"><a href="#2-perf-使用" class="headerlink" title="2.perf 使用"></a>2.perf 使用</h2><h3 id="2-1-安装"><a href="#2-1-安装" class="headerlink" title="2.1 安装"></a>2.1 安装</h3><p>perf的源代码就是Linux的源代码目录中，因为它在相当程度上和内核是关联的。一般Linux 的各种发行版本都会安装好与内核相对应的 perf 命令。perf 有两种安装方式</p>
 <ol>
 <li>通过包管理进行安装，perf工具在 linux-tools-common工具包里，通过包管理软件安装的时候还需要依赖linux-tools-kernelversion包</li>
 <li>源码编译：找到对应内核版本的源码包，在tools/perf目录下进行编译</li>
 </ol>
-<h3 id="2-2-perf"><a href="#2-2-perf" class="headerlink" title="2.2 perf"></a>2.2 perf</h3><p><code>perf [--version] [--help] [OPTIONS] COMMAND [ARGS]</code></p>
+<h3 id="2-2-使用前提"><a href="#2-2-使用前提" class="headerlink" title="2.2 使用前提"></a>2.2 使用前提</h3><h4 id="符号表"><a href="#符号表" class="headerlink" title="符号表"></a>符号表</h4><p>与其他调试工具一样，perf_events需要符号信息(符号)。它们被用来将内存地址转换成函数和变量名，以便我们人类能够读取它们。如果没有符号，您将看到十六进制数字表示所分析的内存地址。</p>
+<p>类似于 Java Node 这些使用虚拟机编写的程序，使用虚拟机自行管理执行函数和管理堆栈，perf 只能查看到虚拟机级别堆栈，是无法解析语言本身的上下文的。使用 perf 分析java，node 等语言需要需要语言的JIT 提供支持。下面是一些常见语言如何支持 perf 的参考链接:</p>
+<ol>
+<li>java<ul>
+<li><a href="https://github.com/jvm-profiling-tools/perf-map-agent" target="_blank" rel="external">perf-map-agent</a></li>
+<li><a href="http://techblog.netflix.com/2015/07/java-in-flames.html" target="_blank" rel="external">Java in flame</a></li>
+<li><a href="http://www.brendangregg.com/FlameGraphs/cpuflamegraphs.html#Java" target="_blank" rel="external">Java火焰图部分</a></li>
+<li><a href="http://www.slideshare.net/brendangregg/java-performance-analysis-on-linux-with-flame-graphs" target="_blank" rel="external">Java Performance Analysis on Linux with Flame Graphs.</a></li>
+</ul>
+</li>
+<li>node:<ul>
+<li><a href="http://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html" target="_blank" rel="external">Node.js火焰图在Linux上的步骤</a></li>
+</ul>
+</li>
+</ol>
+<p>通常软件包的符号表通过类似 <code>-dbgsym</code> 命令符号的调试包提供。libc6-dbgsym和coreutils-dbgsym 可以提供用户级 OS 代码页的一些符号表。实在不行只能自己编译软件，保留符号表。</p>
+<h4 id="省略帧指针优化问题"><a href="#省略帧指针优化问题" class="headerlink" title="省略帧指针优化问题"></a>省略帧指针优化问题</h4><p>省略帧指针是编译器默认的优化选项，使得 perf 无法看到完整的堆栈。</p>
+<p>有下面几种方法可以解决这个问题:</p>
+<ol>
+<li>使用<strong>dwarf</strong>数据展开堆栈:<ul>
+<li>从3.9内核开始，perf_events 支持用户级栈中缺少帧指针的解决方案:libunwind，叫做 dwarf</li>
+<li>使用”–call-graph dwarf”(或“-g dwarf”)启用此功能</li>
+<li>perf 可以在没有 dwarf 支持的情况下构建。因此是否支持 dwarf 要查阅安装信息</li>
+</ul>
+</li>
+<li>使用可用的最后一个分支记录(<strong>LBR</strong>)(如果处理器特性支持)<ul>
+<li>LBR，全称是 Last Branch Record，需要处理器支持，通常在云环境中都是禁用的</li>
+<li>LBR通常限制了堆栈深度(8、16或32帧)，所以它可能不适合深度堆栈或火焰图生成</li>
+</ul>
+</li>
+<li><strong>返回帧指针</strong></li>
+<li>还有其他堆栈遍历技术，比如BTS(分支跟踪存储)和新的ORC解卷器</li>
+</ol>
+<p>内核也有类似省略帧指针的问题。启动 <code>CONFIG_FRAME_POINTER=y</code> 内核选项可以避免此问题。</p>
+<h3 id="2-3-perf-的运行方式"><a href="#2-3-perf-的运行方式" class="headerlink" title="2.3 perf 的运行方式"></a>2.3 perf 的运行方式</h3><p>perf_events有三种使用方式:</p>
+<ol>
+<li>计数模式: <ul>
+<li>对应 perf stat 命令，对内核上下文中的事件进行计数，并输出统计的摘要信息</li>
+<li>此模式不生成perf.data文件</li>
+<li>开销最小</li>
+</ul>
+</li>
+<li>采样事件：<ul>
+<li>通过采样的方式，将事件数据写入内核缓冲区；</li>
+<li>然后以异步的方式，将内核缓冲区的内容写入 perf.data 文件</li>
+<li>perf report 或 perf script 命令读取 perf.data 并输出结果</li>
+<li>开销取决于正在跟踪的事件的频率</li>
+</ul>
+</li>
+<li>事件上的bpf程序: <ul>
+<li>这是Linux 4.4+内核中的一个新特性，它可以在内核空间中执行自定义用户定义的程序，可以执行高效的数据筛选和总结。</li>
+<li>bpf 是先筛选在写入内核缓冲区，相比于采样事件模式高效的多</li>
+</ul>
+</li>
+</ol>
+<p>下面是 perf 三种使用方式的一些示例，我们会在后面详细 perf 的使用。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># gzip命令的性能计数器总结，包括IPC:</span></div><div class="line">perf <span class="built_in">stat</span> gzip largefile</div><div class="line"></div><div class="line"><span class="comment"># 按照静态探针对进程调度事件进行计数，持续 5s</span></div><div class="line">perf <span class="built_in">stat</span> -e <span class="string">'sched:sched_process_*'</span> -a sleep 5</div><div class="line"></div><div class="line"><span class="comment"># 按照静态探针跟踪进程调度事件，持续 5s</span></div><div class="line">perf record -e <span class="string">'sched:sched_process_*'</span> -a sleep 5</div><div class="line">perf report</div><div class="line"></div><div class="line"><span class="comment"># 按照静态探针跟踪进程调度事件，持续 5s，并转储事件信息信息</span></div><div class="line">perf record -e <span class="string">'sched:sched_process_*'</span> -a sleep 5</div><div class="line">perf script</div><div class="line"></div><div class="line"><span class="comment"># 跟踪请求的字节小于10 的 read() 系统调用</span></div><div class="line">perf record -e <span class="string">'syscalls:sys_enter_read'</span> --filter <span class="string">'count &lt; 10'</span> -a</div><div class="line"></div><div class="line"><span class="comment"># 以 99hz 的频率抽样CPU堆栈</span></div><div class="line">perf record -F 99 -ag -- sleep 5</div><div class="line">perf report</div><div class="line"></div><div class="line"><span class="comment"># 添加 tcp_sendmsg 动态探针，追踪 5s，并记录堆栈</span></div><div class="line">perf probe --add tcp_sendmsg</div><div class="line">perf record -e probe:tcp_sendmsg -ag -- sleep 5</div><div class="line">perf probe --del tcp_sendmsg</div><div class="line">perf report</div></pre></td></tr></table></figure>
+<h3 id="2-3-perf-命令概览"><a href="#2-3-perf-命令概览" class="headerlink" title="2.3 perf 命令概览"></a>2.3 perf 命令概览</h3><p>除此上面介绍的三种使用方式之外， perf 还有许多子命令提供特殊用途的功能。这些子命令都是在 perf 三种检测功能的基础上，记录特定的事件并以定制的方式报告，包括:</p>
+<ol>
+<li>perf c2c (Linux 4.10+): cache-2-cache and cacheline false 共享分析</li>
+<li>perf kmem: 内核内存分配分析。</li>
+<li>perf kvm：KVM虚拟客户端分析。</li>
+<li>perf lock: 锁分析</li>
+<li>perf mem: 内存访问分析。</li>
+<li>perf sched: 内核调度器的统计数据</li>
+</ol>
+<p>下面是 perf 子命令的一个完整列表。</p>
+<p><code>perf [--version] [--help] [OPTIONS] COMMAND [ARGS]</code></p>
 <table>
 <thead>
 <tr>
@@ -200,6 +283,10 @@
 <tr>
 <td style="text-align:left">list</td>
 <td style="text-align:left">List all symbolic event types<br>列出当前系统支持的所有事件名,可分为三类：硬件事件、软件事件，检查点</td>
+</tr>
+<tr>
+<td style="text-align:left">stat</td>
+<td style="text-align:left">Run a command and gather performance counter statistics<br>对程序运行过程中的性能计数器进行统计</td>
 </tr>
 <tr>
 <td style="text-align:left">top</td>
@@ -232,10 +319,6 @@
 <tr>
 <td style="text-align:left">kvm</td>
 <td style="text-align:left">Tool to trace/measure kvm guest os<br>分析kvm虚拟机上的guest os</td>
-</tr>
-<tr>
-<td style="text-align:left">stat</td>
-<td style="text-align:left">Run a command and gather performance counter statistics<br>对程序运行过程中的性能计数器进行统计</td>
 </tr>
 <tr>
 <td style="text-align:left">timechart</td>
@@ -315,7 +398,7 @@
 </tr>
 </tbody>
 </table>
-<h4 id="perf-list"><a href="#perf-list" class="headerlink" title="perf list"></a>perf list</h4><p><code>perf list [--no-desc] [--long-desc] [event_class]</code></p>
+<h2 id="3-perf-子命令详解"><a href="#3-perf-子命令详解" class="headerlink" title="3. perf 子命令详解"></a>3. perf 子命令详解</h2><h4 id="perf-list"><a href="#perf-list" class="headerlink" title="perf list"></a>perf list</h4><p><code>perf list [--no-desc] [--long-desc] [event_class]</code></p>
 <ul>
 <li>作用: 列出perf可以支持的所有事件</li>
 <li>event_class: 事件的分类，包括:<ul>
@@ -484,7 +567,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2020/01/04/linux_perf/04_perf/" data-id="ckbjfxmzd004f1ku9n1dj4o9j" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2020/01/04/linux_perf/04_perf/" data-id="ckbkz0wn6004hwcu9f4xcafm9" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -622,11 +705,11 @@
         
 <nav id="article-nav">
     
-        <a href="/2020/01/05/linux_perf/05_perf_example/" id="article-nav-newer" class="article-nav-link-wrap">
+        <a href="/2020/01/05/linux_perf/05_dtrace/" id="article-nav-newer" class="article-nav-link-wrap">
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            2.3 perf Examples 翻译
+            2.3 Dtrace 的原理与使用
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
@@ -653,6 +736,26 @@
         <h3 class="widget-title">最新文章</h3>
         <div class="widget">
             <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/06/18/brendangregg/02_perf_example/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/linux_pf/perf_tracepoints_1700.png)" alt="2. perf Examples" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
+                            <p class="item-title"><a href="/2020/06/18/brendangregg/02_perf_example/" class="title">2. perf Examples</a></p>
+                            <p class="item-date"><time datetime="2020-06-17T16:00:00.000Z" itemprop="datePublished">2020-06-18</time></p>
+                        </div>
+                    </li>
                 
                     <li>
                         
@@ -734,26 +837,6 @@
                         </div>
                     </li>
                 
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
-    
-    
-        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
-                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
-                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
-                        </div>
-                    </li>
-                
             </ul>
         </div>
     </div>
@@ -763,7 +846,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">178</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">176</span></li></ul>
         </div>
     </div>
 
@@ -773,7 +856,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
         </div>
     </div>
 
@@ -783,7 +866,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux基础/">Linux基础</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">38</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">37</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
         </div>
     </div>
 
@@ -793,7 +876,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux基础/" style="font-size: 10.91px;">Linux基础</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
         </div>
     </div>
 
