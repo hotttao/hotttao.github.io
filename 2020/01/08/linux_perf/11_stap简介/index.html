@@ -12,16 +12,19 @@
     
         <meta name="keywords" content="Linux性能调优" />
     
-    <meta name="keywords" content="Linux性能调优">
+    <meta name="description" content="从今天开始我们将学习第一个可编程的动态追踪工具 Systemtap。本节是 Systemtap 的一个基本介绍。">
+<meta name="keywords" content="Linux性能调优">
 <meta property="og:type" content="article">
 <meta property="og:title" content="3.1 Systemp 简介">
 <meta property="og:url" content="http://yoursite.com/2020/01/08/linux_perf/11_stap简介/index.html">
 <meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="从今天开始我们将学习第一个可编程的动态追踪工具 Systemtap。本节是 Systemtap 的一个基本介绍。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/linux_pf/how-systemtap-works.webp">
-<meta property="og:updated_time" content="2020-05-28T15:00:49.464Z">
+<meta property="og:updated_time" content="2020-06-20T12:25:22.201Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="3.1 Systemp 简介">
+<meta name="twitter:description" content="从今天开始我们将学习第一个可编程的动态追踪工具 Systemtap。本节是 Systemtap 的一个基本介绍。">
 <meta name="twitter:image" content="http://yoursite.com/images/linux_pf/how-systemtap-works.webp">
     
 
@@ -163,16 +166,68 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">37</span></a>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">49</span></a>
     </div>
 
             </div>
         
         
         <div class="article-entry" itemprop="articleBody">
-            <a id="more"></a>
-<p><img src="/images/linux_pf/how-systemtap-works.webp" alt="systemtap-works"></p>
-
+            <p>从今天开始我们将学习第一个可编程的动态追踪工具 Systemtap。本节是 Systemtap 的一个基本介绍。<br><a id="more"></a></p>
+<h2 id="1-Systemtap-简介"><a href="#1-Systemtap-简介" class="headerlink" title="1. Systemtap 简介"></a>1. Systemtap 简介</h2><p>动态追踪技术起源于 Solaris 系统的 DTrace。Dtrace 有 Linux  Mac OS X 等系统的移植版，但是实现的都差强人意，不支持很多高级特性。Systemtap 是 Redhat 开源的 Linux 上的动态追踪工具，是 Linux 上目前最成熟的动态追踪框架。</p>
+<h3 id="1-1-Systemtap-框架"><a href="#1-1-Systemtap-框架" class="headerlink" title="1.1 Systemtap 框架"></a>1.1 Systemtap 框架</h3><p><img src="/images/linux_pf/how-systemtap-works.webp" alt="systemtap-works"></p>
+<p>Systemtap 的框架如上图所示:</p>
+<ol>
+<li>Systemtap 并不是 Linux 内核的一部分，因此第一步需要把 Systemtap 自己的“小语言”脚本（有点像 D 语言）动态编译成一个 Linux 内核模块的 C 源码，并加载到内核才能运行</li>
+<li>Systemtap 使用的我们前面介绍的内核工具框架</li>
+<li>DWARF 是Linux的调试符号表格式</li>
+</ol>
+<p>整个SystemTap脚本所做的，无非就是声明感兴趣的事件，然后添加对应的处理程序。当SystemTap脚本运行时，SystemTap会监控声明的事件；一旦事件发生，Linux内核会临时切换到对应的处理程序，完成后再重拾原先的工作。</p>
+<p>可供监控的事件种类繁多：进入/退出某个函数，定时器到期，会话终止，等等。处理程序由一组SystemTap语句构成，指明事件发生后要做的工作。其中包括从事件上下文中提取数据，存储到内部变量中，输出结果。</p>
+<h3 id="1-2-Systemtap-的优缺点"><a href="#1-2-Systemtap-的优缺点" class="headerlink" title="1.2 Systemtap 的优缺点"></a>1.2 Systemtap 的优缺点</h3><p>Systemtap 有如下的优缺点:</p>
+<ol>
+<li>首先，它并不是 Linux 内核的一部分，就是说它并没有与内核紧密集成，所以它需要一直不停地追赶主线内核的变化。</li>
+<li>另一个缺点是，它需要动态编译，因此经常需要在线部署 C 编译器工具链和 Linux 内核的头文件。出于这些原因，SystemTap 脚本的启动相比 DTrace 要慢得多</li>
+<li>无论是 DTrace 还是 SystemTap，其实都不支持编写完整的调试工具，因为它们都缺少方便的命令行交互的原语。所以我们才看到现实世界中许多基于它们的工具，其实最外面都有一个 Perl、Python 或者 Shell 脚本编写的包裹。比如 <a href="https://github.com/openresty/stapxx" target="_blank" rel="external">stap++</a></li>
+<li><p>SystemTap 的优点是它有非常成熟的用户态调试符号的自动加载，同时也有循环这样的语言结构可以去编写比较复杂的探针处理程序，可以支持很多很复杂的分析处理。</p>
+<p>GitHub 上面，有很多针对像 Nginx、LuaJIT 和操作系统内核这样的系统软件，也有一些是针对更高层面的像 OpenResty 这样的 Web 框架。有兴趣的朋友可以查看 GitHub 上面的 <a href="https://github.com/openresty/nginx-systemtap-toolkit" target="_blank" rel="external">nginx-systemtap-toolkit</a>、<a href="https://github.com/agentzh/perl-systemtap-toolkit" target="_blank" rel="external">perl-systemtap-toolkit</a> 和 <a href="https://github.com/openresty/stapxx" target="_blank" rel="external">stappxx</a> 这几个代码仓库。</p>
+</li>
+</ol>
+<h2 id="2-stap-安装"><a href="#2-stap-安装" class="headerlink" title="2. stap 安装"></a>2. stap 安装</h2><p>SystemTap需要内核信息，这样才能注入指令。此外，这些信息还能帮助SystemTap生成合适的检测代码。<br>这些必要的内核信息分别包括在特定内核版本所对应的-devel，-debuginfo和-debuginfo-common包中。对于“标准版”内核（指按照常规配置编译的内核），所需的-devel和-debuginfo等包命名为：</p>
+<ul>
+<li>kernel-debuginfo</li>
+<li>kernel-debuginfo-common</li>
+<li>kernel-devel: 通常已经安装</li>
+</ul>
+<p>下面是Centos7 安装过程的示例：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 方法一，直接执行 stap-prep，如果不起作用，需要手动安装方法二中的包</span></div><div class="line">stap-prep</div><div class="line"></div><div class="line"><span class="comment">## 方法二</span></div><div class="line"><span class="comment"># 1. 配置yum 源</span></div><div class="line">[debug]</div><div class="line">name=CentOS-<span class="variable">$releasever</span> - DebugInfo</div><div class="line">baseurl=http://debuginfo.centos.org/<span class="variable">$releasever</span>/<span class="variable">$basearch</span>/</div><div class="line">gpgcheck=0</div><div class="line">enabled=1</div><div class="line">protect=1</div><div class="line">priority=1</div><div class="line"></div><div class="line"><span class="comment"># 2.安装 kernel-debuginfo</span></div><div class="line">yum --enablerepo=debug install -y kernel-debuginfo-$(uname -r)</div><div class="line"></div><div class="line"><span class="comment"># 3. rpm 包位置，可直接下载手动 yum install </span></div><div class="line">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-957.el7.x86_64.rpm</div><div class="line">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-957.el7.x86_64.rpm</div><div class="line"></div><div class="line">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-1062.el7.x86_64.rpm</div><div class="line">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-1062.el7.x86_64.rpm</div><div class="line"></div><div class="line"><span class="comment">## 4. 运行下面命令开始检查，显示 pass 5 表示运行成功</span></div><div class="line">stab-prep</div><div class="line">stap -v -e <span class="string">'probe vfs.read &#123;printf("read performed\n"); exit()&#125;'</span></div><div class="line"></div><div class="line">Pass 1: parsed user script and 474 library scripts using 251936virt/49240res/3488shr/45992data kb, <span class="keyword">in</span> 80usr/330sys/411real ms.</div><div class="line">Pass 2: analyzed script: 1 probe, 1 <span class="keyword">function</span>, 7 embeds, 0 globals using 416832virt/210188res/4872shr/210888data kb, <span class="keyword">in</span> 1100usr/960sys/2058real ms.</div><div class="line">Pass 3: translated to C into <span class="string">"/tmp/stapdYWPVH/stap_5e2f013414e74a4de164b8e5c7459ef6_2765_src.c"</span> using 416832virt/210444res/5128shr/210888data kb, <span class="keyword">in</span> 10usr/70sys/85real ms.</div><div class="line">Pass 4: compiled C into <span class="string">"stap_5e2f013414e74a4de164b8e5c7459ef6_2765.ko"</span> <span class="keyword">in</span> 1090usr/660sys/1643real ms.</div><div class="line">Pass 5: starting run.</div><div class="line"><span class="built_in">read</span> performance</div><div class="line">Pass 5: run completed <span class="keyword">in</span> 10usr/70sys/373real ms.</div></pre></td></tr></table></figure>
+<h3 id="2-1-为其他计算机生成检测模块"><a href="#2-1-为其他计算机生成检测模块" class="headerlink" title="2.1 为其他计算机生成检测模块"></a>2.1 为其他计算机生成检测模块</h3><p>为了避免为所有带监测机器配置 Systemtap 环境的问题，SystemTap提供了交叉检测（cross-instrumentaion）的功能:</p>
+<ol>
+<li>在一台计算机上运行SystemTap脚本，生成在另一台机器上可用的SystemTap检测模块</li>
+<li>目标机器仅需安装 systemtap-runtime 来使用生成的SystemTap检测模块</li>
+</ol>
+<p>创建和分发的过程如下:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 创建检测模块</span></div><div class="line">stap -r kernel_version script -m module_name</div><div class="line">&gt; stap -r `uname -r` -e <span class="string">'probe vfs.read &#123;printf("read performance\n"); exit()&#125;'</span> -m <span class="built_in">test</span></div><div class="line">&gt; ll test.ko</div><div class="line">-rw-r--r-- 1 root root 97392 4月   9 10:23 test.ko</div><div class="line"></div><div class="line"><span class="comment"># 2. 分发运行检测模块</span></div><div class="line">&gt; staprun test.ko</div></pre></td></tr></table></figure></p>
+<h2 id="3-stap"><a href="#3-stap" class="headerlink" title="3. stap"></a>3. stap</h2><p>stap</p>
+<ul>
+<li>作用: 从SystemTap脚本中读取探测指令，把它们转化为C代码，构建一个内核模块，并加载到当前的Linux内核中运行</li>
+<li>参数:<ul>
+<li><code>-v</code> 让SystemTap会话输出更加详细的信息.重复该选项多次来提高执行信息的详尽程度 </li>
+<li><code>-o file_name</code>: 将输出重定向到file_name</li>
+<li><code>-S size[,count]</code>: 将输出文件的最大大小限制成sizeMB，存储文件的最大数目为count</li>
+<li><code>-x process_id</code>: 设置SystemTap处理函数target()为指定PID，target() 是 systemtap 脚本的内置函数 </li>
+<li><code>-c &#39;command&#39;</code>: 运行command，并在command结束时退出。同时会把target()设置成command运行时的PID</li>
+<li><code>-e script</code>: 直接执行给定的脚本</li>
+<li><code>-F</code>: 进入SystemTap的飞行记录仪模式，并在后台运行该脚本</li>
+</ul>
+</li>
+<li>man: <code>man probe::ioblock.request</code></li>
+</ul>
+<h3 id="3-1-stap-飞行记录模式"><a href="#3-1-stap-飞行记录模式" class="headerlink" title="3.1 stap 飞行记录模式"></a>3.1 stap 飞行记录模式</h3><p>SystemTap的飞行记录仪模式允许你长时间运行一个SystemTap脚本，并关注最新的输出。飞行记录仪模式会限制输出的生成量。</p>
+<p>飞行记录仪模式还可以分成两种：内存型（in-memory）和文件型（file）。无论哪一种 SystemTap脚本都是作为后台进程运行。</p>
+<h4 id="内存型"><a href="#内存型" class="headerlink" title="内存型:"></a>内存型:</h4><p>有 <code>-F</code> 选项，但没有指定 <code>-o</code> 选项时启用，SystemTap会把脚本输出结果存储在内核内存的缓冲区内。默认情况下，缓冲区大小为1MB.你可以使用-s(小s)来调整这个值</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">&gt; stap -F iotime.stp</div><div class="line"></div><div class="line">Disconnecting from systemtap module.</div><div class="line">To reconnect, <span class="built_in">type</span> <span class="string">"staprun -A stap_5dd0073edcb1f13f7565d8c343063e68_19556"</span></div><div class="line"></div><div class="line"><span class="comment"># 重连，得到输出结果</span></div><div class="line">&gt; staprun -A stap_5dd0073edcb1f13f7565d8c343063e68_19556</div></pre></td></tr></table></figure>
+<h4 id="文件型"><a href="#文件型" class="headerlink" title="文件型"></a>文件型</h4><p>同时指定 <code>-F</code>,<code>-o</code> 选项时启用，-S选项来控制输出文件的大小和数目-S选项来控制输出文件的大小和数目。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">&gt; stap -F -o /tmp/pfaults.log -S 1,2  pfaults.stp</div><div class="line">7590  <span class="comment"># stap 进程的 PID</span></div><div class="line"></div><div class="line"><span class="comment"># 终止 stap 进程</span></div><div class="line">&gt; <span class="built_in">kill</span> -s SIGTERM 7590</div></pre></td></tr></table></figure>
         </div>
         <!--  -->
         <footer class="article-footer">
@@ -180,7 +235,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2020/01/08/linux_perf/11_stap简介/" data-id="ckbkz0wnm004twcu9lk0isarc" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2020/01/08/linux_perf/11_stap简介/" data-id="ckbov2zxz004qw0u9m8rof9qm" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -329,9 +384,9 @@
     </a>
     
     
-        <a href="/2020/01/06/linux_perf/06_perf_python/" id="article-nav-older" class="article-nav-link-wrap">
+        <a href="/2020/01/07/linux_perf/08.eBPF/" id="article-nav-older" class="article-nav-link-wrap">
         <strong class="article-nav-caption">上一篇</strong>
-        <p class="article-nav-title">2.4 perf Python</p>
+        <p class="article-nav-title">2.6 eBPF</p>
         <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
         </a>
     
@@ -367,26 +422,6 @@
                             <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
                             <p class="item-title"><a href="/2020/06/18/brendangregg/02_perf_example/" class="title">2. perf Examples</a></p>
                             <p class="item-date"><time datetime="2020-06-17T16:00:00.000Z" itemprop="datePublished">2020-06-18</time></p>
-                        </div>
-                    </li>
-                
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
-    
-    
-        <span class="thumbnail-image thumbnail-none"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"></p>
-                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
-                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
                         </div>
                     </li>
                 
@@ -450,6 +485,26 @@
                         </div>
                     </li>
                 
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
             </ul>
         </div>
     </div>
@@ -459,7 +514,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">176</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
         </div>
     </div>
 
@@ -469,7 +524,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">33</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
         </div>
     </div>
 
@@ -479,7 +534,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">37</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
         </div>
     </div>
 
@@ -489,7 +544,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 19.09px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.18px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
         </div>
     </div>
 

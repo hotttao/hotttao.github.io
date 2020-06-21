@@ -12,15 +12,20 @@
     
         <meta name="keywords" content="Linux性能调优" />
     
-    <meta name="keywords" content="Linux性能调优">
+    <meta name="description" content="本节我们继续来学习 Systemtap 的使用 – 内核的动态追踪">
+<meta name="keywords" content="Linux性能调优">
 <meta property="og:type" content="article">
 <meta property="og:title" content="3.3 Systemtap 内核空间探测">
 <meta property="og:url" content="http://yoursite.com/2020/01/10/linux_perf/13_stap内核空间探测/index.html">
 <meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们继续来学习 Systemtap 的使用 – 内核的动态追踪">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-05-28T15:01:01.249Z">
+<meta property="og:image" content="http://yoursite.com/images/linux_pf/stap_flow_diagram.png">
+<meta property="og:updated_time" content="2020-06-21T04:37:39.735Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="3.3 Systemtap 内核空间探测">
+<meta name="twitter:description" content="本节我们继续来学习 Systemtap 的使用 – 内核的动态追踪">
+<meta name="twitter:image" content="http://yoursite.com/images/linux_pf/stap_flow_diagram.png">
     
 
     
@@ -161,14 +166,67 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">37</span></a>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">49</span></a>
     </div>
 
             </div>
         
         
         <div class="article-entry" itemprop="articleBody">
-            <a id="more"></a>
+            <p>本节我们继续来学习 Systemtap 的使用 – 内核的动态追踪</p>
+<a id="more"></a>
+<p><img src="/images/linux_pf/stap_flow_diagram.png" alt="stap_flow_diagram"></p>
+<h2 id="1-内核变量的获取"><a href="#1-内核变量的获取" class="headerlink" title="1. 内核变量的获取"></a>1. 内核变量的获取</h2><p>本节我们来看如何获取内核空间中的变量，包括:</p>
+<ol>
+<li>目标变量获取</li>
+<li>全局以及静态变量获取</li>
+<li>内置的便捷变量</li>
+</ol>
+<h2 id="2-内核变量获取"><a href="#2-内核变量获取" class="headerlink" title="2. 内核变量获取"></a>2. 内核变量获取</h2><p>跟内核代码相关的事件，如kernel.function(“function”)和kernel.statement(“statement”)，允许使用目标变量获取这部分代码中可访问到的变量的值。<code>stap -L</code> 可以列出特定探测点下可用的目标变量。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">&gt; stap -L `kernel.function(<span class="string">"vfs_read"</span>)`</div><div class="line">kernel.function(<span class="string">"vfs_read@fs/read_write.c:277"</span>) <span class="variable">$file</span>:struct file* <span class="variable">$buf</span>:char* <span class="variable">$count</span>:size_t <span class="variable">$pos</span>:loff_t*</div></pre></td></tr></table></figure>
+<p><code>stap -L</code> 输出的每个目标变量前面都以$开头，并以:加变量类型结尾。上面的输出表示，vfs_read函数入口处有4个变量可用:</p>
+<ol>
+<li>$file（指向描述文件的结构体）</li>
+<li>$buf（指向接收读取的数据的用户空间缓冲区）</li>
+<li>$count（读取的字节数）</li>
+<li>$pos（读开始的位置）</li>
+</ol>
+<p>下面使用目标变量的一个示例:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">&gt; stap -L <span class="string">'syscall.read'</span></div><div class="line">stap -L <span class="string">'syscall.read'</span></div><div class="line">syscall.read name:string fd:long buf_uaddr:long count:long argstr:string <span class="variable">$fd</span>:long int <span class="variable">$buf</span>:long int <span class="variable">$count</span>:long int <span class="variable">$ret</span>:long int</div><div class="line"></div><div class="line"></div><div class="line">probe syscall.read.return &#123;</div><div class="line">  p = pid()</div><div class="line">  fd = <span class="variable">$fd</span>                   <span class="comment"># 引用目标变量</span></div><div class="line">  bytes = <span class="variable">$return</span></div><div class="line">  time = gettimeofday_us() - @entry(gettimeofday_us())</div><div class="line">  <span class="keyword">if</span> (bytes &gt; 0)</div><div class="line">    fileread[p, fd] += bytes</div><div class="line">  time_io[p, fd] &lt;&lt;&lt; time</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="2-全局变量获取"><a href="#2-全局变量获取" class="headerlink" title="2.全局变量获取"></a>2.全局变量获取</h2><p>对于那些不属于本地变量的变量，像是全局变量或一个在文件中定义的静态变量，可以用<code>@var(&quot;varname@src/file.c&quot;)</code>获取。 SystemTap会保留目标变量的类型信息，并且允许通过<code>-&gt;</code>访问其中的成员。</p>
+<p><code>-&gt;</code>既可以用来访问指针指向的值，也可以用来访问子结构体中的成员。在获取复杂结构体中的信息时，<code>-&gt;</code>可以链式使用。下面是一个获取 <code>fs/file_table.c</code>中的静态目标变量<code>files_stat</code> 的示例，files_stat存储着一些当前文件系统中可调节的参数。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">probe kernel.function(vfs_read) &#123;</div><div class="line">    <span class="built_in">printf</span>(<span class="string">"current file_stat max_files: %d\n"</span>, </div><div class="line">            @var(<span class="string">"file_stat@fs/file_table.c"</span>)-&gt;max_files)</div><div class="line">            <span class="built_in">exit</span>()</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>有许多函数可以通过指向基本类型的指针获取内核空间对应地址上的数据：<br>|函数|作用|<br>|:—|:—|<br>|kernel_char(address)|从内核空间地址中获取char变量|<br>|kernel_short(address)||<br>|kernel_long(address)||<br>|kernel_int(address)||<br>|kernel_string(address)||<br>|kernel_string_n(address, n)|从内核空间地址中获取长为n的字符串|</p>
+<h2 id="3-内置变量"><a href="#3-内置变量" class="headerlink" title="3. 内置变量"></a>3. 内置变量</h2><p>某些场景中，我们可能需要输出当前可访问的各种变量，以便于记录底层的变化。SystemTap提供了一些操作，可以生成描述特定目标变量的字符串：</p>
+<ol>
+<li><code>$$vars</code>: <ul>
+<li>输出作用域内每个变量的值</li>
+<li>等同于 <code>sprintf(&quot;parm1=%x ... parmN=%x var1=%x ... varN=%x&quot;, parm1, ..., parmN, var1, ..., varN)</code></li>
+</ul>
+</li>
+<li><code>$$locals</code>: 同$$vars，只输出本地变量</li>
+<li><code>$$parms</code>: 同$$vars，只输出函数入参。</li>
+<li><code>$$return</code>: <ul>
+<li>仅在带return的探针中可用</li>
+<li>如果被监控的函数有返回值，它等价于sprintf(“return=%x”, $return)，否则为空字符串。</li>
+</ul>
+</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">&gt; stap -e <span class="string">'probe kernel.function("vfs_read") &#123;printf("%s\n", $$parms); exit(); &#125;'</span></div><div class="line"></div><div class="line"><span class="comment"># vfs_read的入参有四个：file，buf，count，和pos</span></div><div class="line"><span class="comment"># $$params会给这些入参生成描述字符串。在这个例子里，四个变量都是指针</span></div><div class="line">file=0xffff8800b40d4c80 buf=0x7fff634403e0 count=0x2004 pos=0xffff8800af96df48</div><div class="line"></div><div class="line"><span class="comment"># 要想输出指针指向的值，我们可以加上$后缀</span></div><div class="line">&gt; stap -e <span class="string">'probe kernel.function("vfs_read") &#123;printf("%s\n", $$parms$); exit(); &#125;'</span></div><div class="line">file=&#123;.f_u=&#123;...&#125;, .f_path=&#123;...&#125;, .f_op=0xffffffffa06e1d80, .f_lock=&#123;...&#125;, ....</div><div class="line"></div><div class="line"><span class="comment"># 要想展开嵌套的结构体，你需要使用$$后缀。下面是一个使用$$的例子：</span></div><div class="line"><span class="comment"># $$的输出，会受到字符串最长长度的限制而被截断</span></div><div class="line">&gt; stap -e <span class="string">'probe kernel.function("vfs_read") &#123;printf("%s\n", $$parms$$); exit(); &#125;'</span></div></pre></td></tr></table></figure>
+<h2 id="4-如何使用-tapset"><a href="#4-如何使用-tapset" class="headerlink" title="4. 如何使用 tapset"></a>4. 如何使用 tapset</h2><p>tapset 是 systemtap 提供的函数库，提供了:</p>
+<ol>
+<li>可用的内置函数</li>
+<li>对于常见的目标变量，已将其提取为直接可用的内置变量。</li>
+</ol>
+<p>我们以 ioblock 为例，来看看如何使用 tapset。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div></pre></td><td class="code"><pre><div class="line">&gt; /usr/share/systemtap/tapset/linux/ioblock.stp</div><div class="line"><span class="comment">/**</span></div><div class="line"><span class="comment"> *  probe ioblock.request - Fires whenever making a generic block I/O request.</span></div><div class="line"><span class="comment"> *</span></div><div class="line"><span class="comment"> *  @name      - name of the probe point</span></div><div class="line"><span class="comment"> *  @devname   - block device name</span></div><div class="line"><span class="comment"> *  @ino       - i-node number of the mapped file</span></div><div class="line"><span class="comment"> *  @sector    - beginning sector for the entire bio</span></div><div class="line"><span class="comment"> *  @flags     - see below</span></div><div class="line"><span class="comment"> *  	BIO_UPTODATE    0       ok after I/O completion</span></div><div class="line"><span class="comment"> *  	BIO_RW_BLOCK    1       RW_AHEAD set, and read/write would block</span></div><div class="line"><span class="comment"> *  	BIO_EOF         2       out-out-bounds error</span></div><div class="line"><span class="comment"> *  	BIO_SEG_VALID   3       nr_hw_seg valid </span></div><div class="line"><span class="comment"> *  	BIO_CLONED      4       doesn't own data</span></div><div class="line"><span class="comment"> *  	BIO_BOUNCED     5       bio is a bounce bio</span></div><div class="line"><span class="comment"> *  	BIO_USER_MAPPED 6       contains user pages</span></div><div class="line"><span class="comment"> *  	BIO_EOPNOTSUPP  7       not supported</span></div><div class="line"><span class="comment"> *  </span></div><div class="line"><span class="comment"> *  @rw        - binary trace for read/write request</span></div><div class="line"><span class="comment"> *  @vcnt      - bio vector count which represents number of array element (page, offset, length) which make up this I/O request</span></div><div class="line"><span class="comment"> *  @idx       - offset into the bio vector array</span></div><div class="line"><span class="comment"> *  @phys_segments - number of segments in this bio after physical address coalescing is performed</span></div><div class="line"><span class="comment"> *  @hw_segments -   number of segments after physical and DMA remapping hardware coalescing is performed</span></div><div class="line"><span class="comment"> *  @size      - total size in bytes</span></div><div class="line"><span class="comment"> *  @bdev      - target block device</span></div><div class="line"><span class="comment"> *  @bdev_contains - points to the device object which contains the partition (when bio structure represents a partition)</span></div><div class="line"><span class="comment"> *  @p_start_sect -  points to the start sector of the partition structure of the device</span></div><div class="line"><span class="comment"> *</span></div><div class="line"><span class="comment"> * Context:</span></div><div class="line"><span class="comment"> *  The process makes block I/O request</span></div><div class="line"><span class="comment"> */</span></div><div class="line">probe ioblock.request = kernel.function (<span class="string">"generic_make_request"</span>)</div><div class="line">&#123;</div><div class="line">	name = <span class="string">"ioblock.request"</span></div><div class="line">        devname = __bio_devname($bio)</div><div class="line">        ino = __bio_ino($bio)</div><div class="line"></div><div class="line">        sector = $bio-&gt;bi_sector</div><div class="line">        flags = $bio-&gt;bi_flags</div><div class="line">        rw = $bio-&gt;bi_rw</div><div class="line">        vcnt = $bio-&gt;bi_vcnt</div><div class="line">        idx = $bio-&gt;bi_idx</div><div class="line">        phys_segments = $bio-&gt;bi_phys_segments</div><div class="line">	hw_segments = (@defined($bio-&gt;bi_hw_segments)</div><div class="line">		       ? $bio-&gt;bi_hw_segments : <span class="number">0</span>)</div><div class="line">        size = $bio-&gt;bi_size</div><div class="line"></div><div class="line">        bdev = $bio-&gt;bi_bdev</div><div class="line">        bdev_contains = $bio-&gt;bi_bdev-&gt;bd_contains</div><div class="line">        p_start_sect = __bio_start_sect($bio)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>说明:</p>
+<ol>
+<li>上面是 ioblock.stp 内容的一部分</li>
+<li><code>probe ioblock.request</code> 将常用的目标变量定义成了直接可用内部变量，eg: 通过 devname，我们可以直接获取设备名称，而不需要通过目标变量去获取</li>
+<li><code>__bio_ino</code> 是 ioblock.stap 内定义的函数，但是 <code>__</code> 开头的属于内置函数不能使用。</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">stap -ve <span class="string">'probe ioblock.request &#123;printf("%s,%s\n", "devname: ", devname)&#125;'</span></div></pre></td></tr></table></figure>
+
         </div>
         <!--  -->
         <footer class="article-footer">
@@ -176,7 +234,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2020/01/10/linux_perf/13_stap内核空间探测/" data-id="ckbkz0wnm004zwcu92lou1ext" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2020/01/10/linux_perf/13_stap内核空间探测/" data-id="ckbov2zy90054w0u9cwuskd4t" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -369,26 +427,6 @@
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
-    
-    
-        <span class="thumbnail-image thumbnail-none"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"></p>
-                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
-                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
-                        </div>
-                    </li>
-                
-                    <li>
-                        
-                        <div class="item-thumbnail">
                             <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
     
     
@@ -446,6 +484,26 @@
                         </div>
                     </li>
                 
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
             </ul>
         </div>
     </div>
@@ -455,7 +513,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">176</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
         </div>
     </div>
 
@@ -465,7 +523,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">33</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
         </div>
     </div>
 
@@ -475,7 +533,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">37</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
         </div>
     </div>
 
@@ -485,7 +543,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 19.09px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.18px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
         </div>
     </div>
 

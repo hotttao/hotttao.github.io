@@ -12,15 +12,18 @@
     
         <meta name="keywords" content="Linux性能调优" />
     
-    <meta name="keywords" content="Linux性能调优">
+    <meta name="description" content="本节我们来看看如何使用 Systemtap 来追踪 Python 程序的执行。">
+<meta name="keywords" content="Linux性能调优">
 <meta property="og:type" content="article">
 <meta property="og:title" content="3.5 Systemtap Python">
 <meta property="og:url" content="http://yoursite.com/2020/01/12/linux_perf/15_stap_python/index.html">
 <meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="本节我们来看看如何使用 Systemtap 来追踪 Python 程序的执行。">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-05-28T15:01:11.195Z">
+<meta property="og:updated_time" content="2020-06-21T04:21:24.985Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="3.5 Systemtap Python">
+<meta name="twitter:description" content="本节我们来看看如何使用 Systemtap 来追踪 Python 程序的执行。">
     
 
     
@@ -161,14 +164,85 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">37</span></a>
+        <a class="tag-link" href="/tags/Linux性能调优/">Linux性能调优<span class="tag-count">49</span></a>
     </div>
 
             </div>
         
         
         <div class="article-entry" itemprop="articleBody">
-            <a id="more"></a>
+            <p>本节我们来看看如何使用 Systemtap 来追踪 Python 程序的执行。<br><a id="more"></a></p>
+<h2 id="1-环境配置"><a href="#1-环境配置" class="headerlink" title="1. 环境配置"></a>1. 环境配置</h2><p>从 Python 3.6 开始，CPython 可以使用嵌入式“标记”，也称为“探测器”，使得可以通过 DTrace 或 SystemTap 来追踪 Cpython。</p>
+<p>在 Linux 上，为了Systemtap 能够动态追踪 Cpython 的执行，必须按照如下步骤配置系统环境:</p>
+<ol>
+<li>必须安装 SystemTap 开发工具</li>
+<li>CPython 必须启用 –with-dtrace 编译选项</li>
+</ol>
+<h3 id="1-1-安装-SystemTap-开发工具"><a href="#1-1-安装-SystemTap-开发工具" class="headerlink" title="1.1 安装 SystemTap 开发工具"></a>1.1 安装 SystemTap 开发工具</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">yum install systemtap-sdt-devel</div></pre></td></tr></table></figure>
+<h3 id="1-2-Cpython-启用-–with-dtrace"><a href="#1-2-Cpython-启用-–with-dtrace" class="headerlink" title="1.2 Cpython 启用 –with-dtrace"></a>1.2 Cpython 启用 –with-dtrace</h3><p>默认情况下，通过 yum 安装的 Python 都已启用 –with-dtrace 编译选项。可使用如下方式进行确认</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">&gt; import sysconfig</div><div class="line">&gt; sysconfig.get_config_vars()</div><div class="line">&gt; sysconfig.get_config_var(<span class="string">'WITH_DTRACE'</span>)</div></pre></td></tr></table></figure>
+<h2 id="1-3-验证-Cpython-支持-Systemtap"><a href="#1-3-验证-Cpython-支持-Systemtap" class="headerlink" title="1.3 验证 Cpython 支持 Systemtap"></a>1.3 验证 Cpython 支持 Systemtap</h2><p>在 Linux 上，可以通过查看程序是否包含“.note.stapsdt”部分来验证构建的二进制文件中是否存在 SystemTap 静态标记。</p>
+<p>如果 Cpython 未启用 –enable-shared 选项，可使用如下两种方式进行确认:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">&gt; readelf -S ./python | grep .note.stapsdt</div><div class="line">[30] .note.stapsdt        NOTE         0000000000000000 00308d78</div><div class="line"></div><div class="line">&gt; readelf -n ./python</div><div class="line"><span class="comment"># 显示的元数据或包含 SystemTap 的信息 stapsdt</span></div></pre></td></tr></table></figure></p>
+<p>通常情况下 yum 安装的 python 都会启用 –enable-shared 编译选项，因此需要通过下面的方式进行验证:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">&gt; readelf -S /usr/lib64/libpython3.6m.so.1.0 |grep -i .note.stapsdt</div><div class="line">[28] .note.stapsdt     NOTE             0000000000000000  002f5bcc</div></pre></td></tr></table></figure></p>
+<h2 id="2-使用-Systemtap-追踪-Python"><a href="#2-使用-Systemtap-追踪-Python" class="headerlink" title="2. 使用 Systemtap 追踪 Python"></a>2. 使用 Systemtap 追踪 Python</h2><h3 id="2-1-直接使用-Python-的静态标记"><a href="#2-1-直接使用-Python-的静态标记" class="headerlink" title="2.1 直接使用 Python 的静态标记"></a>2.1 直接使用 Python 的静态标记</h3><p>使用 Systemtap 动态追踪 Python 的第一种方式是直接使用 Python 的静态标记。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Python 未启用 --enable-shared 时</span></div><div class="line">probe process(<span class="string">"python"</span>).mark(<span class="string">"function__entry"</span>) &#123;</div><div class="line">     filename = user_string(<span class="variable">$arg1</span>);</div><div class="line">     funcname = user_string(<span class="variable">$arg2</span>);</div><div class="line">     lineno = <span class="variable">$arg3</span>;</div><div class="line"></div><div class="line">     <span class="built_in">printf</span>(<span class="string">"%s =&gt; %s in %s:%d\\n"</span>,</div><div class="line">            thread_indent(1), funcname, filename, lineno);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment"># Python 启用 --enable-shared 时，静态标记包含在 libpython shared library 中</span></div><div class="line">probe process(<span class="string">"python"</span>).library(<span class="string">"libpython3.6m.so.1.0"</span>).mark(<span class="string">"function__entry"</span>) &#123;</div><div class="line">     filename = user_string(<span class="variable">$arg1</span>);</div><div class="line">     funcname = user_string(<span class="variable">$arg2</span>);</div><div class="line">     lineno = <span class="variable">$arg3</span>;</div><div class="line"></div><div class="line">     <span class="built_in">printf</span>(<span class="string">"%s =&gt; %s in %s:%d\\n"</span>,</div><div class="line">            thread_indent(1), funcname, filename, lineno);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>Python 为 Systemtap 提供了以下静态标记:</p>
+<p><code>function__entry(str filename，str funcname，int lineno)</code></p>
+<ul>
+<li>作用: 表示开始 Python 函数调用</li>
+<li>说明: 这个静态标记，等同于内核函数，可以通过目标变量访问静态标记内的变量</li>
+<li>参数: filename，funcname，lineno，必须使用$arg1，$arg2，$arg3访问<ul>
+<li>$arg1：(const char *) filename，使用user_string($arg1)获取 filename 的值</li>
+<li>$arg2：(const char *) function name，使用user_string($arg2)获取funcname的值</li>
+<li>$arg3：int 行号</li>
+</ul>
+</li>
+</ul>
+<p><code>function__return(str filename，str funcname，int lineno)</code></p>
+<ul>
+<li>作用: 表示Python 函数调用结束，即return 或 exception</li>
+<li>参数: 同 function__entry</li>
+</ul>
+<p><code>line(str filename，str funcname，int lineno)</code></p>
+<ul>
+<li>作用: 此标记表示即将执行 Python 脚本一行，相当于使用 Python 探查器进行 line-by-line 跟踪</li>
+<li>参数: 同 function__entry</li>
+</ul>
+<p><code>gc__start(int generation)</code></p>
+<ul>
+<li>作用: Python interpreter 启动垃圾回收周期时触发</li>
+</ul>
+<p><code>gc__done(long collected)</code></p>
+<ul>
+<li>作用: Python interpreter 完成垃圾回收周期时触发</li>
+<li>参数:<ul>
+<li>$arg0: int 回收的对象数量。</li>
+</ul>
+</li>
+</ul>
+<p><code>import__find__load__start(str modulename)</code></p>
+<ul>
+<li>作用: 在importlib尝试查找并加载模块之前触发</li>
+<li>参数:<ul>
+<li>$arg0: (const char *) modulename，使用user_string($arg0)获取modulename的值</li>
+</ul>
+</li>
+</ul>
+<p><code>import__find__load__done(str modulename，int found)</code></p>
+<ul>
+<li>作用: 调用importlib的 find_and_load function 后触发。 </li>
+<li>参数:<ul>
+<li>$arg0: (const char *) modulename，使用user_string($arg0)获取modulename的值</li>
+<li>$arg1: int 表示模块是否已成功加载</li>
+</ul>
+</li>
+</ul>
+<h4 id="追踪示例"><a href="#追踪示例" class="headerlink" title="追踪示例"></a>追踪示例</h4><p>追踪Python调用的脚本<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"># stap 脚本</div><div class="line">probe process(&quot;python3.6&quot;).library(&quot;/usr/lib64/libpython3.6m.so.1.0&quot;).mark(&quot;function__entry&quot;) &#123;</div><div class="line">     filename = user_string($arg1);</div><div class="line">     funcname = user_string($arg2);</div><div class="line">     lineno = $arg3;</div><div class="line"></div><div class="line">     printf(&quot;%s =&gt; %s in %s:%d\n&quot;,</div><div class="line">            thread_indent(1), funcname, filename, lineno);</div><div class="line">&#125;</div><div class="line"></div><div class="line">probe process(&quot;python3.6&quot;).library(&quot;/usr/lib64/libpython3.6m.so.1.0&quot;).mark(&quot;function__return&quot;) &#123;</div><div class="line">    filename = user_string($arg1);</div><div class="line">    funcname = user_string($arg2);</div><div class="line">    lineno = $arg3;</div><div class="line"></div><div class="line">    printf(&quot;%s &lt;= %s in %s:%d\n&quot;,</div><div class="line">           thread_indent(-1), funcname, filename, lineno);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>试验的 Python 脚本<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># test.py</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">two</span><span class="params">()</span>:</span></div><div class="line">    c = <span class="number">1</span> + <span class="number">2</span></div><div class="line">    <span class="keyword">return</span> c</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">one</span><span class="params">()</span>:</span></div><div class="line">    d = two()</div><div class="line">    <span class="keyword">return</span> d</div><div class="line"></div><div class="line"></div><div class="line">one()</div></pre></td></tr></table></figure></p>
+<p>执行 Python 动态追踪<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># stap 监测</span></div><div class="line">&gt; stap stap_test.stp -c <span class="string">"python3.6 test.py"</span></div><div class="line">......</div><div class="line">0 python3.6(29732): =&gt; __init__ <span class="keyword">in</span> &lt;frozen importlib._bootstrap_external&gt;:800</div><div class="line"> 4 python3.6(29732): &lt;= __init__ <span class="keyword">in</span> &lt;frozen importlib._bootstrap_external&gt;:804</div><div class="line"> 0 python3.6(29732): =&gt; &lt;module&gt; <span class="keyword">in</span> test.py:2</div><div class="line"> 5 python3.6(29732):  =&gt; one <span class="keyword">in</span> test.py:6</div><div class="line"> 8 python3.6(29732):   =&gt; two <span class="keyword">in</span> test.py:2</div><div class="line">10 python3.6(29732):   &lt;= two <span class="keyword">in</span> test.py:4</div><div class="line">13 python3.6(29732):  &lt;= one <span class="keyword">in</span> test.py:8</div><div class="line">16 python3.6(29732): &lt;= &lt;module&gt; <span class="keyword">in</span> test.py:11</div></pre></td></tr></table></figure></p>
+<h3 id="2-2-使用-Systemtap-提供的-typeset"><a href="#2-2-使用-Systemtap-提供的-typeset" class="headerlink" title="2.2 使用 Systemtap 提供的 typeset"></a>2.2 使用 Systemtap 提供的 typeset</h3><p>typeset 提供的函数库，可以帮助我们隐藏一些Python 静态标记的细节。从目前提供的 typeset 来看，提供的库还是很低级。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">ll /usr/share/systemtap/tapset/|grep python</div><div class="line">-rw-r--r--.  1 root root    522 8月   7 2019 libpython2.7-64.stp</div><div class="line">-rw-r--r--.  1 root root  31021 10月 19 00:12 python2.stp</div><div class="line">-rw-r--r--.  1 root root  30405 10月 19 00:12 python3.stp</div></pre></td></tr></table></figure>
+
         </div>
         <!--  -->
         <footer class="article-footer">
@@ -176,7 +250,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2020/01/12/linux_perf/15_stap_python/" data-id="ckbkz0wo10054wcu9l5131bii" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2020/01/12/linux_perf/15_stap_python/" data-id="ckbov2zyb005aw0u9mwx56vbu" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -314,11 +388,11 @@
         
 <nav id="article-nav">
     
-        <a href="/2020/01/15/linux_perf/20_操作系统/" id="article-nav-newer" class="article-nav-link-wrap">
+        <a href="/2020/01/13/linux_perf/16_dtrace_stap/" id="article-nav-newer" class="article-nav-link-wrap">
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            4. 操作系统
+            3.6 Systemtap 与 Dtrace 的语法比较
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
@@ -363,26 +437,6 @@
                             <p class="item-category"><a class="article-category-link" href="/categories/运维/">运维</a></p>
                             <p class="item-title"><a href="/2020/06/18/brendangregg/02_perf_example/" class="title">2. perf Examples</a></p>
                             <p class="item-date"><time datetime="2020-06-17T16:00:00.000Z" itemprop="datePublished">2020-06-18</time></p>
-                        </div>
-                    </li>
-                
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2020/06/17/linux_perf/附录_容器处理/" class="thumbnail">
-    
-    
-        <span class="thumbnail-image thumbnail-none"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"></p>
-                            <p class="item-title"><a href="/2020/06/17/linux_perf/附录_容器处理/" class="title"></a></p>
-                            <p class="item-date"><time datetime="2020-06-17T14:17:36.878Z" itemprop="datePublished">2020-06-17</time></p>
                         </div>
                     </li>
                 
@@ -446,6 +500,26 @@
                         </div>
                     </li>
                 
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/存储/">存储</a></p>
+                            <p class="item-title"><a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="title">26 MYSQL 自增主键</a></p>
+                            <p class="item-date"><time datetime="2020-03-25T16:00:00.000Z" itemprop="datePublished">2020-03-26</time></p>
+                        </div>
+                    </li>
+                
             </ul>
         </div>
     </div>
@@ -455,7 +529,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">176</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">10</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">42</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
         </div>
     </div>
 
@@ -465,7 +539,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">30</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">33</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
         </div>
     </div>
 
@@ -475,7 +549,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">37</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mysql运维/">mysql运维</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
         </div>
     </div>
 
@@ -485,7 +559,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 18.18px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 19.09px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 19.09px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.27px;">MySQL实战45讲</a> <a href="/tags/go语言入门/" style="font-size: 15.45px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/mysql运维/" style="font-size: 10px;">mysql运维</a> <a href="/tags/python/" style="font-size: 11.82px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.36px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 10.91px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.73px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.18px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.27px;">极客时间</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.55px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 13.64px;">高性能的MySQL</a>
         </div>
     </div>
 
