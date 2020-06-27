@@ -21,7 +21,7 @@
 <meta property="og:description" content="幻读">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/mysql/MySQL45讲/gap_block.png">
-<meta property="og:updated_time" content="2020-06-26T06:20:22.352Z">
+<meta property="og:updated_time" content="2020-06-26T06:35:39.325Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="6 MySQL 幻读与间隙锁">
 <meta name="twitter:description" content="幻读">
@@ -317,12 +317,11 @@
 <ol>
 <li>由于是 order by c desc，要拿到满足条件的所有行，优化器必须第一个要定位的是索引 c 上“最右边的”c=20 的行，所以会加上间隙锁 (20,25) 和 next-key lock (15,20]。为什么不对 c=25 加锁，是因为查找 20 的过程是一个非唯一索引的等值查询，25 不满足查询条件无须加锁。</li>
 <li>在索引 c 上向左遍历，要扫描到 c=10 才停下来，所以 next-key lock 会加到 (5,10]，这正是阻塞 session B 的 insert 语句的原因。注意向左遍历，在遍历过程中，就不是等值查询了。</li>
-<li><p>在扫描过程中，c=20、c=15、c=10 这三行都存在值，由于是 <strong><code>select *</code></strong>，所以会在主键 id=10、15、20 上加三个行锁。</p>
+<li>在扫描过程中，c=20、c=15、c=10 这三行都存在值，由于是 <strong><code>select *</code></strong>，所以会在主键 id=10、15、20 上加三个行锁。</li>
+</ol>
 <p>因此，session A 的 select 语句锁的范围就是：索引 c 上 (5, 25)；主键索引上 id=10、15、20 三个行锁。</p>
 <p><strong>每次加锁都会说明是加在“哪个索引上”的。因为，锁是加在索引上的，这是 InnoDB 的一个基础设定，在分析问题的时候一定要谨记。</strong></p>
-<h3 id="3-12-in-语句加锁"><a href="#3-12-in-语句加锁" class="headerlink" title="3.12 in 语句加锁"></a>3.12 in 语句加锁</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">begin;</div><div class="line">select id from t <span class="built_in">where</span> c <span class="keyword">in</span>(5,20,10) lock <span class="keyword">in</span> share mode;</div></pre></td></tr></table></figure>
-</li>
-</ol>
+<h3 id="3-12-in-语句加锁"><a href="#3-12-in-语句加锁" class="headerlink" title="3.12 in 语句加锁"></a>3.12 in 语句加锁</h3> <figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">begin;</div><div class="line">select id from t <span class="built_in">where</span> c <span class="keyword">in</span>(5,20,10) lock <span class="keyword">in</span> share mode;</div></pre></td></tr></table></figure>
 <p>这条查询语句里用的是 in，我们先来看这条语句的 explain 结果。</p>
 <p><img src="/images/mysql/MySQL45讲/in_lock.png" alt="in_lock"></p>
 <p>in 语句使用了索引 c 并且 rows=3，说明这三个值都是通过 B+ 树搜索定位的。</p>
@@ -362,7 +361,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2020/03/06/mysql/MySQL实战45讲/06_间隙锁/" data-id="ckbvtx2tz00mp28u96445uhey" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2020/03/06/mysql/MySQL实战45讲/06_间隙锁/" data-id="ckbxnz8x900mdg4u9xjw7t4vx" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -558,7 +557,7 @@
                             <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.png)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
     
     
 </a>
@@ -618,7 +617,7 @@
                             <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.png)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
     
     
 </a>

@@ -20,7 +20,7 @@
 <meta property="og:site_name" content="宋涛的博客">
 <meta property="og:description" content="mariadb 常用服务端参数">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-06-26T05:06:44.253Z">
+<meta property="og:updated_time" content="2020-06-27T02:56:31.218Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="2 MYSQL 常用服务端参数">
 <meta name="twitter:description" content="mariadb 常用服务端参数">
@@ -220,6 +220,10 @@
 </li>
 </ul>
 <h3 id="2-2-max-connections"><a href="#2-2-max-connections" class="headerlink" title="2.2 max_connections"></a>2.2 max_connections</h3><p>max_connections 参数，用来控制一个 MySQL 实例同时存在的连接数的上限，超过这个值，系统就会拒绝接下来的连接请求，并报错提示“Too many connections”。</p>
+<h3 id="2-3-net-buffer-length"><a href="#2-3-net-buffer-length" class="headerlink" title="2.3 net_buffer_length"></a>2.3 net_buffer_length</h3><p>net_buffer_length</p>
+<ul>
+<li>作用: 设置用于向客户端发送数据的，网络缓冲区大小(net_buffer)。mysql 会在 net_buffer 写满之后调用网络接口发送出去。</li>
+</ul>
 <h2 id="3-日志"><a href="#3-日志" class="headerlink" title="3. 日志"></a>3. 日志</h2><h3 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h3><ol>
 <li>innodb_flush_log_at_trx_commit: <ul>
 <li>作用: 事务提交之后多久更新 redo log<ul>
@@ -321,6 +325,15 @@
 <li>默认值: 0，表示不限制并发线程数量。但是，不限制并发线程数肯定是不行的。因为，一个机器的 CPU 核数有限，线程全冲进来，上下文切换的成本就会太高。</li>
 <li>通常情况下，我们建议把 innodb_thread_concurrency 设置为 64~128 之间的值。</li>
 </ul>
+<p>innodb_buffer_pool_size:</p>
+<ul>
+<li>作用: 设置 InnoDB Buffer Pool 的大小，</li>
+<li>建议: 一般建议设置成可用物理内存的 60%~80%</li>
+</ul>
+<p>innodb_old_blocks_time:</p>
+<ul>
+<li>作用: innodb LRU 缓存淘汰算法相关</li>
+</ul>
 <h2 id="5-锁"><a href="#5-锁" class="headerlink" title="5. 锁"></a>5. 锁</h2><ol>
 <li>innodb_lock_wait_timeout: 设置锁等待超时时长</li>
 <li>innodb_deadlock_detect: 开启死锁检测</li>
@@ -348,6 +361,14 @@
 </li>
 <li>max_length_for_sort_data，是 MySQL 中专门控制用于排序的行数据的长度的一个参数。单行的长度超过这个值，就会使用 rowid 算法</li>
 </ol>
+<h2 id="join"><a href="#join" class="headerlink" title="join"></a>join</h2><p>join_buffer_size:</p>
+<ul>
+<li>作用: 设置 join_buffer 的大小，默认值是 256k。</li>
+</ul>
+<p>read_rnd_buffer_size</p>
+<ul>
+<li>作用: 设置 read_rnd_buffer 的大小是，read_rnd_buffer 是MRR 优化中，用于存放 id 的buffer 大小</li>
+</ul>
 <h2 id="8-内存临时表"><a href="#8-内存临时表" class="headerlink" title="8. 内存临时表"></a>8. 内存临时表</h2><ol>
 <li>tmp_table_size: <ul>
 <li>作用: 配置内存临时表的大小，默认值是 16M</li>
@@ -409,6 +430,22 @@
 <li>如果 current_gtid 没有存在于实例的 GTID 集合中，就将这个 current_gtid 分配给接下来要执行的事务，也就是说系统不需要给这个事务生成新的 GTID，因此 gno 也不用加 1</li>
 </ol>
 <p>怎么能够让 MySQL 在执行事务后，返回包中带上 GTID 呢？你只需要将参数 session_track_gtids 设置为 OWN_GTID，然后通过 API 接口 mysql_session_track_get_first 从返回包解析出 GTID 的值即可。</p>
+<h2 id="10-自增值"><a href="#10-自增值" class="headerlink" title="10 自增值"></a>10 自增值</h2><p>auto_increment_offset 和 auto_increment_increment 分别用来表示自增的初始值和步长，默认值都是 1。</p>
+<h3 id="10-1-自增锁的优化史"><a href="#10-1-自增锁的优化史" class="headerlink" title="10.1 自增锁的优化史"></a>10.1 自增锁的优化史</h3><p>自增 id 锁并不是一个事务锁，而是每次申请完就马上释放，以便允许别的事务再申请。接下来，我们先看一下自增锁设计的历史:</p>
+<ol>
+<li>在 MySQL 5.0 版本的时候，自增锁的范围是语句级别。也就是说，如果一个语句申请了一个表自增锁，这个锁会等语句执行结束以后才释放。显然，这样设计会影响并发度。</li>
+<li>MySQL 5.1.22 版本引入了一个新策略，新增参数 innodb_autoinc_lock_mode，默认值是 1。<ul>
+<li>=0 时，表示采用之前 MySQL 5.0 版本的策略</li>
+<li>=1 时:<ul>
+<li>普通 insert 语句，自增锁在申请之后就马上释放；</li>
+<li>类似 insert … select 这样的批量插入数据的语句，自增锁还是要等语句结束后才被释放；</li>
+</ul>
+</li>
+<li>=2 时，所有的申请自增主键的动作都是申请后就释放锁。</li>
+</ul>
+</li>
+</ol>
+<p>那么，为什么默认设置下，insert … select 要使用语句级的锁？为什么这个参数的默认值不是 2？答案是，这么设计还是为了数据的一致性。在生产上，尤其是有 insert … select 这种批量插入数据的场景时，从并发插入数据性能的角度考虑，我建议你这样设置：innodb_autoinc_lock_mode=2 ，并且 binlog_format=row. 这样做，既能提升并发性，又不会出现数据一致性问题。</p>
 
         </div>
         <!--  -->
@@ -417,7 +454,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2019/10/07/mysql/马哥_MySQL/2_常用服务端参数/" data-id="ckbvtx2vj00oy28u9xp87sxn1" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2019/10/07/mysql/马哥_MySQL/2_常用服务端参数/" data-id="ckbxnz8zb00oeg4u9borfaw9v" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -613,7 +650,7 @@
                             <a href="/2020/03/29/mysql/MySQL实战45讲/61_分区表/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.jpg)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/mysql/MySQL45讲/split_innodb.png)" alt="29 MYSQL 分区表" class="thumbnail-image"></span>
     
     
 </a>
@@ -673,7 +710,7 @@
                             <a href="/2020/03/26/mysql/MySQL实战45讲/45_自增主键/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.jpg)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/mysql/MySQL45讲/auto_error.png)" alt="26 MYSQL 自增主键" class="thumbnail-image"></span>
     
     
 </a>
