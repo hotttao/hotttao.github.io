@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>20 分布式并发原语一 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="go并发编程" />
+    
+    <meta name="description" content="Leader 选举、互斥锁、读写锁">
+<meta name="keywords" content="go并发编程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="20 分布式并发原语一">
+<meta property="og:url" content="http://yoursite.com/2019/02/20/go/go_sync/go_sync_20/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="Leader 选举、互斥锁、读写锁">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-01-02T01:41:25.507Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="20 分布式并发原语一">
+<meta name="twitter:description" content="Leader 选举、互斥锁、读写锁">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/Go/">Go</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-go/go_sync/go_sync_20" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        20 分布式并发原语一
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2019/02/20/go/go_sync/go_sync_20/" class="article-date">
+            <time datetime="2019-02-19T16:00:00.000Z" itemprop="datePublished">2019-02-20</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/go并发编程/">go并发编程<span class="tag-count">21</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>Leader 选举、互斥锁、读写锁<br><a id="more"></a></p>
+<h2 id="1-分布式并发原语概述"><a href="#1-分布式并发原语概述" class="headerlink" title="1. 分布式并发原语概述"></a>1. 分布式并发原语概述</h2><p>在前面的课程里，我们学习的并发原语都是在进程内使用的，即一个运行程序为了<strong>控制共享资源、实现任务编排和进行消息传递</strong>而提供的控制类型。布式的并发原语实现更加复杂，因为在分布式环境中，网络不可靠、时钟不一致、以及不可预测的程序暂停，使得节点之间的通信相对于内存具有非常的不确定性。不过还好有相应的软件系统去做这些事情。这些软件系统会专门去处理这些节点之间的协调和异常情况，并且保证数据的一致性。我们要做的就是在它们的基础上实现我们的业务。etcd 就提供了非常好的分布式并发原语，比如分布式互斥锁、分布式读写锁、Leader 选举，等等。所以，今天，我就以 etcd 为基础，给你介绍几种分布式并发原语。</p>
+<h2 id="2-etcd-单节点集群安装"><a href="#2-etcd-单节点集群安装" class="headerlink" title="2. etcd 单节点集群安装"></a>2. etcd 单节点集群安装</h2><p>etcd 集群的安装配置参考其<a href="https://www.bookstack.cn/read/etcd/documentation-dev-guide-local_cluster.md" target="_blank" rel="external">官方文档</a>。本地独立集群的安装如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">yum install etcd</div><div class="line"></div><div class="line">etcd -listen-client-urls=http://192.168.108.55:2379 --advertise-client-urls=http://192.168.108.55:2379</div></pre></td></tr></table></figure>
+<h3 id="2-1-etcd-go-模块安装"><a href="#2-1-etcd-go-模块安装" class="headerlink" title="2.1 etcd go 模块安装"></a>2.1 etcd go 模块安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 安装 gRPC</span></div><div class="line">go get -u google.golang.org/grpc</div><div class="line">go get github.com/grpc-ecosystem/go-grpc-middleware</div></pre></td></tr></table></figure>
+<h2 id="3-Leader-选举"><a href="#3-Leader-选举" class="headerlink" title="3. Leader 选举"></a>3. Leader 选举</h2><p>Leader 选举常常用在主从架构的系统中。主从架构中的服务节点分为主（Leader、Master）和从（Follower、Slave）两种角色，实际节点包括 1 主 n 从，一共是 n+1 个节点。主节点常常执行写操作，从节点常常执行读操作，如果读写都在主节点，从节点只是提供一个备份功能的话，那么，主从架构就会退化成主备模式架构。</p>
+<p>主从架构中最重要的是如何确定节点的角色，在同一时刻，系统中不能有两个主节点，否则，如果两个节点都是主，都执行写操作的话，就有可能出现数据不一致的情况，所以，我们需要一个选主机制，选择一个节点作为主节点，这个过程就是 Leader 选举。当主节点宕机或者是不可用时，就需要新一轮的选举，从其它的从节点中选择出一个节点，让它作为新主节点，宕机的原主节点恢复后，可以变为从节点，或者被摘掉。</p>
+<p>接下来，我们将介绍业务开发中跟 Leader 选举相关的选举、查询、Leader 变动监控等功能。</p>
+<h3 id="3-1-选举"><a href="#3-1-选举" class="headerlink" title="3.1 选举"></a>3.1 选举</h3><p>如果业务集群还没有主节点，或者主节点宕机了，就需要发起新一轮的选主操作，主要会用到 Campaign 和 Proclaim。如果你需要主节点放弃主的角色，让其它从节点有机会成为主节点，就可以调用 Resign 方法。</p>
+<ol>
+<li>Campaign:<ul>
+<li>作用：把一个节点选举为主节点，并且会设置一个值</li>
+<li>签名: <code>func (e *Election) Campaign(ctx context.Context, val string) error</code></li>
+<li>说明: 这是一个阻塞方法，在调用它的时候会被阻塞，直到满足下面的三个条件之一，才会取消阻塞<ul>
+<li>成功当选为主；</li>
+<li>此方法返回错误；</li>
+<li>ctx 被取消</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Proclaim:<ul>
+<li>作用: 重新设置 Leader 的值，但是不会重新选主</li>
+<li>返回: 新值设置成功或者失败的信息</li>
+<li>签名: <code>func (e *Election) Proclaim(ctx context.Context, val string) error</code></li>
+</ul>
+</li>
+<li>Resign:<ul>
+<li>作用: 开始新一次选举</li>
+<li>返回: 新的选举成功或者失败的信息</li>
+<li>签名: <code>func (e *Election) Resign(ctx context.Context) (err error)</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="3-2-查询"><a href="#3-2-查询" class="headerlink" title="3.2 查询"></a>3.2 查询</h3><p>程序在启动的过程中，或者在运行的时候，还有可能需要查询当前的主节点是哪一个节点？主节点的值是什么？此外查询主节点以便把读写请求发往相应的主从节点上。etcd 提供了查询当前主几点的 Leader 的方法</p>
+<ol>
+<li>Leader:<ul>
+<li>作用：查询当前的主节点</li>
+<li>返回: 如果当前还没有 Leader，就返回一个错误</li>
+<li>签名: <code>func (e *Election) Leader(ctx context.Context) (*v3.GetResponse, error)</code></li>
+</ul>
+</li>
+<li>Rev: <ul>
+<li>作用: 查询版本号信息</li>
+<li>说明: 每次主节点的变动都会生成一个新的版本号</li>
+<li>签名: <code>func (e *Election) Rev() int64</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="3-3-监控"><a href="#3-3-监控" class="headerlink" title="3.3 监控"></a>3.3 监控</h3><p>有了选举和查询方法，我们还需要一个监控方法。毕竟，如果主节点变化了，我们需要得到最新的主节点信息。我们可以通过 Observe 来监控主的变化：</p>
+<ul>
+<li>Observe<ul>
+<li>作用: 监控主节点的变化</li>
+<li>签名: <code>func (e *Election) Observe(ctx context.Context) &lt;-chan v3.GetResponse</code></li>
+<li>返回: 一个 chan，显示主节点的变动信息，它不会返回主节点的全部历史变动信息，而是只返回最近的一条变动信息以及之后的变动信息。</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-4-使用示例"><a href="#3-4-使用示例" class="headerlink" title="3.4 使用示例"></a>3.4 使用示例</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bufio"</span></div><div class="line">	<span class="string">"context"</span></div><div class="line">	<span class="string">"flag"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"log"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"strings"</span></div><div class="line"></div><div class="line">	<span class="string">"go.etcd.io/etcd/client/v3/concurrency"</span></div><div class="line">	<span class="string">"go.etcd.io/etcd/clientv3"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> (</div><div class="line">	nodeID    = flag.Int(<span class="string">"id"</span>, <span class="number">0</span>, <span class="string">"node ID"</span>)</div><div class="line">	addr      = flag.String(<span class="string">"addr"</span>, <span class="string">"http://192.168.108.55:2379"</span>, <span class="string">"etcd address"</span>)</div><div class="line">	electName = flag.String(<span class="string">"name"</span>, <span class="string">"my-test-elect"</span>, <span class="string">"election name"</span>)</div><div class="line">	count     <span class="keyword">int</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	endpoints := strings.Split(*addr, <span class="string">","</span>)</div><div class="line">	cli, err := clientv3.New(clientv3.Config&#123;Endpoints: endpoints&#125;)</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		log.Fatal(err)</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">defer</span> cli.Close()</div><div class="line">	session, err := concurrency.NewSession(cli)</div><div class="line">	<span class="keyword">defer</span> session.Close()</div><div class="line"></div><div class="line">	el := concurrency.NewElection(session, *electName)</div><div class="line">	consolescanner := bufio.NewScanner(os.Stdin)</div><div class="line">	<span class="keyword">for</span> consolescanner.Scan() &#123;</div><div class="line">		action := consolescanner.Text()</div><div class="line">		<span class="keyword">switch</span> action &#123;</div><div class="line">		<span class="keyword">case</span> <span class="string">"elect"</span>:</div><div class="line">			<span class="keyword">go</span> elect(el, *electName)</div><div class="line">		<span class="keyword">case</span> <span class="string">"proclaim"</span>:</div><div class="line">			proclaim(el, *electName)</div><div class="line">		<span class="keyword">case</span> <span class="string">"resign"</span>:</div><div class="line">			resign(el, *electName)</div><div class="line">		<span class="keyword">case</span> <span class="string">"watch"</span>:</div><div class="line">			<span class="keyword">go</span> watch(el, *electName)</div><div class="line">		<span class="keyword">case</span> <span class="string">"query"</span>:</div><div class="line">			query(el, *electName)</div><div class="line">		<span class="keyword">case</span> <span class="string">"rev"</span>:</div><div class="line">			rev(el, *electName)</div><div class="line">		<span class="keyword">default</span>:</div><div class="line">			fmt.Println(<span class="string">"unkonw error"</span>)</div><div class="line">		&#125;</div><div class="line"></div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 选主</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">elect</span><span class="params">(e1 *concurrency.Election, electName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	log.Println(<span class="string">"acampaigning for ID:"</span>, *nodeID)</div><div class="line">	<span class="comment">// 调用Campaign方法选主,主的值为value-&lt;主节点ID&gt;-&lt;count&gt;</span></div><div class="line">	<span class="keyword">if</span> err := e1.Campaign(context.Background(), fmt.Sprintf(<span class="string">"value-%d-%d"</span>, *nodeID, count)); err != <span class="literal">nil</span> &#123;</div><div class="line">		log.Println(err)</div><div class="line">	&#125;</div><div class="line">	log.Println(<span class="string">"campaigned for ID:"</span>, *nodeID)</div><div class="line">	count++</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 为主设置新值</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">proclaim</span><span class="params">(e1 *concurrency.Election, electName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	log.Println(<span class="string">"proclaiming for ID:"</span>, *nodeID)</div><div class="line">	<span class="comment">// 调用Proclaim方法设置新值,新值为value-&lt;主节点ID&gt;-&lt;count&gt;</span></div><div class="line">	<span class="keyword">if</span> err := e1.Proclaim(context.Background(), fmt.Sprintf(<span class="string">"value-%d-%d"</span>, *nodeID, count)); err != <span class="literal">nil</span> &#123;</div><div class="line">		log.Println(err)</div><div class="line">	&#125;</div><div class="line">	log.Println(<span class="string">"proclaimed for ID:"</span>, *nodeID)</div><div class="line">	count++</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 重新选主，有可能另外一个节点被选为了主</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">resign</span><span class="params">(e1 *concurrency.Election, electName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	log.Println(<span class="string">"resigning for ID:"</span>, *nodeID)</div><div class="line">	<span class="comment">// 调用Resign重新选主</span></div><div class="line">	<span class="keyword">if</span> err := e1.Resign(context.TODO()); err != <span class="literal">nil</span> &#123;</div><div class="line">		log.Println(err)</div><div class="line">	&#125;</div><div class="line">	log.Println(<span class="string">"resigned for ID:"</span>, *nodeID)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 查询主的信息</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">query</span><span class="params">(e1 *concurrency.Election, electName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	<span class="comment">// 调用Leader返回主的信息，包括key和value等信息</span></div><div class="line">	resp, err := e1.Leader(context.Background())</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		log.Printf(<span class="string">"failed to get the current leader: %v"</span>, err)</div><div class="line">	&#125;</div><div class="line">	log.Println(<span class="string">"current leader:"</span>, <span class="keyword">string</span>(resp.Kvs[<span class="number">0</span>].Key), <span class="keyword">string</span>(resp.Kvs[<span class="number">0</span>].Value))</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 可以直接查询主的rev信息</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">rev</span><span class="params">(e1 *concurrency.Election, electName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	rev := e1.Rev()</div><div class="line">	log.Println(<span class="string">"current rev:"</span>, rev)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 监控主节点的变化</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">watch</span><span class="params">(e1 *concurrency.Election, electName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	ch := e1.Observe(context.TODO())</div><div class="line"></div><div class="line">	log.Println(<span class="string">"start to watch for ID:"</span>, *nodeID)</div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">10</span>; i++ &#123;</div><div class="line">		resp := &lt;-ch</div><div class="line">		log.Println(<span class="string">"leader changed to"</span>, <span class="keyword">string</span>(resp.Kvs[<span class="number">0</span>].Key), <span class="keyword">string</span>(resp.Kvs[<span class="number">0</span>].Value))</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="4-互斥锁"><a href="#4-互斥锁" class="headerlink" title="4. 互斥锁"></a>4. 互斥锁</h2><p>前面说的互斥锁都是用来保护同一进程内的共享资源的，今天我们要重点学习下分布在不同机器中的不同进程内的 goroutine，如何利用分布式互斥锁来保护共享资源。</p>
+<p>互斥锁的应用场景和主从架构的应用场景不太一样。使用互斥锁的不同节点是没有主从这样的角色的，所有的节点都是一样的，只不过在同一时刻，只允许其中的一个节点持有锁。</p>
+<h3 id="4-1-Locker"><a href="#4-1-Locker" class="headerlink" title="4.1 Locker"></a>4.1 Locker</h3><p>etcd 提供了一个简单的 Locker 原语，它类似于 Go 标准库中的 sync.Locker 接口，也提供了 Lock/UnLock 的机制：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewLocker</span><span class="params">(s *Session, pfx <span class="keyword">string</span>)</span> <span class="title">sync</span>.<span class="title">Locker</span></span></div></pre></td></tr></table></figure>
+<p>下面的代码是一个使用 Locker 并发原语的例子：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">    <span class="string">"flag"</span></div><div class="line">    <span class="string">"log"</span></div><div class="line">    <span class="string">"math/rand"</span></div><div class="line">    <span class="string">"strings"</span></div><div class="line">    <span class="string">"time"</span></div><div class="line"></div><div class="line">    <span class="string">"github.com/coreos/etcd/clientv3"</span></div><div class="line">    <span class="string">"github.com/coreos/etcd/clientv3/concurrency"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> (</div><div class="line">    addr     = flag.String(<span class="string">"addr"</span>, <span class="string">"http://127.0.0.1:2379"</span>, <span class="string">"etcd addresses"</span>)</div><div class="line">    lockName = flag.String(<span class="string">"name"</span>, <span class="string">"my-test-lock"</span>, <span class="string">"lock name"</span>)</div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">    flag.Parse()</div><div class="line">    </div><div class="line">    rand.Seed(time.Now().UnixNano())</div><div class="line">    <span class="comment">// etcd地址</span></div><div class="line">    endpoints := strings.Split(*addr, <span class="string">","</span>)</div><div class="line">    <span class="comment">// 生成一个etcd client</span></div><div class="line">    cli, err := clientv3.New(clientv3.Config&#123;Endpoints: endpoints&#125;)</div><div class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">defer</span> cli.Close()</div><div class="line">    useLock(cli) <span class="comment">// 测试锁</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">useLock</span><span class="params">(cli *clientv3.Client)</span></span> &#123;</div><div class="line">    <span class="comment">// 为锁生成session</span></div><div class="line">    s1, err := concurrency.NewSession(cli)</div><div class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">defer</span> s1.Close()</div><div class="line">    <span class="comment">//得到一个分布式锁</span></div><div class="line">    locker := concurrency.NewLocker(s1, *lockName)</div><div class="line"></div><div class="line">    <span class="comment">// 请求锁</span></div><div class="line">    log.Println(<span class="string">"acquiring lock"</span>)</div><div class="line">    locker.Lock()</div><div class="line">    log.Println(<span class="string">"acquired lock"</span>)</div><div class="line"></div><div class="line">    <span class="comment">// 等待一段时间</span></div><div class="line">    time.Sleep(time.Duration(rand.Intn(<span class="number">30</span>)) * time.Second)</div><div class="line">    locker.Unlock() <span class="comment">// 释放锁</span></div><div class="line"></div><div class="line">    log.Println(<span class="string">"released lock"</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="4-2-Mutex"><a href="#4-2-Mutex" class="headerlink" title="4.2 Mutex"></a>4.2 Mutex</h3><p>Locker 是基于 Mutex 实现的，只不过，Mutex 提供了查询 Mutex 的 key 的信息的功能</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">useMutex</span><span class="params">(cli *clientv3.Client)</span></span> &#123;</div><div class="line">    <span class="comment">// 为锁生成session</span></div><div class="line">    s1, err := concurrency.NewSession(cli)</div><div class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">defer</span> s1.Close()</div><div class="line">    m1 := concurrency.NewMutex(s1, *lockName)</div><div class="line"></div><div class="line">    <span class="comment">//在请求锁之前查询key</span></div><div class="line">    log.Printf(<span class="string">"before acquiring. key: %s"</span>, m1.Key())</div><div class="line">    <span class="comment">// 请求锁</span></div><div class="line">    log.Println(<span class="string">"acquiring lock"</span>)</div><div class="line">    <span class="keyword">if</span> err := m1.Lock(context.TODO()); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    log.Printf(<span class="string">"acquired lock. key: %s"</span>, m1.Key())</div><div class="line"></div><div class="line">    <span class="comment">//等待一段时间</span></div><div class="line">    time.Sleep(time.Duration(rand.Intn(<span class="number">30</span>)) * time.Second)</div><div class="line"></div><div class="line">    <span class="comment">// 释放锁</span></div><div class="line">    <span class="keyword">if</span> err := m1.Unlock(context.TODO()); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    log.Println(<span class="string">"released lock"</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>可以看到，Mutex 并没有实现 sync.Locker 接口，它的 Lock/Unlock 方法需要提供一个 context.Context 实例做参数，这也就意味着，在请求锁的时候，你可以设置超时时间，或者主动取消请求。</p>
+<h2 id="5-读写锁"><a href="#5-读写锁" class="headerlink" title="5. 读写锁"></a>5. 读写锁</h2><p>etcd 也提供了分布式的读写锁。不过，互斥锁 Mutex 是在 github.com/coreos/etcd/clientv3/concurrency 包中提供的，读写锁 RWMutex 却是在 github.com/coreos/etcd/contrib/recipes 包中提供的。</p>
+<p>etcd 提供的分布式读写锁的功能和标准库的读写锁的功能是一样的。只不过，etcd 提供的读写锁，可以在分布式环境中的不同的节点使用。它提供的方法也和标准库中的读写锁的方法一致，分别提供了 RLock/RUnlock、Lock/Unlock 方法。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">    <span class="string">"bufio"</span></div><div class="line">    <span class="string">"flag"</span></div><div class="line">    <span class="string">"fmt"</span></div><div class="line">    <span class="string">"log"</span></div><div class="line">    <span class="string">"math/rand"</span></div><div class="line">    <span class="string">"os"</span></div><div class="line">    <span class="string">"strings"</span></div><div class="line">    <span class="string">"time"</span></div><div class="line"></div><div class="line">    <span class="string">"github.com/coreos/etcd/clientv3"</span></div><div class="line">    <span class="string">"github.com/coreos/etcd/clientv3/concurrency"</span></div><div class="line">    recipe <span class="string">"github.com/coreos/etcd/contrib/recipes"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> (</div><div class="line">    addr     = flag.String(<span class="string">"addr"</span>, <span class="string">"http://127.0.0.1:2379"</span>, <span class="string">"etcd addresses"</span>)</div><div class="line">    lockName = flag.String(<span class="string">"name"</span>, <span class="string">"my-test-lock"</span>, <span class="string">"lock name"</span>)</div><div class="line">    action   = flag.String(<span class="string">"rw"</span>, <span class="string">"w"</span>, <span class="string">"r means acquiring read lock, w means acquiring write lock"</span>)</div><div class="line">)</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">    flag.Parse()</div><div class="line">    rand.Seed(time.Now().UnixNano())</div><div class="line"></div><div class="line">    <span class="comment">// 解析etcd地址</span></div><div class="line">    endpoints := strings.Split(*addr, <span class="string">","</span>)</div><div class="line"></div><div class="line">    <span class="comment">// 创建etcd的client</span></div><div class="line">    cli, err := clientv3.New(clientv3.Config&#123;Endpoints: endpoints&#125;)</div><div class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">defer</span> cli.Close()</div><div class="line">    <span class="comment">// 创建session</span></div><div class="line">    s1, err := concurrency.NewSession(cli)</div><div class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">defer</span> s1.Close()</div><div class="line">    m1 := recipe.NewRWMutex(s1, *lockName)</div><div class="line"></div><div class="line">    <span class="comment">// 从命令行读取命令</span></div><div class="line">    consolescanner := bufio.NewScanner(os.Stdin)</div><div class="line">    <span class="keyword">for</span> consolescanner.Scan() &#123;</div><div class="line">        action := consolescanner.Text()</div><div class="line">        <span class="keyword">switch</span> action &#123;</div><div class="line">        <span class="keyword">case</span> <span class="string">"w"</span>: <span class="comment">// 请求写锁</span></div><div class="line">            testWriteLocker(m1)</div><div class="line">        <span class="keyword">case</span> <span class="string">"r"</span>: <span class="comment">// 请求读锁</span></div><div class="line">            testReadLocker(m1)</div><div class="line">        <span class="keyword">default</span>:</div><div class="line">            fmt.Println(<span class="string">"unknown action"</span>)</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">testWriteLocker</span><span class="params">(m1 *recipe.RWMutex)</span></span> &#123;</div><div class="line">    <span class="comment">// 请求写锁</span></div><div class="line">    log.Println(<span class="string">"acquiring write lock"</span>)</div><div class="line">    <span class="keyword">if</span> err := m1.Lock(); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    log.Println(<span class="string">"acquired write lock"</span>)</div><div class="line"></div><div class="line">    <span class="comment">// 等待一段时间</span></div><div class="line">    time.Sleep(time.Duration(rand.Intn(<span class="number">10</span>)) * time.Second)</div><div class="line"></div><div class="line">    <span class="comment">// 释放写锁</span></div><div class="line">    <span class="keyword">if</span> err := m1.Unlock(); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    log.Println(<span class="string">"released write lock"</span>)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">testReadLocker</span><span class="params">(m1 *recipe.RWMutex)</span></span> &#123;</div><div class="line">    <span class="comment">// 请求读锁</span></div><div class="line">    log.Println(<span class="string">"acquiring read lock"</span>)</div><div class="line">    <span class="keyword">if</span> err := m1.RLock(); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    log.Println(<span class="string">"acquired read lock"</span>)</div><div class="line"></div><div class="line">    <span class="comment">// 等待一段时间</span></div><div class="line">    time.Sleep(time.Duration(rand.Intn(<span class="number">10</span>)) * time.Second)</div><div class="line"></div><div class="line">    <span class="comment">// 释放写锁</span></div><div class="line">    <span class="keyword">if</span> err := m1.RUnlock(); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">    log.Println(<span class="string">"released read lock"</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2019/02/20/go/go_sync/go_sync_20/" data-id="ckjpsyymq001dusu9n9a6rmyx" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2019/02/21/go/go_sync/go_sync_21/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            21 分布式并发原语二
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2019/02/19/go/go_sync/go_sync_19/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">19 分组操作</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T13:58:09.104Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/11/15/web/react/react_15/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/前端/">前端</a></p>
+                            <p class="item-title"><a href="/2020/11/15/web/react/react_15/" class="title">15 react 项目实战</a></p>
+                            <p class="item-date"><time datetime="2020-11-14T16:00:00.000Z" itemprop="datePublished">2020-11-15</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">43</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15.71px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 13.57px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 15px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 19.29px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.86px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15.71px;">React</a> <a href="/tags/Vue/" style="font-size: 15.71px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.14px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.71px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 15px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.43px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.43px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 15px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.14px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.57px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.86px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.29px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.86px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2019/02/20/go/go_sync/go_sync_20/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

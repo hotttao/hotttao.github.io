@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>4 Mutex 扩展 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="go并发编程" />
+    
+    <meta name="description" content="如何基于 Mutex 实现一个可重入锁">
+<meta name="keywords" content="go并发编程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4 Mutex 扩展">
+<meta property="og:url" content="http://yoursite.com/2019/02/04/go/go_sync/go_sync_4/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="如何基于 Mutex 实现一个可重入锁">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-11-28T12:50:00.849Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="4 Mutex 扩展">
+<meta name="twitter:description" content="如何基于 Mutex 实现一个可重入锁">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/Go/">Go</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-go/go_sync/go_sync_4" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        4 Mutex 扩展
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2019/02/04/go/go_sync/go_sync_4/" class="article-date">
+            <time datetime="2019-02-03T16:00:00.000Z" itemprop="datePublished">2019-02-04</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/go并发编程/">go并发编程<span class="tag-count">21</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>如何基于 Mutex 实现一个可重入锁<br><a id="more"></a></p>
+<h2 id="1-Mutex-的扩展"><a href="#1-Mutex-的扩展" class="headerlink" title="1. Mutex 的扩展"></a>1. Mutex 的扩展</h2><p>上一节我们介绍了 Mutex 的实现原理，这一节我们来看看如何基于标准库的 Mutex 来扩展 Mutex 提供的并发原语，包括:</p>
+<ol>
+<li>实现一个可重入锁</li>
+<li>TryLock</li>
+<li>获取等待者的数量</li>
+<li>实现一个线程安全的队列</li>
+</ol>
+<h2 id="2-可重入锁"><a href="#2-可重入锁" class="headerlink" title="2. 可重入锁"></a>2. 可重入锁</h2><p>实现可重入锁的关键是要锁能记住当前哪个 goroutine 持有锁，这里有两个方案:</p>
+<ol>
+<li>通过 hacker 的方式获取到 goroutine id，记录下获取锁的 goroutine id，它可以实现 Locker 接口</li>
+<li>调用 Lock/Unlock 方法时，由 goroutine 提供一个 token，用来标识它自己，而不是我们通过 hacker 的方式获取到 goroutine id，但是，这样一来，就不满足 Locker 接口了</li>
+</ol>
+<p>可重入锁（递归锁）解决了代码重入或者递归调用带来的死锁问题，同时它也带来了另一个好处: 只有持有锁的 goroutine 才能 unlock 这个锁。接下来我们来看看这两个方案具体如何实现。</p>
+<h3 id="2-1-goroutine-id"><a href="#2-1-goroutine-id" class="headerlink" title="2.1 goroutine id"></a>2.1 goroutine id</h3><p>这个方案的关键第一步是获取 goroutine id，方式有两种，分别是</p>
+<ol>
+<li>简单方式：通过 runtime.Stack 方法获取栈帧信息，栈帧信息里包含 goroutine id</li>
+<li>hacker 方式: <ul>
+<li>原理: 我们获取运行时的 g 指针，反解出对应的 g 的结构。每个运行的 goroutine 结构的 g 指针保存在当前 goroutine 的一个叫做 TLS 对象中</li>
+<li>第一步：我们先获取到 TLS 对象</li>
+<li>第二步：再从 TLS 中获取 goroutine 结构的 g 指针</li>
+<li>第三步：再从 g 指针中取出 goroutine id。</li>
+<li>需要注意的是，不同 Go 版本的 goroutine 的结构可能不同，所以需要根据 Go 的不同版本进行调整。没必要重复造轮子，直接使用第三方库就可以: <a href="https://github.com/petermattis/goid" target="_blank" rel="external">petermattis/goid</a> </li>
+</ul>
+</li>
+</ol>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"runtime"</span></div><div class="line">	<span class="string">"strconv"</span></div><div class="line">	<span class="string">"strings"</span></div><div class="line">	<span class="string">"sync"</span></div><div class="line">	<span class="string">"sync/atomic"</span></div><div class="line"></div><div class="line">	<span class="string">"github.com/petermattis/goid"</span> <span class="comment">// 使用第三方包通过 hacker 方式获取 goroutine id </span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="comment">// 简单方式</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">GoID</span><span class="params">()</span> <span class="title">int</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> buffer [<span class="number">64</span>]<span class="keyword">byte</span></div><div class="line">	n := runtime.Stack(buffer[:], <span class="literal">false</span>)</div><div class="line">	idField := strings.Fields(strings.TrimPrefix(<span class="keyword">string</span>(buffer[:n]), <span class="string">"goroutine "</span>))[<span class="number">0</span>]</div><div class="line">	d, err := strconv.Atoi(idField)</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		<span class="built_in">panic</span>(fmt.Sprintf(<span class="string">"can not get goroutine id %v"</span>, err))</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> d</div><div class="line">&#125;</div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">// RecursiveMutex 包装一个Mutex,实现可重入</span></div><div class="line"><span class="keyword">type</span> RecursiveMutex <span class="keyword">struct</span> &#123;</div><div class="line">    sync.Mutex</div><div class="line">    owner     <span class="keyword">int64</span> <span class="comment">// 当前持有锁的goroutine id</span></div><div class="line">    recursion <span class="keyword">int32</span> <span class="comment">// 这个goroutine 重入的次数</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *RecursiveMutex)</span> <span class="title">Lock</span><span class="params">()</span></span> &#123;</div><div class="line">    gid := goid.Get()</div><div class="line">    <span class="comment">// 如果当前持有锁的goroutine就是这次调用的goroutine,说明是重入</span></div><div class="line">    <span class="keyword">if</span> atomic.LoadInt64(&amp;m.owner) == gid &#123;</div><div class="line">        m.recursion++</div><div class="line">        <span class="keyword">return</span></div><div class="line">    &#125;</div><div class="line">    m.Mutex.Lock()</div><div class="line">    <span class="comment">// 获得锁的goroutine第一次调用，记录下它的goroutine id,调用次数加1</span></div><div class="line">    atomic.StoreInt64(&amp;m.owner, gid)</div><div class="line">    m.recursion = <span class="number">1</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *RecursiveMutex)</span> <span class="title">Unlock</span><span class="params">()</span></span> &#123;</div><div class="line">    gid := goid.Get()</div><div class="line">    <span class="comment">// 非持有锁的goroutine尝试释放锁，错误的使用</span></div><div class="line">    <span class="keyword">if</span> atomic.LoadInt64(&amp;m.owner) != gid &#123;</div><div class="line">        <span class="built_in">panic</span>(fmt.Sprintf(<span class="string">"wrong the owner(%d): %d!"</span>, m.owner, gid))</div><div class="line">    &#125;</div><div class="line">    <span class="comment">// 调用次数减1</span></div><div class="line">    m.recursion--</div><div class="line">    <span class="keyword">if</span> m.recursion != <span class="number">0</span> &#123; <span class="comment">// 如果这个goroutine还没有完全释放，则直接返回</span></div><div class="line">        <span class="keyword">return</span></div><div class="line">    &#125;</div><div class="line">    <span class="comment">// 此goroutine最后一次调用，需要释放锁</span></div><div class="line">    atomic.StoreInt64(&amp;m.owner, <span class="number">-1</span>)</div><div class="line">    m.Mutex.Unlock()</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="2-2-token"><a href="#2-2-token" class="headerlink" title="2.2 token"></a>2.2 token</h3><p>通过 token 的实现方式需要调用者自己提供一个 token，获取锁的时候把这个 token 传入，释放锁的时候也需要把这个 token 传入。通过用户传入的 token 替换方案一中 goroutine id，其它逻辑和方案一一致。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">// Token方式的递归锁</span></div><div class="line"><span class="keyword">type</span> TokenRecursiveMutex <span class="keyword">struct</span> &#123;</div><div class="line">    sync.Mutex</div><div class="line">    token     <span class="keyword">int64</span></div><div class="line">    recursion <span class="keyword">int32</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 请求锁，需要传入token</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *TokenRecursiveMutex)</span> <span class="title">Lock</span><span class="params">(token <span class="keyword">int64</span>)</span></span> &#123;</div><div class="line">    <span class="keyword">if</span> atomic.LoadInt64(&amp;m.token) == token &#123; <span class="comment">//如果传入的token和持有锁的token一致，说明是递归调用</span></div><div class="line">        m.recursion++</div><div class="line">        <span class="keyword">return</span></div><div class="line">    &#125;</div><div class="line">    m.Mutex.Lock() <span class="comment">// 传入的token不一致，说明不是递归调用</span></div><div class="line">    <span class="comment">// 抢到锁之后记录这个token</span></div><div class="line">    atomic.StoreInt64(&amp;m.token, token)</div><div class="line">    m.recursion = <span class="number">1</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 释放锁</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *TokenRecursiveMutex)</span> <span class="title">Unlock</span><span class="params">(token <span class="keyword">int64</span>)</span></span> &#123;</div><div class="line">    <span class="keyword">if</span> atomic.LoadInt64(&amp;m.token) != token &#123; <span class="comment">// 释放其它token持有的锁</span></div><div class="line">        <span class="built_in">panic</span>(fmt.Sprintf(<span class="string">"wrong the owner(%d): %d!"</span>, m.token, token))</div><div class="line">    &#125;</div><div class="line">    m.recursion-- <span class="comment">// 当前持有这个锁的token释放锁</span></div><div class="line">    <span class="keyword">if</span> m.recursion != <span class="number">0</span> &#123; <span class="comment">// 还没有回退到最初的递归调用</span></div><div class="line">        <span class="keyword">return</span></div><div class="line">    &#125;</div><div class="line">    atomic.StoreInt64(&amp;m.token, <span class="number">0</span>) <span class="comment">// 没有递归调用了，释放锁</span></div><div class="line">    m.Mutex.Unlock()</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="3-TryLock"><a href="#3-TryLock" class="headerlink" title="3. TryLock"></a>3. TryLock</h2><p>我们可以为 Mutex 添加一个 TryLock 请求锁的方法:</p>
+<ol>
+<li>如果 goroutine 获取锁成功，则持有锁，并返回 true</li>
+<li>如果这把锁已经被其他 goroutine 所持有，或者是正在准备交给某个被唤醒的 goroutine，那么 TryLock 直接返回 false，不会阻塞在方法调用上</li>
+</ol>
+<p>具体实现如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">// 复制Mutex定义的常量</span></div><div class="line"><span class="keyword">const</span> (</div><div class="line">    mutexLocked = <span class="number">1</span> &lt;&lt; <span class="literal">iota</span> <span class="comment">// 加锁标识位置</span></div><div class="line">    mutexWoken              <span class="comment">// 唤醒标识位置</span></div><div class="line">    mutexStarving           <span class="comment">// 锁饥饿标识位置</span></div><div class="line">    mutexWaiterShift = <span class="literal">iota</span> <span class="comment">// 标识waiter的起始bit位置</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="comment">// 扩展一个Mutex结构</span></div><div class="line"><span class="keyword">type</span> Mutex <span class="keyword">struct</span> &#123;</div><div class="line">    sync.Mutex</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 尝试获取锁</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *Mutex)</span> <span class="title">TryLock</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</div><div class="line">    <span class="comment">// 如果能成功抢到锁</span></div><div class="line">    <span class="keyword">if</span> atomic.CompareAndSwapInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)), <span class="number">0</span>, mutexLocked) &#123;</div><div class="line">        <span class="keyword">return</span> <span class="literal">true</span></div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">// 如果处于唤醒、加锁或者饥饿状态，这次请求就不参与竞争了，返回false</span></div><div class="line">    old := atomic.LoadInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)))</div><div class="line">    <span class="keyword">if</span> old&amp;(mutexLocked|mutexStarving|mutexWoken) != <span class="number">0</span> &#123;</div><div class="line">        <span class="keyword">return</span> <span class="literal">false</span></div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">// 尝试在竞争的状态下请求锁</span></div><div class="line">    <span class="built_in">new</span> := old | mutexLocked</div><div class="line">    <span class="keyword">return</span> atomic.CompareAndSwapInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)), old, <span class="built_in">new</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="4-获取等待者的数量"><a href="#4-获取等待者的数量" class="headerlink" title="4. 获取等待者的数量"></a>4. 获取等待者的数量</h2><p>Mutex 结构中的 state 字段有很多个含义，通过 state 字段，你可以知道锁是否已经被某个 goroutine 持有、当前是否处于饥饿状态、是否有等待的 goroutine 被唤醒、等待者的数量等信息。但是要想获取这些信息，我们需要将他们从 state 字段中一一解析出来，代码如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">const</span> (</div><div class="line">    mutexLocked = <span class="number">1</span> &lt;&lt; <span class="literal">iota</span> <span class="comment">// mutex is locked</span></div><div class="line">    mutexWoken</div><div class="line">    mutexStarving</div><div class="line">    mutexWaiterShift = <span class="literal">iota</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">type</span> Mutex <span class="keyword">struct</span> &#123;</div><div class="line">    sync.Mutex</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *Mutex)</span> <span class="title">Count</span><span class="params">()</span> <span class="title">int</span></span> &#123;</div><div class="line">    <span class="comment">// 获取state字段的值</span></div><div class="line">    </div><div class="line">    v := atomic.LoadInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)))</div><div class="line">    isLock = v &amp; mutexLocked</div><div class="line">    v = v &gt;&gt; mutexWaiterShift <span class="comment">//得到等待者的数值</span></div><div class="line">    v = v + isLock <span class="comment">//再加上锁持有者的数量，0或者1</span></div><div class="line">    <span class="keyword">return</span> <span class="keyword">int</span>(v)</div><div class="line">&#125;</div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">// 锁是否被持有</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *Mutex)</span> <span class="title">IsLocked</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</div><div class="line">    state := atomic.LoadInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)))</div><div class="line">    <span class="keyword">return</span> state&amp;mutexLocked == mutexLocked</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 是否有等待者被唤醒</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *Mutex)</span> <span class="title">IsWoken</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</div><div class="line">    state := atomic.LoadInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)))</div><div class="line">    <span class="keyword">return</span> state&amp;mutexWoken == mutexWoken</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// 锁是否处于饥饿状态</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *Mutex)</span> <span class="title">IsStarving</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</div><div class="line">    state := atomic.LoadInt32((*<span class="keyword">int32</span>)(unsafe.Pointer(&amp;m.Mutex)))</div><div class="line">    <span class="keyword">return</span> state&amp;mutexStarving == mutexStarving</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>需要注意的是在获取 state 字段的时候，并没有通过 Lock 获取这把锁，所以获取的这个 state 的值是一个瞬态的值。</p>
+<h2 id="5-实现一个线程安全的队列"><a href="#5-实现一个线程安全的队列" class="headerlink" title="5. 实现一个线程安全的队列"></a>5. 实现一个线程安全的队列</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">type</span> SliceQueue <span class="keyword">struct</span> &#123;</div><div class="line">    data []<span class="keyword">interface</span>&#123;&#125;</div><div class="line">    mu   sync.Mutex</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewSliceQueue</span><span class="params">(n <span class="keyword">int</span>)</span> <span class="params">(q *SliceQueue)</span></span> &#123;</div><div class="line">    <span class="keyword">return</span> &amp;SliceQueue&#123;data: <span class="built_in">make</span>([]<span class="keyword">interface</span>&#123;&#125;, <span class="number">0</span>, n)&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// Enqueue 把值放在队尾</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(q *SliceQueue)</span> <span class="title">Enqueue</span><span class="params">(v <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</div><div class="line">    q.mu.Lock()</div><div class="line">    q.data = <span class="built_in">append</span>(q.data, v)</div><div class="line">    q.mu.Unlock()</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// Dequeue 移去队头并返回</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(q *SliceQueue)</span> <span class="title">Dequeue</span><span class="params">()</span> <span class="title">interface</span></span>&#123;&#125; &#123;</div><div class="line">    q.mu.Lock()</div><div class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(q.data) == <span class="number">0</span> &#123;</div><div class="line">        q.mu.Unlock()</div><div class="line">        <span class="keyword">return</span> <span class="literal">nil</span></div><div class="line">    &#125;</div><div class="line">    v := q.data[<span class="number">0</span>]</div><div class="line">    q.data = q.data[<span class="number">1</span>:]</div><div class="line">    q.mu.Unlock()</div><div class="line">    <span class="keyword">return</span> v</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2019/02/04/go/go_sync/go_sync_4/" data-id="ckjpsyymy001nusu9j0oo72kf" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2019/02/05/go/go_sync/go_sync_5/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            5 RWMutex
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2019/02/03/go/go_sync/go_sync_3/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">3 Mutex 锁</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T13:58:09.104Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/11/15/web/react/react_15/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/前端/">前端</a></p>
+                            <p class="item-title"><a href="/2020/11/15/web/react/react_15/" class="title">15 react 项目实战</a></p>
+                            <p class="item-date"><time datetime="2020-11-14T16:00:00.000Z" itemprop="datePublished">2020-11-15</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">43</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15.71px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 13.57px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 15px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 19.29px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.86px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15.71px;">React</a> <a href="/tags/Vue/" style="font-size: 15.71px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.14px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.71px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 15px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.43px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.43px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 15px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 12.14px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.57px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.86px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 14.29px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.86px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2019/02/04/go/go_sync/go_sync_4/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
