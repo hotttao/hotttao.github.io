@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>8. 事务 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="数据密集型应用" />
+    
+    <meta name="description" content="事务">
+<meta name="keywords" content="数据密集型应用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="8. 事务">
+<meta property="og:url" content="http://yoursite.com/2019/04/08/db/db_8/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="事务">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/db/write_skew.png">
+<meta property="og:updated_time" content="2021-01-31T07:23:16.441Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="8. 事务">
+<meta name="twitter:description" content="事务">
+<meta name="twitter:image" content="http://yoursite.com/images/db/write_skew.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/分布式/">分布式</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-db/db_8" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        8. 事务
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2019/04/08/db/db_8/" class="article-date">
+            <time datetime="2019-04-07T16:00:00.000Z" itemprop="datePublished">2019-04-08</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/数据密集型应用/">数据密集型应用<span class="tag-count">13</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>事务</p>
+<a id="more"></a>
+<h2 id="1-为什么需要事务"><a href="#1-为什么需要事务" class="headerlink" title="1. 为什么需要事务"></a>1. 为什么需要事务</h2><p>事务将应用程序的多个读、写操作捆绑在一起成为一个逻辑单元，要么全部成功(提交)、要么失败(中止或回滚)。如果失败，应用程序可以安全地重试。这样无需担心<strong>部分失败</strong>的情况。事务存在的目的是简化应用层的编程模型。有了事务，应用程序可以不用考虑某些内部潜在的错误以及<strong>复杂的并发性问题</strong>，这些都交给数据库负责处理(称之为<strong>安全性保证</strong>)。</p>
+<p>要判断什么时候需要事务，我们需要确切理解<strong>事务能提供哪些安全性保证</strong>，背后的代价是什么。</p>
+<h2 id="2-深入理解事务"><a href="#2-深入理解事务" class="headerlink" title="2. 深入理解事务"></a>2. 深入理解事务</h2><p>事务所提供的安全性保证即大家熟悉的 ACID，分表代表:</p>
+<ol>
+<li>Atomicity: 原子性</li>
+<li>Consistency: 一致性</li>
+<li>Isolation: 隔离性</li>
+<li>Durability: 持久性</li>
+</ol>
+<p>但实际上各种数据库所实现的 ACID 并不相同，它们能提供的安全保证也各不相同。</p>
+<p>而不符合 ACID 的系统有时被称为 BASE:</p>
+<ol>
+<li>Basically Available: 基本可用性</li>
+<li>Soft State: 软状态</li>
+<li>Eventual Consistency: 最终一致性</li>
+</ol>
+<p>接下来我们一一来介绍 原子性、一致性、隔离性和持久性的确切含义。</p>
+<h3 id="2-1-原子性"><a href="#2-1-原子性" class="headerlink" title="2.1 原子性"></a>2.1 原子性</h3><p>ACID 的原子性并不关乎多个操作的并发性，它没有描述多个线程视图访问相同的数据会发生情况，后者其实是由 ACID 的隔离性所定义。原子性其实描述了<strong>客户端发起一个包含多个写操作的请求时可能发生的情况</strong>。把多个写操作纳入到一个原子事务，万一出现了故障而导致没法完成最终提交时，事务会中止，并且数据库会<strong>丢弃或撤销哪些局部完成的更改</strong>。</p>
+<p>原型性大大简化了: 如果事务已经中止，应用程序可以确定没有实质发生任何更改，可以安全的重试。</p>
+<p>因此 ACID 中原子性所定义的特征是: 在出错时中止事务，并将部分完成的写入全部丢弃。也许<strong>可中止性</strong>更为准确。</p>
+<h3 id="2-2-一致性"><a href="#2-2-一致性" class="headerlink" title="2.2 一致性"></a>2.2 一致性</h3><p>很多场景都存在<strong>一致性</strong>，比如:</p>
+<ol>
+<li>副本一致性以及异步复制中，引出的最终一致性问题</li>
+<li>一致性哈希</li>
+<li>CPA 理论中，一致性用来表示线性化</li>
+<li>ACID 中一致性主要指<strong>数据库处于应用程序所期待的预期状态</strong></li>
+</ol>
+<p>ACID 的一致性主要是指<strong>对数据有特定的预期状态</strong>，任何数据更改必须满足这些<strong>状态约束(或者恒等条件)</strong>。</p>
+<p>这种一致性本质上要求应用层来维护状态一致或恒等，应用程序有责任正确的定义事务来保持一致。即如果提供的数据修改为了恒等条件，数据很难检查而组织操作。应用程序可以借助数据库提供的原子性、隔离性达到一致性，但一致性并不源于数据库。因此<strong>C 其实不属于 ACID</strong>。</p>
+<h3 id="2-3-隔离性"><a href="#2-3-隔离性" class="headerlink" title="2.3 隔离性"></a>2.3 隔离性</h3><p>隔离性意味着<strong>并发执行的多个事务相互隔离</strong>，不能相互交叉，不会相互影响，比如一个事务不应该看到其他事务部分执行的中间结果。</p>
+<p>隔离性意味着可以假装事务是数据库上运行的唯一事务，尽管实际上可能多个事务在同时运行，数据库系统要保证当事务提交时，其结果与串行执行完全相同。</p>
+<p>实际上为了权衡性能和安全性，存在多种隔离级别，待会我们在详述。</p>
+<h3 id="2-4-持久化"><a href="#2-4-持久化" class="headerlink" title="2.4 持久化"></a>2.4 持久化</h3><p>持久化保证一旦事务提交成功，及时存在硬件故障或数据奔溃，事务所写入的任何数据也不会丢失:</p>
+<ol>
+<li>对于单节点数据库，持久性意味着数据已经写入非易失性存储设备，写入的过程中，通常还涉及预写日志等，以保证磁盘数据损坏可恢复</li>
+<li>对于支持远程复制的数据库，持久化意味着数据已成功复制到多个节点</li>
+</ol>
+<p>为了实现持久化，数据库必须等到这些写入或者复制完成之后才能报告事务成功提交。现实情况是没有哪一项技术可以提供绝对的持久性保证，包括写入磁盘、复制到远程以及备份，这些都是降低风险的手段，应该组合使用。</p>
+<h2 id="3-多对象事务与单对象事务"><a href="#3-多对象事务与单对象事务" class="headerlink" title="3. 多对象事务与单对象事务"></a>3. 多对象事务与单对象事务</h2><h3 id="3-1-多对象事务"><a href="#3-1-多对象事务" class="headerlink" title="3.1 多对象事务"></a>3.1 多对象事务</h3><p>多对象事务是指一个事务中会修改多个对象，多对象事务会保证多个数据对象之间保持同步。</p>
+<p>多对象事务要求确定知道事务包含了哪些读写操作。对于关系型数据库，客户端通常与数据库服务器建立 TCP 连接，因而对于特定的链接，SQL 语句 BEGIN TRANSACTION 和 COMMIT 之间的所有操作都属于同一个事务。但是这种方式并不完美。如果 TCP 连接中断，事务必须终止。假定中断发生在事务提交之后，服务器确认提交完成之前，客户端最后不知道该事务是否已提交。为了解决这个问题，事务管理器需要定义一个<strong>唯一的事务标识</strong>来逻辑上绑定一组写操作，该事务标识符独立于 TCP 链接。</p>
+<p>而许多非关系型数据库则可能不支持<strong>多对象事务</strong></p>
+<h3 id="3-2-单对象事务"><a href="#3-2-单对象事务" class="headerlink" title="3.2 单对象事务"></a>3.2 单对象事务</h3><p>原子性和隔离性也同样适用于单个对象的更新，比如像数据库写入 20KB 的JSON 文档:</p>
+<ol>
+<li>发送第一个 10KB 之后网络连接中断，数据库是否会存储无法完整解析的片段</li>
+<li>数据库覆盖磁盘现有数据时故障，新旧值会不会混杂在一起</li>
+<li>另一个客户端是否能看到部分更新的文档</li>
+</ol>
+<p>因此存储引擎必须实现的就是<strong>单节点、单个对象层面</strong>上提供原子性和隔离性，例如: 基于日志恢复实现原子性，对每个对象加锁来实现隔离</p>
+<h3 id="3-3-多对象事务的必要性"><a href="#3-3-多对象事务的必要性" class="headerlink" title="3.3 多对象事务的必要性"></a>3.3 多对象事务的必要性</h3><p>许多分布式数据库不支持多对象事务，主要是因为当出现<strong>跨分区</strong>时，多对象事务非常难以正确实现，同时在高可用或者极致性能场景下会带来很多负面影响。但是分布式数据库实现事务并非不可能，不存在原理上的限制。</p>
+<p>我们是否需要多对象事务？是否有可能只用键值数据模型和单对象操作来实现任何应用程序？的确有可能，但是还有许多情况需要协调写入几个不同的对象:</p>
+<ol>
+<li>在关系数据模型中，一个表中的行通常具有对另一个表中的行的外键引用。多对象事务使你确信这些引用始终有效</li>
+<li>缺乏连接功能的文档数据库会鼓励非规范化。当需要更新非规范化的信息时，如 图7-2 所示，需要一次更新多个文档。事务在这种情况下非常有用</li>
+<li>在具有二级索引的数据库中（除了纯粹的键值存储以外几乎都有），每次更改值时都需要更新索引。如果没有事务隔离性，记录可能出现在一个索引中，但没有出现在另一个索引中，因为第二个索引的更新还没有发生</li>
+</ol>
+<h3 id="3-4-处理错误和终止"><a href="#3-4-处理错误和终止" class="headerlink" title="3.4 处理错误和终止"></a>3.4 处理错误和终止</h3><p>ACID数据库基于这样的哲学：如果数据库有违反其原子性，隔离性或持久性的危险，则完全放弃整个事务，而不是部分放弃。然后并不是所欲的系统都遵循上述理念。例如无主复制的数据存储，主要是在“尽力而为”的基础上进行工作。可以概括为“数据库将做尽可能多的事，运行遇到错误时，它不会撤消它已经完成的事情“ ——所以，从错误中恢复是应用程序的责任。</p>
+<p>支持安全的重试机制才是中止流程的重点。尽管重试一个中止的事务是一个简单而有效的错误处理机制，但它并不完美：</p>
+<ol>
+<li>如果事务实际上成功了，但是在服务器试图向客户端确认提交成功时网络发生故障（所以客户端认为提交失败了），那么重试事务会导致事务被执行两次——除非你有一个额外的应用级除重机制。</li>
+<li>如果错误是由于负载过大造成的，则重试事务将使问题变得更糟，而不是更好。</li>
+<li>仅在临时性错误（例如，由于死锁，异常情况，临时性网络中断和故障切换）后才值得重试。在发生永久性错误（例如，违反约束）之后重试是毫无意义的</li>
+<li>如果客户端进程在重试中失效，任何试图写入数据库的数据都将丢失</li>
+<li>如果事务在数据库之外也有副作用，即使事务被中止，也可能发生这些副作用。如果你想确保几个不同的系统一起提交或放弃，二阶段提交（2PC, two-phase commit） 可以提供帮助</li>
+</ol>
+<h2 id="4-弱隔离级别"><a href="#4-弱隔离级别" class="headerlink" title="4. 弱隔离级别"></a>4. 弱隔离级别</h2><p>只有出现某个事务修改数据而另一个事务同时要读取改数据，或者两个事务同时修改相同数据时，才会引发并发问题。并发问题通常难以测试和发现，所以数据库试图通过事务隔离来对应用程序隐藏内部的各种并发问题。隔离是假装没有发生并发，保证事务最终的执行结果与串行执行结果相同。</p>
+<p>但是串行化的隔离会严重影响隔离，许多数据库倾向于采用较弱的隔离级别。这些较弱的隔离级别可以防止但是不是全部的并发问题。</p>
+<p>接下来我们就来详细分析几个实际中经常用到的弱级别(非串行化)隔离，并详细讨论可能发生的竞争条件。有了这些认识后，可以帮助我们判断哪些场景适合什么样的隔离级别，最后我们将介绍串行化。</p>
+<h3 id="4-1-读-提交"><a href="#4-1-读-提交" class="headerlink" title="4.1 读-提交"></a>4.1 读-提交</h3><p>读-提交时最基本的事务隔离级别，值提供以下两个保证:</p>
+<ol>
+<li>读数据库时，只能看到已成功提交的数据(防止，脏读)</li>
+<li>写数据库时，只会覆盖已成功提交的数据(防止，脏写)</li>
+</ol>
+<h4 id="防止脏读"><a href="#防止脏读" class="headerlink" title="防止脏读"></a>防止脏读</h4><p>脏读是指事务可以看到<strong>其他尚未提交事务部分写入的数据</strong>，读-提交意味着事务的任何写入只有在成功提交后，才能被其他事务观察到(并且所有的写全部可见)。</p>
+<p>当有一些需求时，需要防止脏读:</p>
+<ol>
+<li>事务需要更新多个对象</li>
+<li>如果事务中止，则所有写入操作都需要回滚。如果数据库允许脏读，那就意味着一个事务可能会看到稍后需要回滚的数据，而这些数据并未实际提交到数据库中。</li>
+</ol>
+<h4 id="防止脏写"><a href="#防止脏写" class="headerlink" title="防止脏写"></a>防止脏写</h4><p>脏写是指事务会覆盖<strong>尚未提交</strong>的其他事务的<strong>部分写入</strong>。读-提交隔离级别可以防止脏写，通常的方式是推迟第二个写请求，直至前面的事务完成提交。</p>
+<p>防止脏写，可以避免下面的并发问题:</p>
+<ol>
+<li>事务需要更新多个对象</li>
+</ol>
+<h3 id="实现读-提交"><a href="#实现读-提交" class="headerlink" title="实现读-提交"></a>实现读-提交</h3><p>数据库通常采用<strong>行级锁</strong>来防止脏读: 当事务想要修改特定对象（行或文档）时，它必须首先获得该对象的锁。然后必须持有该锁直到事务被提交或中止。</p>
+<p>使用加锁的方式实现脏读，因为会导致许多只读事务等待太长时间，大多数据库采用这样的方法防止脏读: 对每个待更新的对象，数据库都会维护<strong>其旧值和当前持有锁事务将要设置的新值</strong>两个版本。在事务提交之前，所有其他读操作都读取旧值，仅当写事务提交之后，才会切换到读取新值。</p>
+<h3 id="4-2-快照级别隔离与可重复读"><a href="#4-2-快照级别隔离与可重复读" class="headerlink" title="4.2 快照级别隔离与可重复读"></a>4.2 快照级别隔离与可重复读</h3><p>读-提交，会产生不可重复读，即一个事务内，两次相同的读取可能会读到不同的值。有些场景不能容忍这种暂时的不一致:</p>
+<ol>
+<li>备份场景: 备份过程中会继续写入数据，最终的备份数据里可能包含部分旧版本和部分新版本数据</li>
+<li>分析查询和完整性检查场景</li>
+</ol>
+<p>究其原因，读-提交无法获取数据库的一致性视图。快照级别隔离可以解决这个问题。其总体想法是: 每个事物都从数据库的一致性快照中读取，事物一开始所看到的是最近提交的数据，即使数据随后可能被另一个事物修改，但保证每个事物都只看到改特定时间点的旧数据。</p>
+<p>快照级别隔离对长时间运行的只读查询(备份和分析)非常有用。</p>
+<h4 id="实现快照级别隔离"><a href="#实现快照级别隔离" class="headerlink" title="实现快照级别隔离"></a>实现快照级别隔离</h4><p>与读取提交的隔离类似，快照隔离的实现通常使用写锁来防止脏写，读取不需要加锁，读操作不会阻止写操作，反之亦然。</p>
+<p>快照级别隔离的实现使用的是<strong>多版本并发控制</strong>(Multi Version Concurrency Control, MVCC)。每个版本对应正在进行的多个事务在不同的时间点查看到的数据。</p>
+<p>如果一个数据库只需要提供读已提交的隔离级别，而不提供快照隔离，那么保留一个对象的两个版本就足够了：提交的版本和被覆盖但尚未提交的版本。所以支持快照隔离的存储引擎往往直接采用MVCC来实现读已提交隔离级别。做法是<strong>对每一个不同的查询</strong>单独创建一个快照。</p>
+<p>在 MVCC的实现中，事务开始时，首先会被赋予一个唯一的、单调递增的事务ID，每当事务向数据库写入新内容时，所写的数据都会被标记写入者的事务ID。当事务读取数据库时，通过事务ID决定哪些对象可见。仅当以下两个条件都成立时，数据对事务可见:</p>
+<ol>
+<li>事务开始时，创建该对象的事务已经完成了提交</li>
+<li>对象没有被删除，或者删除了，但是删除事务在当前事务开始时还未提交</li>
+</ol>
+<h4 id="索引与快照级别隔离"><a href="#索引与快照级别隔离" class="headerlink" title="索引与快照级别隔离"></a>索引与快照级别隔离</h4><p>MVCC 如何支持索引呢？</p>
+<p>一种防范是索引直接指向对象的所有版本，然后想办法过滤对当前是事务不可见的那些版本。当后台的垃圾回收进程决定删除某个旧对象是，对应的索引条目也需要删除。</p>
+<p>在CouchDB，Datomic和LMDB中使用另一种方法。虽然它们也使用B树，但它们使用的是一种仅追加/写时拷贝（append-only/copy-on-write） 的变体，它们在更新时不覆盖树的页面，而为每个修改页面创建一份副本。从父页面直到树根都会级联更新，以指向它们子页面的新版本。任何不受写入影响的页面都不需要被复制，并且保持不变。</p>
+<p>这种追加式的 Btree，每个写入事务都会创建一个新的 B-tree root，代表该时刻数据库的一致性快照。这时就没有必要更具事务 ID 再去过滤某些对象，每笔修改都会修改现有的 Btree，因为之后的查询可以直接作用于特定快照 Btree(有利于查询性能)。采用这种方法依然需要后台进程来执行压缩和垃圾回收。</p>
+<h3 id="4-3-防止更新丢失"><a href="#4-3-防止更新丢失" class="headerlink" title="4.3 防止更新丢失"></a>4.3 防止更新丢失</h3><p>总结一下，<strong>读-提交</strong>和<strong>快照级别隔离</strong>主要都是为了解决<strong>只读事务</strong>遇到<strong>并发写</strong>时<strong>可以看到什么</strong>。虽然中间也涉及脏写的问题，但是脏写只是写并发的一个特例。总体而言这两种弱隔离级别还没有触及另一种情况，即<strong>两个写事务并发</strong>。</p>
+<p>写事务并发会带来其他一些值的关注的冲突问题，典型的就是<strong>更新丢失问题</strong>。更新丢失可能发生在这样一个操作场景中: 应用程序从数据库读取某些值，根据应用逻辑做出修改，然后写回新值(read-modify-write)。当两个事务在同样的数据对象上执行类似操作时，由于隔离性，第二个写操作并不包含第一个事务修改后的值，最终会导致第一个事务的修改值可能丢失。这种冲突可能发生在下列场景中:</p>
+<ol>
+<li>递增计数器、更新账户余额(read-modify-write)</li>
+<li>对某个复杂对象的一部分内容执行修改</li>
+<li>两个用户同时编辑 wiki 页面</li>
+</ol>
+<p>并发写事务冲突，目前有多种可行的解决方案，包括:</p>
+<ol>
+<li>原子写操作</li>
+<li>显示加锁</li>
+<li>自动检测更新丢失</li>
+<li>原子比较和设置</li>
+<li>冲突解决与复制</li>
+</ol>
+<h4 id="原子写操作"><a href="#原子写操作" class="headerlink" title="原子写操作"></a>原子写操作</h4><p>许多数据库提供了<strong>原子更新操作</strong>，以避免在应用层代码完成<strong>读-修改-写回</strong>操作。无论如何，如果原子操作可行，那么它就是推荐的最佳方式。</p>
+<p>原子操作有两种常见的实现方式:</p>
+<ol>
+<li>对读取对象加独占锁，这样在更新被提交之前，其他事务不可读取</li>
+<li>强制所有的原子操作都在<strong>单线程上执行</strong></li>
+</ol>
+<h4 id="显示加锁"><a href="#显示加锁" class="headerlink" title="显示加锁"></a>显示加锁</h4><p>防止更新丢失的另一种方法是<strong>应用程序显示锁定</strong>待更新的对象，然后执行<strong>读-修改-写回</strong>这样的操作序列。此时如果有其他事务尝试同时读取对象，则必须等待当前正在执行的序列全部完成。</p>
+<p>在 mysql 中就是使用 <strong>SELECT … FOR UPDATE;</strong>。FOR UPDATE 指令指示数据库对返回的所有结果行加锁。</p>
+<p>首先该方法是可行的，但要做到这一点，需要仔细考虑应用层的逻辑。很多代码会忘记在必要的地方加锁，结果很容易引入竞争冲突。</p>
+<h4 id="自动检测更新丢失"><a href="#自动检测更新丢失" class="headerlink" title="自动检测更新丢失"></a>自动检测更新丢失</h4><p>原子操作和锁都是通过强制<strong>读-修改-写回</strong>操作序列<strong>串行执行</strong>来防止丢失更新。另一种思路是先让他们并发执行，如果事务管理器检测到了更新丢失风险，则会中止当前事务，并强制回退到安全的<strong>读-修改-写回</strong>方式。</p>
+<p>该方法的一个优点是<strong>数据库完全可以借助快照级别隔离来高效地执行检查</strong>。PostgreSQL、Oracle 的快照隔离级别都可以自动检测何时发生了更新丢失，然后终止违规的那个事务。但是 <strong>MySQL InnoDB 的可重复度并不支持检测更新丢失</strong>。</p>
+<p>自动检测更新丢失是非常好的功能，应用层代码因此不用依赖数据库提供的特殊功能，且自动生效有效避免这类错误。</p>
+<h4 id="原子比较和设置"><a href="#原子比较和设置" class="headerlink" title="原子比较和设置"></a>原子比较和设置</h4><p>原子比较和设置，即只有在上次读取的数据没有发生变化时才允许更新。否则更新失败，需要应用层再次检查并在必要时进行重试。注意原子比较和设置不能基于快照隔离级别的旧值，而必须是当前的最新值，否则无法防止更新丢失。</p>
+<h4 id="冲突解决与复制"><a href="#冲突解决与复制" class="headerlink" title="冲突解决与复制"></a>冲突解决与复制</h4><p>防止丢失更新需要考虑另一个维度：多个节点上的多个数据副本，并且不同节点上的数据可能被并发修改时。</p>
+<p><strong>加锁和原子修改都有个前提</strong>:<strong>只有一个最新的数据副本</strong>。然后对于多主节点或者无主节点的多副本数据库，由于支持多个并发写，且通常以异步方式来同步更新。所以会出现多个最新的数据副本。此时加锁和原子修改比较将不再适用。</p>
+<p>如果操作可交换(即顺序无关，在不同的副本上以不同的顺序执行执行仍然得到相同的结果)，则原子操作在多副本情况下也可以工作。</p>
+<h3 id="4-4-写倾斜与幻读"><a href="#4-4-写倾斜与幻读" class="headerlink" title="4.4 写倾斜与幻读"></a>4.4 写倾斜与幻读</h3><h4 id="写倾斜"><a href="#写倾斜" class="headerlink" title="写倾斜"></a>写倾斜</h4><p>脏读和更新丢失是多事务并发写同一个对象时引发的两种竞争条件，但不是并发写所引发的全部问题。写倾斜和幻读是并发写引发的另外两个问题。</p>
+<p>如果两个事务读取相同的一组对象，然后<strong>更新其中一部分</strong></p>
+<ol>
+<li>如果不同的事务更新不同的对象，则可能发生写倾斜</li>
+<li>如果不同的事务更新相同的对象，则可能发生脏读或更新丢失</li>
+</ol>
+<p>所以写倾斜可以视为一种更广义的更新丢失问题。所有产生写倾斜的场景都遵循下面类似的模式:</p>
+<ol>
+<li>首先输入一些匹配条件，即采用 SELECT 查询所有满足条件的行</li>
+<li>根据查询的结果，应用层代码来决定下一步的操作，可能继续或者报告错误</li>
+<li>如果应用程序决定继续执行，它将发起数据库写入并提交事务</li>
+<li>而对数据库的更新操作会改变第二步做出决定的前提条件</li>
+</ol>
+<p>换句话说，如果提交写入之后在重复执行步骤 SELECT 查询，应用层会做出完全不同的判断结果。原因是刚刚的写操作改变了决定的前提条件。比如下面这个值班室必须要有一个医生值班的例子: 医生可以调整班次，但是至少要确保一位医生在该班次值班。</p>
+<p><img src="/images/db/write_skew.png" alt="写倾斜"></p>
+<p>入上图所示，Bob 和 Alice 医生分别申请调班，由于数据库正在使用<strong>快照级别隔离</strong>，两次检查都返回有两名医生，两个事务都判断可以继续执行，最终的结果是该班次没有医生值班。</p>
+<p>这是示例中，步骤 3 中所修改的行恰好是步骤 1 查询结果的一部分，导致了写倾斜。对于这个例子，一种解决方案是: 先修改值班记录并加锁在查询或者加锁读(SELECT FOR UPDATE)，可以保证事务安全，避免写倾斜。</p>
+<h4 id="幻读"><a href="#幻读" class="headerlink" title="幻读"></a>幻读</h4><p>医生值班里的解决方案对于其他一些例子并不适用，比如下面这个声明一个用户名的例子: 网站通常要求每个用户有唯一的用户名，两个用户可能同时尝试创建相同的用户名。可以采用实物的方式首先检查用户名是否被使用，如果没有，则使用该名称创建账户。这个医生值班的例子类似，依然存在写倾斜。但是这个例子更加的特殊无法使用 SELECT FOR UPDATE 通过读加锁来解决，它<strong>检查的是不满足给定搜索条件的行(预期结果为空)</strong>，<strong>接下来添加符合条件的行</strong>。因为一开始的读请求根本不会返回任何行，SELECT FOR UPDATE 也就无从加锁。<strong>这种在一个事务中的写入改变了另一个事务查询结果的现象，称为幻读。</strong>快照级别隔离可以避免只读查询时的幻读，但是对于这里讨论的<strong>读-写事务</strong>，无法解决棘手的写倾斜问题。(注: 这里唯一用户名的问题可以通过数据库的唯一键解决)。</p>
+<h4 id="实体化冲突"><a href="#实体化冲突" class="headerlink" title="实体化冲突"></a>实体化冲突</h4><p>对于<strong>幻读</strong>，问题的关键是查询结果中没有对象可以加锁，可以人为引入一些可加锁的对象(比如行的间隙，又称为间隙锁)。</p>
+<p>比如会议室预定系统的例子: 同一时间，同一个会议室不能被预定两次。我们可以构建一个事件-房间表，表的每一行对应于特定时间段的特定房间。预定事务可以查询并锁定时间-房间表中对应查询房间和时间段的行。</p>
+<p>这种方法称为<strong>实体化冲突(或物化冲突)</strong>，它把幻读问题转变为针对数据库中一组具体行的锁冲突问题。因为弄清楚如何实现实体化具有挑战性，这种<strong>把一个并发控制降级为数据模型的思路</strong>总是不够优雅。除非没有别的方案可行，否则我们不推荐采用实体化冲突。而在大多数情况下串行化隔离方案更为可行。</p>
+<h4 id="有关写倾斜和幻读的一些问题"><a href="#有关写倾斜和幻读的一些问题" class="headerlink" title="有关写倾斜和幻读的一些问题"></a>有关写倾斜和幻读的一些问题</h4><p>关于幻读有如下几个值的回答的问题。</p>
+<p>问题一: 为什么防止更新丢失中的方法很难解决幻读和写倾斜:</p>
+<ol>
+<li>首先写倾斜和幻读设计一组对象，原子操作不起作用</li>
+<li>快照隔离级别下，几乎所有的关系型数据库都不支持检测写倾斜，自动防止写倾斜要求真正的可串行化隔离</li>
+<li>数据不支持复杂的自定义约束条件，我们无法将上面各个例子中的限制条件检测放到数据库中执行</li>
+</ol>
+<p>问题二: 读提交隔离级别下会产生写倾斜和幻读么？</p>
+<ol>
+<li>对于医生值班的例子，如果 Alice 调整值班的事务提交后，Bob 的事务在执行的查询，那么可以看到 Alice 已经调整了班次，Bob 调整值班的事务将中止。但是如果 Bob 事务的查询在 Alice 事务提交前，此时依旧会产生类似的错误。所以<strong>读提交隔离级别下，依旧存在写倾斜的问题</strong>。</li>
+<li>对于会议室预定的例子，显然同医生值班的例子一样存在类似的写倾斜问题。但是读提交不会产生幻读问题。因为读提交和幻读在概念定义下没有交集。在读提交下，事务总是能查询到最新事务提交的结果，所以肯定能看到最新插入的数据，也就不存在一个事务中的写入改变了另一个事务查询结果的现象。所以幻读是<strong>可重复读隔离级别下</strong>才会产生的特定现象。</li>
+</ol>
+<h4 id="写倾斜-幻读-可重复读隔离级别之间的关系"><a href="#写倾斜-幻读-可重复读隔离级别之间的关系" class="headerlink" title="写倾斜/幻读/可重复读隔离级别之间的关系"></a>写倾斜/幻读/可重复读隔离级别之间的关系</h4><p>写倾斜/幻读/可重复读隔离级别，之间的关系是这样的: </p>
+<ol>
+<li>可重复读隔离级别下会产生更新丢失和写倾斜问题</li>
+<li>使用 SELECT FOR UPDATE(又称为当前读)可以解决更新丢失和部分写倾斜问题(不是全部)</li>
+<li>使用 SELECT FOR UPDATE 又会导致幻读问题</li>
+<li>幻读和无法用 SELECT FOR UPDATE 解决的写倾斜问题，都是因为无法对不存在行进行加锁的问题，MySQL 里面通过间隙锁解决了幻读问题，间隙就是认为施加的可加锁对象</li>
+</ol>
+<h4 id="幻读到底是什么"><a href="#幻读到底是什么" class="headerlink" title="幻读到底是什么"></a>幻读到底是什么</h4><p>幻读指的是一个事务在前后两次查询同一个范围的时候，后一次查询看到了前一次查询没有看到的行。对于幻读需要在注意:</p>
+<ol>
+<li>在<strong>可重复读隔离级别下</strong>，普通的查询是快照读，是不会看到别的事务插入的数据的。而当前读的规则，就是要能读到所有已经提交的记录的最新值。因此，幻读<strong>只在</strong>“<strong>当前读</strong>”下才会出现。</li>
+<li>修改结果，被之后的 select 语句用“当前读”看到，不能称为幻读。<strong>幻读仅专指“新插入的行”</strong></li>
+</ol>
+<p>幻读到底会造成什么影响，请参考文章<a href="https://hotttao.github.io/2020/03/06/mysql/MySQL%E5%AE%9E%E6%88%9845%E8%AE%B2/06_%E9%97%B4%E9%9A%99%E9%94%81/" target="_blank" rel="external">MySQL 幻读与间隙锁</a></p>
+<h2 id="5-串行化"><a href="#5-串行化" class="headerlink" title="5. 串行化"></a>5. 串行化</h2><p>上面我们分析读-提交、快照隔离，它们可以解决一部分问题，但不是全部，最后你会面临以下挑战:</p>
+<ol>
+<li>隔离级别通常难以理解，不同数据库实现还不一致</li>
+<li>很难判断应用程序代码，在特定隔离级别下是否安全</li>
+<li>缺乏工具帮助分析并发问题</li>
+</ol>
+<p>可串行化隔离通常被认为是最强的隔离级别，它保证事务可能会并发执行，但最终的结果与每此一个即串行执行结果相同。换句话说数据库可以防止所有可能的竞争条件。目前大多数谁提供可串行化的数据库都使用一下三种技术之一:</p>
+<ol>
+<li>严格按照串行顺序执行</li>
+<li>两阶段加锁</li>
+<li>乐观并发控制技术</li>
+</ol>
+<h3 id="5-1-严格按照串行顺序执行"><a href="#5-1-严格按照串行顺序执行" class="headerlink" title="5.1 严格按照串行顺序执行"></a>5.1 严格按照串行顺序执行</h3><p>解决并发的问题的直接方法是避免并发，即在<strong>一个线程</strong>上按顺序每次只执行一个事务。这样我们完全回避了诸如检测、防止事务冲突等问题，对应的隔离级别一定是严格串行化的。但是为什么我们不一开始就只使用单线程，或者说为什么我们又开始考虑只是用单线程顺序执行呢。原因有以下几点:</p>
+<ol>
+<li>内存越来越便宜，现在许多应用程序都将整个活动数据集加载到内存。当事务所需的所有数据都在内存时，事务的执行速度要比等待磁盘 I/O 快的多</li>
+<li>OLTP 事务通常执行很快，只产生少量读写，相比之下，运行时间较长的分析查询则通常是只读的，可以在快照隔离级别下运行，而不需要运行在串行主循环里</li>
+<li>通常的事务处理机制希望囊括用户的所有操作:<ul>
+<li><strong>事务总是需要等待来自用户的输入</strong>，同时还要支持潜在大量并发需求，那么系统大部分时间处于空闲状态。</li>
+<li>于此同时事务总体沿用交互式客户端/服务器风格，一次一个请求有语句。请求与结果在应用代码和数据库服务器之间来回交互。<strong>这种交互式的事务处理，大量时间耗费在应用程序与数据库之间的网络通信上</strong>。数据库总是在等待应用程序提交下一个请求。</li>
+<li>在这种类型的数据库中，为了获得足够的吞吐量，需要能够同时处理多个事务</li>
+</ul>
+</li>
+<li>单线程串行的系统则将<strong>人为交互</strong>从事务中移除，并且<strong>不支持交互式的多语句事务</strong>。应用程序必须提交整个事务代码作为存储过程打包发送到数据库，同时事务所需的所有数据已经全部加载到内存中，使得存储过程高效执行，而无需等待网络和磁盘I/O</li>
+<li>VoltDB/H-Store、Redis、Datomic 等采用串行方式执行事务它们的存储已经放弃传统关系型数据库的 PL/SQL，转而使用现有的通用编程语言，Redis 使用 Lua。通用的编程语言克服了传统的 PL/SQL的弊端</li>
+</ol>
+<p>存储过程与内存式数据存储使得单线程上执行所有事物变得可行，它们不需要等待I/O，避免加锁开销等复杂的并发控制机制，可以得到相当不错的性能。VoltDB 还借助存储过程来执行复制: 不同通过复制事务的执行结果而是在每个副本上执行相同的存储过程。不过这要求存储过程必须具备确定性。</p>
+<h4 id="分区"><a href="#分区" class="headerlink" title="分区"></a>分区</h4><p>串行执行所有事务使得并发控制更加简单，但是数据的吞吐量被限制在单机单个 CPU核上。虽然只读事务可以在单独的快照上执行，但是对于高写入需求的应用程序，但线程事务处理很容易造成严重的性能瓶颈。</p>
+<p>为了扩展到多个CPU核和多节点，可以对数据进行分区。每个事务只在单个数据分区上读写数据，此时每个分区一个CPU核。但是对于跨分区的事务，数据库必须在涉及的所欲分区之间协调事务，存储过程要跨越所有分区加锁执行，以确保整个系统的可串行化。</p>
+<p>事务是否能只在单分区上执行很大程度上取决于应用层的数据结构。简单的键值数据比较容易切分，而带有多个二级索引的数据则需要大量的跨区协调，因此不太合适。</p>
+<h4 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h4><p>当满足一下条件时，串行执行事务可以实现串行化隔离:</p>
+<ol>
+<li>事务必须剪短而高效，否则一个缓慢的事务会影响到所有其他事务的执行</li>
+<li>仅限于活动数据集可以完全加载到内存的场景</li>
+<li>写入吞吐量必须足够低，才能在单个 CPU核上处理，否则就需要采用分区，最好没有跨分区事务</li>
+<li>跨分区事务虽然可以支持，但是占比必须很小</li>
+<li>如果事务需要访问那些不在内存的数据，最好的解决方案可能是终止事务，异步的将数据提取到内存中，同时继续处理其他事务，然后在数据加载完成后重启事务</li>
+</ol>
+<h3 id="5-2-两阶段加锁"><a href="#5-2-两阶段加锁" class="headerlink" title="5.2 两阶段加锁"></a>5.2 两阶段加锁</h3><p>首先两阶段加锁 2PL 不是<strong>两阶段提交 2PC</strong>。两阶段加锁要求，多个事务可以同时读取同一个对象，但只要出现任何写操作，则必须加锁以独占访问。因为2PL 不仅在并发写操作之间互斥，读取也会和修改产生互斥。快照级别隔离的口号<strong>读写互不干扰</strong>非常准确的点明了它和两阶段加锁的关键区别。2PL 提供了串行化，可以防止前面讨论的所有竞争条件，包括更新丢失和<strong>写倾斜</strong>(不包括好幻读问题)。</p>
+<p>目前2PL已经在 MySQL 可串行化隔离级别中实现。此时数据库的每一个对象都有一个读写锁来隔离读写操作。事务启动时第一阶段要获取所锁，即对读取对象加读锁，对修改对象加写锁，第二阶段事务提交时释放锁。</p>
+<p>由于使用了这么多锁，很容易出现死锁现象。</p>
+<h4 id="缺陷"><a href="#缺陷" class="headerlink" title="缺陷"></a>缺陷</h4><p>两阶段锁的主要缺点是: 其事务吞吐量和查询响应时间相比其他弱隔离级别下降非常多。部分原因在于锁的获取和释放本身的开销，更重要的原因是其降低了事务的并发性。</p>
+<p>由于传统的关系型数据不限制事务的执行时间，且通常支持人为交互和交互式的多语句事务，事务等待另一个事务完成的时间理论上无上限，如果多个事务操作同一对象，出现严重竞争。如果一个事务很慢且访问了大量数据，将导致所有其他事务停顿。最后2PL 下死锁会更加频繁，从而导致如果事务由于死锁而中止，应用层必须重试，如果死锁过于频繁，性能必然大打折扣。</p>
+<h4 id="幻读问题"><a href="#幻读问题" class="headerlink" title="幻读问题"></a>幻读问题</h4><p>可串行化隔离必须防止幻读问题。有如下几种解决方案:</p>
+<ol>
+<li>谓词锁</li>
+<li>索引区间锁</li>
+</ol>
+<p>他们的核心目的都是为了保护数据中心那些上<strong>不存在的但可能马上会被插入的对象(幻读)</strong>。谓词锁的问题是性能不佳，所以大多数使用 2PL的数据库试讲实现的是索引区间锁(next-key locking)，本质上他是对为此所的简化或者近似。</p>
+<p>索引区间锁简化谓词锁的方式是将其保护的对象扩大化，包括对象和对象所在索引的区间(注，具体原理可以参考 MySQL 间隙锁的实现)。索引区间不像谓词锁那么准确，会锁更大范围的对象，而超出了串行化的要求，但由于开销低的多是一个很好的折中方案。如果没有合适的索引施加区间锁，数据库可以回退到对整个表施加共享锁。</p>
+<h3 id="5-3-乐观并发控制技术"><a href="#5-3-乐观并发控制技术" class="headerlink" title="5.3 乐观并发控制技术"></a>5.3 乐观并发控制技术</h3><p>两阶段加锁可以保证串行化，但性能差强人意；弱隔离级别性能不错，但容易引发各种边界条件。那么串行化隔离与性能是不是无法兼得呢？<strong>可串行化的快照隔离</strong>(Serializable Snapshot Isolation SSI)提供了完整的可串行性保证，而性能相比于快照隔离损失很小。目前在单节点数据库(PostgreSQL 9.1之后的可串行化隔离)中实现。</p>
+<h4 id="悲观与乐观的并发控制"><a href="#悲观与乐观的并发控制" class="headerlink" title="悲观与乐观的并发控制"></a>悲观与乐观的并发控制</h4><p>两阶段锁是一种所谓的悲观并发控制机制（pessimistic） ：它是基于这样的原则：如果有事情可能出错（例如与其他并发事务发生了锁冲突），那么直接放弃，采用等待方式直至绝对安全。</p>
+<p>从某种意义上说，<strong>串行执行(单线程执行)</strong>悲观到了极致：事务执行期间，等价于事务对整个数据库（或数据库的一个分区）持有锁。我们只能假定事务执行得足够快、持有锁的时间足够短。</p>
+<p>相比之下，可串行化的快照隔离则是一种乐观并发控制: 如果可能发生冲突，事务继续执行而不是中止；而当事务提交时(只有可串行化的事务被允许提交)，数据库会检查是否确实发生了冲突(即违反了隔离性的原则)，如果是的话，中止事务并接下来重试。</p>
+<p>乐观并发控制的优点和缺点已经争论了很长时间。如果冲突很多(许多事务访问相同的对象)，则性能不佳，大量事务必须中止。如果系统已接近其最大吞吐量，反复重试事务会使系统性能变得更差。如果不存在大量冲突，乐观锁的控制机制比悲观锁高效很多。</p>
+<p><strong>SSI 基于快照隔离</strong>，也就是说事务中的所有读取操作都是基于数据库的一致性快照。在快照隔离的基础上，SSI 新增了相关算法来<strong>检测写入之间的串行化冲突</strong>从而决定中止哪些事务。</p>
+<h4 id="基于过期的条件做决定"><a href="#基于过期的条件做决定" class="headerlink" title="基于过期的条件做决定"></a>基于过期的条件做决定</h4><p>当应用程序进行查询时（例如，“当前有多少医生正在值班？”），数据库不知道应用逻辑如何使用该查询结果。安全起见，<strong>数据库假定对查询结果(决策的前提条件)的任何改变都会使得写事务失效</strong>。 换而言之，<strong>事务中的查询与写入可能存在因果依赖</strong>。为了提供可串行化的隔离，数据库必须检测事务是否会修改其他事务的查询结果，并在此情况下中止写事务。如果知道查询结果是否发生了变化呢？可以分以下两种情况:</p>
+<ol>
+<li>读取是否作用于一个(即将)过期的 MVCC对象，即<strong>读取之前已经有未提交的写入</strong></li>
+<li>检查写入是否影响即将完成的读取，即<strong>读取之后，又有新的写入</strong></li>
+</ol>
+<h4 id="检测是否读取了过期的-MVCC对象"><a href="#检测是否读取了过期的-MVCC对象" class="headerlink" title="检测是否读取了过期的 MVCC对象"></a>检测是否读取了过期的 MVCC对象</h4><p>数据库需要跟踪那些由于 MVCC 可见性规则而被忽略的写操作。当事务提交时，数据库会检查是否存在一些当初被忽略的写操作现在已经完成了提交，如果是则必须中止当前事务。</p>
+<p>为什么要等到提交，在执行检查？因为即便是存在未提交的写入，事务也可能会回滚而未最终生效。</p>
+<p><img src="/images/db/detecting_mvcc_read.png" alt="过期的MVCC读"></p>
+<p>如上图:</p>
+<ol>
+<li>事务 42 对 Alice 值班的修改未提交，事务 43 可继续执行</li>
+<li>当事务 42 提交时，事务 43 从快照读取时被忽略的写入已经生效，并导致其作出决定的前提条件已经失效</li>
+<li>事务 43 被终止</li>
+</ol>
+<h4 id="检测写是否影响了之前的读"><a href="#检测写是否影响了之前的读" class="headerlink" title="检测写是否影响了之前的读"></a>检测写是否影响了之前的读</h4><p>第二种要考虑的情况是，在读取数据之后，另一个事务修改了数据。如下图所示:</p>
+<ol>
+<li>事务 42/43 都查询了轮班 1234 期间的值班医生</li>
+<li>通过索引区间锁，数据库可以通过索引条目 1234 来记录事务 42/43 都查询了相同的结果，SSI 下索引区间锁不会阻止事务继续执行</li>
+<li>如果没有索引可以在表级别跟踪此信息，该记录只需要保留很小一段时间，当并发的所有事务都处理完了即可丢弃</li>
+<li>当另个一尝试修改时，它首先检查索引，从而确定是否最近存在一些读目标数据的其他事务。这个过程类似在受影响的字段上获取写锁，但是不阻塞读取，而是直到事务提交时才通知他们: 所读到的数据现在已经发生了变化。</li>
+<li>事务 43/42 会相互通知对象先前的读已经失效，事务42提交时，事务 43 还未提交所以可以成功提交，而事务 43 则不得不中止。</li>
+</ol>
+<p><img src="/images/db/detecting_write_affect_read.png" alt="过期的MVCC读"></p>
+<h4 id="可串行化快照隔离的性能"><a href="#可串行化快照隔离的性能" class="headerlink" title="可串行化快照隔离的性能"></a>可串行化快照隔离的性能</h4><p>与两阶段加锁相比，可串行化快照隔离的一大优点是事务需要等待其他事务所持有的锁，读写通常不会相互阻塞，特别是在一致性快照上执行的只读查询需要要任何锁。</p>
+<p>与串行执行相比，可串行化快照隔离可以突破单个 CPU 核的限制，从而提高吞吐量。即使数据可以能跨多台机器进行分区，事务也可以在多个分区上读、写数据并保证可串行化隔离。</p>
+<p>需要注意，事务中止的比例会显著影响 SSI 的性能表现。例如，一个运行很长时间的事务，读取和写入了大量数据，产生冲突和并中止的概率会恨到，因此SSI要求<strong>读-写型</strong>事务要简短（而长时间执行的只读事务没有此限制）。总体来说，相比于两阶段加锁和串行执行，SSI 更能容忍哪些执行缓慢的事务。</p>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2019/04/08/db/db_8/" data-id="ckln7ltlw004emwu9x08h7q3s" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2019/04/09/db/db_9/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            9. 分布式系统的挑战
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2019/04/07/db/db_7/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">7. 分区</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T14:22:23.753Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/11/15/web/react/react_15/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/前端/">前端</a></p>
+                            <p class="item-title"><a href="/2020/11/15/web/react/react_15/" class="title">15 react 项目实战</a></p>
+                            <p class="item-date"><time datetime="2020-11-14T16:00:00.000Z" itemprop="datePublished">2020-11-15</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">43</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15.38px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 13.08px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 14.62px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Linux性能调优/" style="font-size: 19.23px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.69px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15.38px;">React</a> <a href="/tags/Vue/" style="font-size: 15.38px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 16.92px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.77px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.62px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.54px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.15px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 14.62px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 15.38px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.46px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.69px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.85px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.31px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2019/04/08/db/db_8/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
