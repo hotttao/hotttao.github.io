@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>8 深入理解客户端 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Kafka" />
+    
+    <meta name="description" content="从客户端入手，深入地挖掘Kafka的实现原理">
+<meta name="keywords" content="Kafka">
+<meta property="og:type" content="article">
+<meta property="og:title" content="8 深入理解客户端">
+<meta property="og:url" content="http://yoursite.com/2020/04/08/kafka/08_深入理解客户端/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="从客户端入手，深入地挖掘Kafka的实现原理">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/kafka/find_coordinator.png">
+<meta property="og:updated_time" content="2021-03-11T15:22:05.434Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="8 深入理解客户端">
+<meta name="twitter:description" content="从客户端入手，深入地挖掘Kafka的实现原理">
+<meta name="twitter:image" content="http://yoursite.com/images/kafka/find_coordinator.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/存储/">存储</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-kafka/08_深入理解客户端" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        8 深入理解客户端
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/04/08/kafka/08_深入理解客户端/" class="article-date">
+            <time datetime="2020-04-07T16:00:00.000Z" itemprop="datePublished">2020-04-08</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Kafka/">Kafka<span class="tag-count">15</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>从客户端入手，深入地挖掘Kafka的实现原理</p>
+<a id="more"></a>
+<h2 id="1-内容概述"><a href="#1-内容概述" class="headerlink" title="1. 内容概述"></a>1. 内容概述</h2><p>本章我们将从客户端的角度入手，同时涉及客户端和服务端的内容，以便深入地挖掘Kafka的实现原理，内容包括:</p>
+<ol>
+<li>分区分配策略</li>
+<li>消费者协调器和组协调器</li>
+<li>_consumer_offset</li>
+</ol>
+<h2 id="2-分区分配策略"><a href="#2-分区分配策略" class="headerlink" title="2. 分区分配策略"></a>2. 分区分配策略</h2><p>前面我们讲解了消费者和消费组的模型，客户端参数<code>partition.assignment.strategy</code>来设置消费者与订阅主题之间的分区分配策略，它如下几个策略:</p>
+<ol>
+<li>RangeAssignor: 默认策略，值为 org.apache.kafka.clients.consumer.RangeAssignor</li>
+<li>RoundRobinAssignor 值为 org.apache.kafka.clients.consumer.RoundRobinAssignor</li>
+<li>StickyAssignor</li>
+</ol>
+<p>消费者客户端参数 partition.assignment.strategy可以配置多个分配策略，彼此之间以逗号分隔。</p>
+<h3 id="2-1-RangeAssignor"><a href="#2-1-RangeAssignor" class="headerlink" title="2.1 RangeAssignor"></a>2.1 RangeAssignor</h3><p>RangeAssignor 分配策略的原理是</p>
+<ol>
+<li>按照消费者总数和分区总数进行整除运算来获得一个跨度，然后将分区按照跨度进行平均分配，以保证分区尽可能均匀地分配给所有的消费者</li>
+<li>对于每一个主题，RangeAssignor策略会将消费组内所有订阅这个主题的消费者按照名称的字典序排序，然后为每个消费者划分固定的分区范围</li>
+</ol>
+<p>假设消费组内有2个消费者C0和C1，都订阅了主题t0和t1，并且每个主题都有3个分区，则RangeAssignor 分区分配结果是</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">消费者C0: t0p0, t0p1, t1p0, t1p1</div><div class="line">消费者C1: t0p2, t1p2</div></pre></td></tr></table></figure>
+<h3 id="2-2-RoundRobinAssignor"><a href="#2-2-RoundRobinAssignor" class="headerlink" title="2.2 RoundRobinAssignor"></a>2.2 RoundRobinAssignor</h3><p>RoundRobinAssignor分配策略的原理是将消费组内所有消费者及消费者订阅的所有主题的分区按照字典序排序，然后通过轮询方式逐个将分区依次分配给每个消费者。</p>
+<p>如果同一个消费组内所有的消费者的订阅信息都是相同的，那么RoundRobinAssignor分配策略的分区分配会是均匀的。</p>
+<p>如果同一个消费组内的消费者订阅的信息是不相同的，那么在执行分区分配的时候就不是完全的轮询分配，有可能导致分区分配得不均匀。如果某个消费者没有订阅消费组内的某个主题，那么在分配分区的时候此消费者将分配不到这个主题的任何分区。</p>
+<h3 id="2-3-StickyAssignor"><a href="#2-3-StickyAssignor" class="headerlink" title="2.3 StickyAssignor"></a>2.3 StickyAssignor</h3><p>引入 StickyAssignor 策略，主要有两个目的:</p>
+<ol>
+<li>分区的分配要尽可能均匀。</li>
+<li>分区的分配尽可能与上次分配的保持相同。</li>
+</ol>
+<p>当两者发生冲突时，第一个目标优先于第二个目标。使用StickyAssignor分配策略的一个优点就是可以使分区重分配具备“黏性”，减少不必要的分区移动（即一个分区剥离之前的消费者，转而分配给另一个新的消费者）。</p>
+<h2 id="3-消费者协调器和组协调器"><a href="#3-消费者协调器和组协调器" class="headerlink" title="3. 消费者协调器和组协调器"></a>3. 消费者协调器和组协调器</h2><p>多个消费者之间的分区分配是需要协同的，协调过程由消费者协调器（ConsumerCoordinator）和组协调器（GroupCoordinator）来完成，它们之间使用一套组协调协议进行交互。</p>
+<p>新版客户端将全部消费组分成多个子集，每个消费组的子集在服务端对应一个 GroupCoordinator 对其进行管理:</p>
+<ol>
+<li>GroupCoordinator 是 Kafka 服务端中用于管理消费组的组件</li>
+<li>而消费者客户端中的 ConsumerCoordinator 组件负责与 GroupCoordinator进行交互</li>
+</ol>
+<p>ConsumerCoordinator与GroupCoordinator之间最重要的职责就是负责执行消费者再均衡的操作，包括前面提及的分区分配的工作也是在再均衡期间完成的。就目前而言，一共有如下几种情形会触发再均衡的操作：</p>
+<ol>
+<li>有新的消费者加入消费组。</li>
+<li>有消费者宕机下线，这个下线指的是因为各种原因，包括迭机、网络延迟、GC 等导致消费者长时间未向GroupCoordinator发送心跳</li>
+<li>有消费者主动退出消费组（发送 LeaveGroupRequest 请求）。比如客户端调用了unsubscrible（）方法取消对某些主题的订阅。</li>
+<li>消费组所对应的GroupCoorinator节点发生了变更</li>
+<li>消费组内所订阅的任一主题或者主题的分区数量发生变化</li>
+</ol>
+<h2 id="4-再均衡原理"><a href="#4-再均衡原理" class="headerlink" title="4. 再均衡原理"></a>4. 再均衡原理</h2><p>我们就以有消费者加入消费组为例来简单介绍一下再均衡的具体内容，消费者、消费组及组协调器之间会经历一下几个阶段:</p>
+<ol>
+<li>第一阶段（FIND_COORDINATOR）<ul>
+<li>目的: 消费者需要确定它所属的消费组对应的GroupCoordinator所在的broker，并创建与该broker相互通信的网络连接</li>
+</ul>
+</li>
+<li>第二阶段（JOIN_GROUP）: 进入加入消费组</li>
+<li>第三阶段（SYNC_GROUP）: leader 消费者将分区分配的方案同步给各个消费者</li>
+<li>第四阶段（HEARTBEAT）：确定拉取消息的起始位置</li>
+</ol>
+<h3 id="4-1-FIND-COORDINATOR"><a href="#4-1-FIND-COORDINATOR" class="headerlink" title="4.1 FIND_COORDINATOR"></a>4.1 FIND_COORDINATOR</h3><p>如果消费者已经保存了与消费组对应的 GroupCoordinator 节点的信息，并且与它之间的网络连接是正常的，那么就可以进入第二阶段。否则需要向集群中的某个节点发送 FindCoordinatorRequest 请求来查找对应的 GroupCoordinator，这里的“某个节点”并非是集群中的任意节点，而是负载最小的节点。</p>
+<p>FindCoordinatorRequest 请求体的结构如下，它只有两个域（Field）：</p>
+<ol>
+<li>coordinator_key 在这里就是消费组的名称，即 groupId</li>
+<li>coordinator_type置为0</li>
+</ol>
+<p><img src="/images/kafka/find_coordinator.png" alt="FindCoordinatorRequest"></p>
+<p>Kafka 在收到 FindCoordinatorRequest 请求之后，会根据 coordinator_key（也就是groupId）查找对应的GroupCoordinator节点，如果找到对应的GroupCoordinator则会返回其相对应的node_id、host和port信息。</p>
+<p>GroupCoordinator的查找大体会经过如下这样一个过程:</p>
+<ol>
+<li>先根据消费组groupId的哈希值计算__consumer_offsets中的分区编号</li>
+<li>找到对应的__consumer_offsets中的分区之后，再寻找此分区leader副本所在的broker节点，该broker节点即为这个groupId所对应的GroupCoordinator节点</li>
+</ol>
+<p>消费者groupId最终的<strong>分区分配方案</strong>及<strong>组内消费者所提交</strong>的消费位移信息都会发送给此分区leader副本所在的broker节点，让此broker节点既扮演GroupCoordinator的角色，又扮演保存分区分配方案和组内消费者位移的角色，可以省去很多不必要的中间轮转所带来的开销。</p>
+<h3 id="4-2-JOIN-GROUP"><a href="#4-2-JOIN-GROUP" class="headerlink" title="4.2 JOIN_GROUP"></a>4.2 JOIN_GROUP</h3><p><strong>JoinGroupRequest</strong><br>消费者会向GroupCoordinator发送 JoinGroupRequest 请求，并处理响应。</p>
+<p><img src="/images/kafka/join_request.png" alt="JoinGroupRequest"></p>
+<p>JoinGroupRequest的结构包含多个域：</p>
+<ol>
+<li>group_id: <ul>
+<li>就是消费组的id，通常也表示为groupId。</li>
+</ul>
+</li>
+<li>session_timout: <ul>
+<li>对应消费端参数 session.timeout.ms，默认值为 10000，即10秒</li>
+<li>GroupCoordinator超过session_timeout指定的时间内没有收到心跳报文则认为此消费者已经下线</li>
+</ul>
+</li>
+<li>rebalance_timeout <ul>
+<li>对应消费端参数 max.poll.interval.ms，默认值为300000，即 5 分钟</li>
+<li>表示当消费组再平衡的时候，GroupCoordinator 等待各个消费者重新加入的最长等待时间</li>
+</ul>
+</li>
+<li>member_id <ul>
+<li>表示 GroupCoordinator 分配给消费者的 id 标识</li>
+<li>消费者第一次发送JoinGroupRequest请求的时候此字段设置为null。</li>
+</ul>
+</li>
+<li>protocol_type:<ul>
+<li>表示消费组实现的协议，对于消费者而言此字段值为“consumer”</li>
+</ul>
+</li>
+<li>group_protocols:<ul>
+<li>数组类型，其中可以囊括多个分区分配策略</li>
+<li>主要取决于消费者客户端参数 <code>partition.assignment.strategy</code> 的配置</li>
+</ul>
+</li>
+</ol>
+<p>如果是原有的消费者重新加入消费组，那么在真正发送JoinGroupRequest 请求之前还要执行一些准备工作：</p>
+<ol>
+<li>如果消费端参数enable.auto.commit设置为true（默认值也为true），即开启自动提交位移功能，那么在请求加入消费组之前需要向 GroupCoordinator 提交消费位移。这个过程是阻塞执行的，要么成功提交消费位移，要么超时。</li>
+<li>如果消费者添加了自定义的再均衡监听器（ConsumerRebalanceListener），那么此时会调用onPartitionsRevoked（）方法在重新加入消费组之前实施自定义的规则逻辑</li>
+<li>因为是重新加入消费组，之前与GroupCoordinator节点之间的心跳检测也就不需要了，所以在成功地重新加入消费组之前需要禁止心跳检测的运作。</li>
+</ol>
+<p>消费者在发送JoinGroupRequest请求之后会阻塞等待Kafka服务端的响应。服务端在收到JoinGroupRequest 请求后会交由 GroupCoordinator 来进行处理。</p>
+<p><strong>选举消费组的leader</strong><br>GroupCoordinator需要为消费组内的消费者选举出一个消费组的leader:</p>
+<ol>
+<li>如果消费组内还没有 leader，那么第一个加入消费组的消费者即为消费组的 leader</li>
+<li>如果 leader 消费者退出，选择消费者保存数组中的第一个消费者为 leader</li>
+</ol>
+<p><strong>选举分区分配策略</strong><br>每个消费者都可以设置自己的分区分配策略，对消费组而言需要从各个消费者呈报上来的各个分配策略中选举一个彼此都“信服”的策略来进行整体上的分区分配。</p>
+<p>这个分区分配的选举并非由leader消费者决定，而是根据消费组内的各个消费者投票来决定的。所谓投票是根据各个消费者呈报的分配策略来实施。最终选举的分配策略基本上可以看作被各个消费者支持的最多的策略。</p>
+<p>如果有消费者并不支持选出的分配策略，那么就会报出异常 IllegalArgumentException。消费者所支持的分配策略”是指 partition.assignment.strategy 参数配置的策略，如果这个参数值只配置了RangeAssignor，那么这个消费者客户端只支持 RangeAssignor 分配策略</p>
+<p><strong>JoinGroupResponse</strong><br>在此之后，Kafka服务端就要发送 JoinGroupResponse 响应给各个消费者，leader消费者和其他普通消费者收到的响应内容并不相同。</p>
+<p>JoinGroupResponse 的结构如下:</p>
+<p><img src="/images/kafka/join_response.png" alt="JoinGroupResponse"></p>
+<p>JoinGroupResponse 包含了多个域:</p>
+<ol>
+<li>generation_id<ul>
+<li>用来标识当前消费组的年代信息，避免受到过期请求的影响</li>
+</ul>
+</li>
+<li>leader_id<ul>
+<li>表示消费组leader消费者的member_id</li>
+</ul>
+</li>
+<li>members<ul>
+<li>发送给普通消费者的JoinGroupResponse中的members内容为空</li>
+<li>leader消费者的JoinGroupResponse中的members包含有效数据。members为数组类型，其中包含各个成员信息。</li>
+<li>member_metadata 为消费者的订阅信息，与 JoinGroupRequest 中的protocol_metadata内容相同，是对应选举完成后的结果</li>
+</ul>
+</li>
+</ol>
+<p>Kafka把分区分配的具体分配交还给客户端，自身并不参与具体的分配细节，这样即使以后分区分配的策略发生了变更，也只需要重启消费端的应用即可，而不需要重启服务端。</p>
+<h3 id="4-3-SYNC-GROUP"><a href="#4-3-SYNC-GROUP" class="headerlink" title="4.3 SYNC_GROUP"></a>4.3 SYNC_GROUP</h3><p>leader 消费者根据在第二阶段中选举出来的分区分配策略来实施具体的分区分配，在此之后需要将分配的方案同步给各个消费者，此时leader消费者并不是直接和其余的普通消费者同步分配方案，而是通过 GroupCoordinator 这个“中间人”来负责转发同步分配方案的。在第三阶段，也就是同步阶段，各个消费者会向GroupCoordinator发送 SyncGroupRequest 请求来同步分配方案，如下图。</p>
+<p><img src="/images/kafka/syn_request.png" alt="分区分配方案同步过程"></p>
+<p><img src="/images/kafka/syn_request_s.png" alt="SyncGroupRequest"></p>
+<p>只有leader消费者发送的 SyncGroupRequest 请求中才包含具体的分区分配方案，其余消费者发送的SyncGroupRequest请求中的group_assignment为空。</p>
+<p>其余消费者发送的SyncGroupRequest请求中的group_assignment为空。它是一个数组类型，其中包含了各个消费者对应的具体分配方案：member_id表示消费者的唯一标识，而member_assignment是与消费者对应的分配方案<br>。</p>
+<p>服务端在收到消费者发送的SyncGroupRequest请求之后会交由GroupCoordinator来负责具体的逻辑处理。GroupCoordinator同样会先对SyncGroupRequest请求做合法性校验，在此之后会将从 leader 消费者发送过来的分配方案提取出来，连同整个消费组的元数据信息一起存入Kafka的__consumer_offsets主题中，最后发送响应给各个消费者以提供给各个消费者各自所属的分配方案。</p>
+<p><strong>SyncGroupResponse</strong><br>SyncGroupRequest请求对应的是 SyncGroupResponse，里面包含的就是消费者对应的所属分配方案</p>
+<p><img src="/images/kafka/syn_response.png" alt="SyncGroupResponse"></p>
+<p>当消费者收到所属的分配方案之后会调用PartitionAssignor中的onAssignment（）方法。随后再调用ConsumerRebalanceListener中的OnPartitionAssigned（）方法。之后开启心跳任务，消费者定期向服务端的GroupCoordinator发送HeartbeatRequest来确定彼此在线。</p>
+<p><strong>消费组元数据信息</strong><br>消费组的元数据信息也保存在 __consumer_offsets主题中。每个消费组的元数据信息都是一条消息，不过这类消息并不依赖于具体版本的消息格式。具体的格式如下:</p>
+<p><img src="/images/kafka/consumer_meta.png" alt="消费者元信息"></p>
+<p>key和 value 中的 version 表示版本，就目前版本而言，key的version为2，而value的version为1。</p>
+<p>key中的 group 字段，就是消费组的名称，确定这条信息所要存储的分区还是根据单独的group字段来计算的，这样就可以保证消费组的元数据信息与消费组对应的GroupCoordinator处于同一个broker节点上，省去了中间轮转的开销。</p>
+<p>value 中包含的内容有很多</p>
+<ol>
+<li>protocol_type：消费组实现的协议，这里的值为“consumer”。</li>
+<li>generation：标识当前消费组的年代信息，避免收到过期请求的影响。</li>
+<li>protocol：消费组选取的分区分配策略。</li>
+<li>leader：消费组的leader消费者的名称。</li>
+<li>members：数组类型，其中包含了消费组的各个消费者成员信息，其中subscription和assignment这两个字段，分别代码消费者的订阅信息和分配信息。</li>
+</ol>
+<h3 id="4-4-HEARTBEAT"><a href="#4-4-HEARTBEAT" class="headerlink" title="4.4 HEARTBEAT"></a>4.4 HEARTBEAT</h3><p>进入这个阶段之后，消费组中的所有消费者就会处于正常工作状态。在正式消费之前，消费者还需要确定拉取消息的起始位置。消费者可以通过OffsetFetchRequest请求获取上次提交的消费位移并从此处继续消费。</p>
+<p>消费者通过向 GroupCoordinator 发送心跳来维持它们与消费组的从属关系，以及它们对分区的所有权关系。</p>
+<p><strong>心跳线程是一个独立的线程，可以在轮询消息的空档发送心跳</strong>。如果消费者停止发送心跳的时间足够长，则整个会话就被判定为过期，GroupCoordinator 也会认为这个消费者已经死亡，就会触发一次再均衡行为。消费者的心跳间隔时间由参数<code>heartbeat.interval.ms</code>指定，默认值为3000，即3秒，这个参数必须比<code>session.timeout.ms</code>参数设定的值要小，一般情况下heartbeat.interval.ms的配置值不能超过session.timeout.ms配置值的1/3。这个参数可以调整得更低，以控制正常重新平衡的预期时间。</p>
+<p>如果一个消费者发生崩溃，并停止读取消息，那么 GroupCoordinator 会等待一小段时间，确认这个消费者死亡之后才会触发再均衡。在这一小段时间内，死掉的消费者并不会读取分区里的消息。这个一小段时间由 <code>session.timeout.ms</code> 参数控制，该参数的配置值必须在broker端参数 <code>group.min.session.timeout.ms</code>（默认值为 6000，即 6 秒）和 <code>group.max.session.timeout.ms</code>（默认值为300000，即5分钟）允许的范围内。</p>
+<p>还有一个参数 <code>max.poll.interval.ms</code>，它用来指定使用消费者组管理时 <code>poll（）</code>方法调用之间的最大延迟，也就是消费者在获取更多消息之前可以空闲的时间量的上限。如果此超时时间期满之前poll（）没有调用，则消费者被视为失败，并且分组将重新平衡，以便将分区重新分配给别的成员。</p>
+<p>除了被动退出消费组，还可以使用 LeaveGroupRequest 请求主动退出消费组，比如客户端调用了unsubscrible（）方法取消对某些主题的订阅。</p>
+<h2 id="5-consumer-offsets剖析"><a href="#5-consumer-offsets剖析" class="headerlink" title="5. __consumer_offsets剖析"></a>5. __consumer_offsets剖析</h2><p>对于主题<strong>consumer_offsets的深度掌握也可以让我们更好地理解和使用好位移提交。一般情况下，当集群中第一次有消费者消费消息时会自动创建主题 </strong>consumer_offsets。</p>
+<p>__consumer_offsets 有如下几个控制参数:</p>
+<ol>
+<li>offsets.topic.replication.factor: 设置副本数，默认值为 3</li>
+<li>offsets.topic.num.partitions: 设置分区数，默认值为 50</li>
+</ol>
+<h3 id="5-1-OffsetCommitRequest"><a href="#5-1-OffsetCommitRequest" class="headerlink" title="5.1 OffsetCommitRequest"></a>5.1 OffsetCommitRequest</h3><p>客户端提交消费位移是使用 OffsetCommitRequest 请求，其结构如下:</p>
+<p><img src="/images/kafka/offset_commit_request.png" alt="OffsetCommitRequest"></p>
+<p>OffsetCommitRequest 包含多个域:</p>
+<ol>
+<li>retention_time <ul>
+<li>表示当前提交的消费位移所能保留的时长，不过对于消费者而言这个值保持为-1</li>
+<li>也就是说，按照 broker 端的配置 offsets.retention.minutes 来确定保留时长</li>
+<li>offsets.retention.minutes的默认值为10080，即7天，超过这个时间后消费位移的信息就会被删除（使用墓碑消息和日志压缩策略）</li>
+</ul>
+</li>
+<li>其余字段大抵也是按照分区的粒度来划分消费位移的：<ul>
+<li>topic表示主题名称</li>
+<li>partition表示分区编号等</li>
+<li>注意这里还有一个metadata字段</li>
+<li>metadata是自定义的元数据信息，不设置默认为空字符串，其长度不能超过 offset.metadata.max.bytes 参数（broker 端配置，默认值为4096）所配置的大小</li>
+</ul>
+</li>
+</ol>
+<h3 id="5-2-消费位移对应的消息格式"><a href="#5-2-消费位移对应的消息格式" class="headerlink" title="5.2 消费位移对应的消息格式"></a>5.2 消费位移对应的消息格式</h3><p>同消费组的元数据信息一样，最终提交的消费位移也会以消息的形式发送至主题__consumer_offsets，与消费位移对应的消息也只定义了 key 和 value 字段的具体内容，它不依赖于具体版本的消息格式，以此做到与具体的消息格式无关。</p>
+<p><img src="/images/kafka/offset_message.png" alt="OffsetCommitRequest"></p>
+<p>key和value中都包含了version字段，这个用来标识具体的key和value的版本信息。目前key和value的version值都为1。</p>
+<p>key</p>
+<ol>
+<li>包含 group、topic、partition字段，分别表示消费组的groupId、主题名称和分区编号</li>
+<li>虽然key中包含了4个字段，但最终确定这条消息所要存储的分区还是根据单独的 group 字段来计算的，这样就可以保证消费位移信息与消费组对应的GroupCoordinator 处于同一个 broker 节点上，省去了中间轮转的开销，这一点与消费组的元数据信息的存储是一样的。</li>
+</ol>
+<p>value:</p>
+<ol>
+<li>包含 offset、metadata、commit_timestamp、expire_timestamp字段分别表示消费位移、自定义的元数据信息、位移提交到 Kafka 的时间戳、消费位移被判定为超时的时间戳。</li>
+<li>其中 offset 和 metadata 与OffsetCommitRequest 请求体中的 offset 和 metadata 对应</li>
+<li>expire_timestamp 和OffsetCommitRequest 请求体中的 retention_time 也有关联，</li>
+<li>commit_timestamp 值与offsets.retention.minutes参数值之和即为expire_timestamp（默认情况下）</li>
+</ol>
+<h3 id="5-3-OffsetCommitResponse"><a href="#5-3-OffsetCommitResponse" class="headerlink" title="5.3 OffsetCommitResponse"></a>5.3 OffsetCommitResponse</h3><p>在处理完消费位移之后，Kafka返回OffsetCommitResponse给客户端，OffsetCommitResponse的结构如下图:</p>
+<p><img src="/images/kafka/offset_commit_response.png" alt="OffsetCommitRequest"></p>
+<h3 id="5-4-位移查看工具"><a href="#5-4-位移查看工具" class="headerlink" title="5.4 位移查看工具"></a>5.4 位移查看工具</h3><p>可以通过 kafka-console-consumer.sh 脚本来查看__consumer_offsets 中的内容。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">bin/kafka-console-consumer.sh /</div><div class="line">    --bootstrap-server localhost:9092 /</div><div class="line">    --topic __consumer_offset /</div><div class="line">    --partition 20 /</div><div class="line">    --formatter <span class="string">"kafka.coordinator.group.GroupMetadataManager<span class="variable">$OffsetsMessageFormatter</span>"</span></div></pre></td></tr></table></figure>
+<h3 id="5-5-消费位移清理"><a href="#5-5-消费位移清理" class="headerlink" title="5.5 消费位移清理"></a>5.5 消费位移清理</h3><p>在Kafka中有一个名为“delete-expired-group-metadata”的定时任务来负责清理过期的消费位移，这个定时任务的执行周期由参数 <code>offsets.retention.check.interval.ms</code> 控制，默认值为600000，即10分钟。</p>
+<p>最后，如果有若干消费者消费了某个主题中的消息，并且也提交了相应的消费位移，那么在删除这个主题之后会一并将这些消费位移信息删除。</p>
+<h2 id="6-事务"><a href="#6-事务" class="headerlink" title="6. 事务"></a>6. 事务</h2><p>一般而言，消息中间件的消息传输保障有3个层级，分别如下。</p>
+<ol>
+<li>at most once：至多一次。消息可能会丢失，但绝对不会重复传输。</li>
+<li>at least once：最少一次。消息绝不会丢失，但可能会重复传输。</li>
+<li>exactly once：恰好一次。每条消息肯定会被传输一次且仅传输一次。</li>
+</ol>
+<p>生产者可以进行多次重试来确保消息已经写入 Kafka，这个重试的过程中有可能会造成消息的重复写入，所以这里 Kafka 提供的消息传输保障为 at least once。</p>
+<p>对消费者而言，消费者处理消息和提交消费位移的顺序在很大程度上决定了消费者提供哪一种消息传输保障。</p>
+<p>Kafka从0.11.0.0版本开始引入了幂等和事务这两个特性，以此来实现EOS（exactly once semantics，精确一次处理语义）。</p>
+<h3 id="6-1-幂等"><a href="#6-1-幂等" class="headerlink" title="6.1 幂等"></a>6.1 幂等</h3><p>所谓的幂等，简单地说就是对接口的多次调用所产生的结果和调用一次是一致的。生产者在进行重试的时候有可能会重复写入消息，而使用Kafka的幂等性功能之后就可以避免这种情况。</p>
+<p>开启幂等性功能的方式很简单，只需要显式地将生产者客户端参数 <code>enable.idempotence</code> 设置为true即可。</p>
+<p>不过如果要确保幂等性功能正常，还需要确保生产者客户端的 <code>retries</code>、<code>acks</code>、<code>max.in.flight.requests.per.connection</code> 这几个参数不被配置错。实际上在使用幂等性功能的时候，用户完全可以不用配置（也不建议配置）这几个参数。</p>
+<p>如果用户对这几个参数配置了:</p>
+<ol>
+<li>retries:<ul>
+<li>如果指定了 retries 参数，那么这个参数的值必须大于 0，否则会报出ConfigException</li>
+<li>如果没有显式地指定 retries 参数，那么 KafkaProducer 会将它置为 Integer.MAX_VALUE</li>
+<li>同时还需要保证 <code>max.in.flight.requests.per.connection</code> 参数的值不能大于5，这个参数的默认值是 5，否则也会报出ConfigException</li>
+</ul>
+</li>
+<li>ack:<ul>
+<li>如果显式地指定了 acks 参数，那么需要保证这个参数的值为-1（all）</li>
+<li>如果不为-1（这个参数的值默认为1），那么也会报出ConfigException</li>
+<li>如果用户没有显式地指定这个参数，那么KafkaProducer会将它置为-1</li>
+</ul>
+</li>
+</ol>
+<h4 id="幂等的实现"><a href="#幂等的实现" class="headerlink" title="幂等的实现"></a>幂等的实现</h4><p>为了实现生产者的幂等性，Kafka为此引入了producer id（以下简称PID）和序列号（sequence number）这两个概念，分别对应 v2 版的日志格式中RecordBatch的<code>producer id</code>和<code>first seqence</code>这两个字段。</p>
+<p>每个新的生产者实例在初始化的时候都会被分配一个PID，这个PID对用户而言是完全透明的。对于每个PID，消息发送到的每一个分区都有对应的序列号，这些序列号从0开始单调递增。生产者每发送一条消息就会将＜PID，分区＞对应的序列号的值加1。</p>
+<p>broker端会在内存中为每一对<code>＜PID，分区＞</code>维护一个序列号。对于收到的每一条消息，它的序列号的值（SN_new），broker端中维护的对应的序列号的值（SN_old）</p>
+<ol>
+<li>如果 <code>SN_new=SN_old+1</code>，broker才会接收它</li>
+<li>如果<code>SN_new＜SN_old+1</code>，那么说明消息被重复写入，broker可以直接将其丢弃</li>
+<li>如果<code>SN_new＞SN_old+1</code>，那么说明中间有数据尚未写入，出现了乱序，暗示可能有消息丢失，对应的生产者会抛出OutOfOrderSequenceException，这个异常是一个严重的异常，后续的诸如 send（）、beginTransaction（）、commitTransaction（）等方法的调用都会抛出IllegalStateException的异常。</li>
+</ol>
+<p><strong>引入序列号来实现幂等也只是针对每一对<code>＜PID，分区＞</code>而言的，也就是说，Kafka的幂等只能保证单个生产者会话（session）中单分区的幂等</strong>。</p>
+<h3 id="6-2-事务"><a href="#6-2-事务" class="headerlink" title="6.2 事务"></a>6.2 事务</h3><p>幂等性并不能跨多个分区运作，而事务可以弥补这个缺陷。事务可以保证对多个分区写入操作的原子性。</p>
+<p>对流式应用，一个典型的应用模式为“consume-transform-produce”：应用程序从某个主题中消费消息，然后经过一系列转换后写入另一个主题。Kafka 中的事务可以使应用程序将消费消息、生产消息、提交消费位移当作原子操作来处理，同时成功或失败，即使该生产或消费会跨多个分区。</p>
+<p><img src="/images/kafka/consumer_trans_producer.png" alt="consume-transform-produce"></p>
+<h4 id="生产者事务保证"><a href="#生产者事务保证" class="headerlink" title="生产者事务保证"></a>生产者事务保证</h4><p>为了实现事务，应用程序必须提供唯一的 transactionalId，这个 transactionalId 通过客户端参数transactional.id来显式设置。</p>
+<p>事务要求生产者开启幂等特性，因此通过将transactional.id参数设置为非空从而开启事务特性的同时需要将 enable.idempotence 设置为 true （如果未显式设置，则KafkaProducer默认会将它的值设置为true），如果用户显式地将enable.idempotence设置为false，则会报出ConfigException：</p>
+<p>transactionalId与PID一一对应，两者之间所不同的是transactionalId由用户显式设置，而PID是由Kafka内部分配的。另外，为了保证新的生产者启动后具有相同 transactionalId 的旧生产者能够立即失效，每个生产者通过transactionalId获取PID的同时，还会获取一个单调递增的producer epoch（对应下面要讲述的 KafkaProducer.initTransactions（）方法）。如果使用同一个transactionalId开启两个生产者，那么前一个开启的生产者会报出如下的错误：</p>
+<p><img src="/images/kafka/producer_transaction_error.png" alt="transactionalId重复错误"></p>
+<p>从生产者的角度分析，通过事务，Kafka 可以保证跨生产者会话的消息幂等发送，以及跨生产者会话的事务恢复。</p>
+<ol>
+<li>前者表示具有相同 transactionalId 的新生产者实例被创建且工作的时候，旧的且拥有相同transactionalId的生产者实例将不再工作。</li>
+<li>后者指当某个生产者实例宕机后，新的生产者实例可以保证任何未完成的旧事务要么被提交（Commit），要么被中止（Abort），如此可以使新的生产者实例从一个正常的状态开始工作。</li>
+</ol>
+<h4 id="消费者事务保证"><a href="#消费者事务保证" class="headerlink" title="消费者事务保证"></a>消费者事务保证</h4><p>从消费者的角度分析，事务能保证的语义相对偏弱。出于以下原因，Kafka 并不能保证已提交的事务中的所有消息都能够被消费：</p>
+<ol>
+<li>对采用日志压缩策略的主题而言，事务中的某些消息有可能被清理（相同key的消息，后写入的消息会覆盖前面写入的消息）</li>
+<li>事务中消息可能分布在同一个分区的多个日志分段（LogSegment）中，当老的日志分段被删除时，对应的消息可能会丢失</li>
+<li>消费者可以通过seek（）方法访问任意offset的消息，从而可能遗漏事务中的部分消息。</li>
+<li>消费者在消费时可能没有分配到事务内的所有分区，如此它也就不能读取事务中的所有消息。</li>
+</ol>
+<h4 id="事务接口"><a href="#事务接口" class="headerlink" title="事务接口"></a>事务接口</h4><p>KafkaProducer提供了5个与事务相关的方法:</p>
+<ol>
+<li>initTransactions方法:<ul>
+<li>用来初始化事务</li>
+<li>这个方法能够执行的前提是配置了transactionalId，如果没有则会报出IllegalStateException</li>
+</ul>
+</li>
+<li>beginTransaction（）方法用来开启事务</li>
+<li>sendOffsetsToTransaction（）方法为消费者提供在事务内的位移提交的操作；</li>
+<li>commitTransaction（）方法用来提交事务；</li>
+<li>abortTransaction（）方法用来中止事务，类似于事务回滚</li>
+</ol>
+<h4 id="事务实现-未完成"><a href="#事务实现-未完成" class="headerlink" title="事务实现(未完成)"></a>事务实现(未完成)</h4><p>日志文件中除了普通的消息，还有一种消息专门用来标志一个事务的结束，它就是控制消息（ControlBatch）。控制消息一共有两种类型：COMMIT和ABORT，分别用来表征事务已经成功提交或已经被成功中止。KafkaConsumer 可以通过这个控制消息来判断对应的事务是被提交了还是被中止了，然后结合参数isolation.level配置的隔离级别来决定是否将相应的消息返回给消费端应用，如图7-19所示。注意ControlBatch对消费端应用不可见。</p>
+<p><img src="/images/kafka/control_batch.png" alt="control_batch"></p>
+<p>为了实现事务的功能，Kafka还引入了<code>事务协调器（TransactionCoordinator）</code>来负责处理事务，这一点可以类比一下组协调器（GroupCoordinator）。每一个生产者都会被指派一个特定的TransactionCoordinator，<strong>所有的事务逻辑包括分派 PID</strong> 等都是由 TransactionCoordinator 来负责实施的。TransactionCoordinator 会将 <strong>事务状态持久化到内部主题__transaction_state</strong> 中。下面就以最复杂的consume-transform-produce的流程（参考图7-21）为例来分析Kafka事务的实现原理。</p>
+<p><img src="/images/kafka/transaction.png" alt="事务执行过程"></p>
+<p>整个过程分为如下步骤:</p>
+<ol>
+<li>1.查找TransactionCoordinator<ul>
+<li>与查找GroupCoordinator节点一样，也是通过FindCoordinatorRequest请求来实现的，不同是请求中的coordinator_type就由原来的0变成了1</li>
+<li>Kafka 在收到 FindCoorinatorRequest 请求之后，会根据 coordinator_key （也就是transactionalId）查找对应的TransactionCoordinator节点。</li>
+<li>具体查找TransactionCoordinator的方式是根据transactionalId的哈希值对__transaction_state中的分区个数取余，计算出对应分区号</li>
+<li>找到对应的分区之后，再寻找此分区leader副本所在的broker节点，该broker节点即为这个transactionalId对应的TransactionCoordinator节点</li>
+<li>_transaction_state中的分区个数，可以通过broker端参数<code>transaction.state.log.num.partitions</code>来配置，默认值为50</li>
+</ul>
+</li>
+<li>2.获取PID<ul>
+<li>生产者获取PID的操作是通过InitProducerIdRequest请求来实现的</li>
+<li>请求体中包含两个字段:<ul>
+<li>transactional_id 表示事务的 transactionalId</li>
+<li>transaction_timeout_ms表示TransactionCoordinaor等待事务状态更新的超时时间，通过生产者客户端参数transaction.timeout.ms配置，默认值为60000。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>2.1保存PID<ul>
+<li>当TransactionCoordinator第一次收到包含该transactionalId的InitProducerIdRequest请求时，它会把transactionalId和对应的PID以消息（我们习惯性地把这类消息称为“事务日志消息”）的形式保存到主题__transaction_state中</li>
+</ul>
+</li>
+<li>开启事务:<ul>
+<li>KafkaProducer的beginTransaction（）方法可以开启一个事务，调用该方法后，生产者本地会标记已经开启了一个新的事务</li>
+<li>只有在生产者发送第一条消息之后 TransactionCoordinator才会认为该事务已经开启。</li>
+</ul>
+</li>
+<li>Consume-Transform-Produce<ul>
+<li>AddPartitionsToTxnRequest: <ul>
+<li>当生产者给一个新的分区（TopicPartition）发送数据前，它需要先向TransactionCoordinator发送AddPartitionsToTxnRequest请求</li>
+<li>这个请求会让 TransactionCoordinator 将＜transactionId，TopicPartition＞的对应关系存储在主题__transaction_state中</li>
+<li>有了这个对照关系之后，我们就可以在后续的步骤中为每个分区设置COMMIT或ABORT标记</li>
+<li>如果该分区是对应事务中的第一个分区，那么此时TransactionCoordinator还会启动对该事务的计时</li>
+</ul>
+</li>
+<li>ProduceRequest<ul>
+<li>发送生产消息</li>
+<li>与普通消息的区别是ProducerBatch中会包含实质的PID、producer_epoch和sequence number</li>
+</ul>
+</li>
+<li>AddOffsetsToTxnRequest<ul>
+<li>TransactionCoordinator收到这个请求之后会通过groupId来推导出在<strong>consumer_offsets中的分区，之后TransactionCoordinator会将这个分区保存在</strong>transaction_state中</li>
+</ul>
+</li>
+<li>TxnOffsetCommitRequest<ul>
+<li>将本次事务中包含的消费位移信息offsets存储到主题__consumer_offsets中</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>EndTxnRequest: 提交或者中止事务<ul>
+<li>commitTransaction（）方法还是 abortTransaction（）方法，生产者都会向TransactionCoordinator发送EndTxnRequest请求</li>
+<li>TransactionCoordinator在收到EndTxnRequest请求后会执行如下操作：<ul>
+<li>将PREPARE_COMMIT或PREPARE_ABORT消息写入主题__transaction_state</li>
+<li>通过WriteTxnMarkersRequest请求将COMMIT或ABORT信息写入用户所使用的普通主题和__consumer_offsets</li>
+<li>将COMPLETE_COMMIT或COMPLETE_ABORT信息写入内部主题__transaction_state</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h4 id="transaction-state"><a href="#transaction-state" class="headerlink" title="__transaction_state"></a>__transaction_state</h4><p>＜transaction_Id，PID＞的对应关系被持久化存储到主题__transaction_state中的具体内容格式入下图所示:</p>
+<p><img src="/images/kafka/transaction_msg.png" alt="事务持久化的消息格式"></p>
+<p>其中:</p>
+<ol>
+<li>transaction_status 包含<ul>
+<li>Empty（0）</li>
+<li>Ongoing（1）</li>
+<li>PrepareCommit（2）</li>
+<li>PrepareAbort（3）</li>
+<li>CompleteCommit（4）</li>
+<li>CompleteAbort（5）</li>
+<li>Dead（6）这几种状态</li>
+</ul>
+</li>
+</ol>
+<h4 id="InitProducerIdRequest-InitProducerIdResponse"><a href="#InitProducerIdRequest-InitProducerIdResponse" class="headerlink" title="InitProducerIdRequest/InitProducerIdResponse"></a>InitProducerIdRequest/InitProducerIdResponse</h4><p><img src="/images/kafka/init_request.png" alt="InitProducerIdRequest"></p>
+<p><img src="/images/kafka/init_response.png" alt="InitProducerIdResponse"></p>
+<p>InitProducerIdRequest还会触发执行以下任务：</p>
+<ol>
+<li>增加该 PID 对应的 producer_epoch。具有相同 PID 但 producer_epoch 小于该producer_epoch的其他生产者新开启的事务将被拒绝</li>
+<li>恢复（Commit）或中止（Abort）之前的生产者未完成的事务</li>
+</ol>
+<h4 id="AddPartitionsToTxnRequest"><a href="#AddPartitionsToTxnRequest" class="headerlink" title="AddPartitionsToTxnRequest"></a>AddPartitionsToTxnRequest</h4><p><img src="/images/kafka/AddPartitionsToTxnRequest.png" alt="AddPartitionsToTxnRequest"></p>
+<h4 id="事务提交"><a href="#事务提交" class="headerlink" title="事务提交"></a>事务提交</h4><p><strong>Kafka 的事务实现是两阶段提交</strong>。</p>
+<ol>
+<li>将PREPARE_COMMIT或PREPARE_ABORT消息写入主题__transaction_state，进行预提交</li>
+<li>第一阶段: WriteTxnMarkersRequest<ul>
+<li>由TransactionCoordinator 发向事务中各个分区的leader 节点的</li>
+<li>当节点收到这个请求之后，会在相应的分区中写入控制消息（ControlBatch）</li>
+<li>控制消息用来标识事务的终结，它和普通的消息一样存储在日志文件中</li>
+</ul>
+</li>
+<li>第二阶段: <ul>
+<li>TransactionCoordinator将最终的COMPLETE_COMMIT或COMPLETE_ABORT信息写入主题<strong>transaction_state以表明当前事务已经结束，此时可以删除主题</strong>transaction_state中所有关于该事务的消息。</li>
+<li>由于主题__transaction_state 采用的日志清理策略为日志压缩，所以这里的删除只需将相应的消息设置为墓碑消息即可。</li>
+</ul>
+</li>
+</ol>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/04/08/kafka/08_深入理解客户端/" data-id="ckminog1w005emcu99gtays8i" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/04/09/kafka/09_kafka可靠性/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            9 Kafka 可靠性
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/04/07/kafka/07_服务端/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">7 服务端</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/03/21/redis/12_redis原理总结/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/03/21/redis/12_redis原理总结/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-03-21T04:20:55.555Z" itemprop="datePublished">2021-03-21</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T14:22:23.753Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kafka/">Kafka</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 12.86px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 14.29px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Kafka/" style="font-size: 15.71px;">Kafka</a> <a href="/tags/Linux性能调优/" style="font-size: 19.29px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.86px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15px;">React</a> <a href="/tags/Vue/" style="font-size: 15px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.14px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.71px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.29px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.43px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.43px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 14.29px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 15px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.57px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.86px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.57px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.14px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/04/08/kafka/08_深入理解客户端/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

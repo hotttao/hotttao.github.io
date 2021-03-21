@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>7 服务端 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Kafka" />
+    
+    <meta name="description" content="Kafka 服务端的核心设计和运行机制">
+<meta name="keywords" content="Kafka">
+<meta property="og:type" content="article">
+<meta property="og:title" content="7 服务端">
+<meta property="og:url" content="http://yoursite.com/2020/04/07/kafka/07_服务端/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="Kafka 服务端的核心设计和运行机制">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/kafka/request_base.png">
+<meta property="og:updated_time" content="2021-03-09T15:18:32.420Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="7 服务端">
+<meta name="twitter:description" content="Kafka 服务端的核心设计和运行机制">
+<meta name="twitter:image" content="http://yoursite.com/images/kafka/request_base.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/存储/">存储</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-kafka/07_服务端" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        7 服务端
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/04/07/kafka/07_服务端/" class="article-date">
+            <time datetime="2020-04-06T16:00:00.000Z" itemprop="datePublished">2020-04-07</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Kafka/">Kafka<span class="tag-count">15</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>Kafka 服务端的核心设计和运行机制<br><a id="more"></a></p>
+<h2 id="1-Kafka-服务端概述"><a href="#1-Kafka-服务端概述" class="headerlink" title="1. Kafka 服务端概述"></a>1. Kafka 服务端概述</h2><p>前面我们已经介绍了，Kafka 生产者、消费者客户端、主题与分区管理、日志存储。但对于Kafka 服务端的一些核心设计与运行机理还未涉及。那么本节我们来介绍 kafka 服务端的相关设计，包括:</p>
+<ol>
+<li>网络协议设计</li>
+<li>时间轮</li>
+<li>延迟操作</li>
+<li>控制器及参数解密</li>
+</ol>
+<p>尤其是协议设计和控制器的介绍，这些是深入了解Kafka的必备知识点。</p>
+<h2 id="1-协议设计"><a href="#1-协议设计" class="headerlink" title="1. 协议设计"></a>1. 协议设计</h2><p>Kafka自定义了一组基于TCP的二进制协议，在 Kafka 2.0.0 中，一共包含了 43 种协议类型，每种协议类型都有对应的请求（Request）和响应（Response）</p>
+<h4 id="Request"><a href="#Request" class="headerlink" title="Request"></a>Request</h4><p>每种类型的Request都包含相同结构的协议请求头（RequestHeader）和不同结构的协议请求体。</p>
+<p><img src="/images/kafka/request_base.png" alt="request"></p>
+<p>协议请求头中包含 4 个域（Field）:</p>
+<ol>
+<li>api_key: API 标识，标识请求的类型</li>
+<li>api_version: API 版本号</li>
+<li>correlation_id: 客户端生成的唯一请求 ID 标识，服务器端在处理完请求后也会将此 ID 写到 Response，这样客户端就能将请求和响应关联起来</li>
+<li>client_id: 客户端 ID </li>
+</ol>
+<h4 id="Response"><a href="#Response" class="headerlink" title="Response"></a>Response</h4><p>每种类型的 Response 也包含相同结构的协议响应头（ResponseHeader）和不同结构的响应体（ResponseBody）</p>
+<p><img src="/images/kafka/response_base.png" alt="request"></p>
+<p>协议响应头中只有一个 correlation_id，这是客户端请求中的请求 ID。</p>
+<h4 id="请求响应所使用的基础类型"><a href="#请求响应所使用的基础类型" class="headerlink" title="请求响应所使用的基础类型"></a>请求响应所使用的基础类型</h4><p>Kafka中所有协议类型的Request和Response的结构都是具备固定格式的，并且它们都构建于多种基本数据类型之上。这些基础类型如下图所示:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">类型</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">boolean</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">int8、int16、int32、int64</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">uint32</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">varint</td>
+<td style="text-align:left">变长整型，值在 -2^31 - 2^31-1，ZigZag编码</td>
+</tr>
+<tr>
+<td style="text-align:left">varlong</td>
+<td style="text-align:left">变长长整型，值在 -2^63 - 2^63-1，ZigZag编码</td>
+</tr>
+<tr>
+<td style="text-align:left">string</td>
+<td style="text-align:left">字符串，开头是int16的长度字段，代表字符串长度 N，后面包含 N 个UTF8编码的字符串</td>
+</tr>
+<tr>
+<td style="text-align:left">nullable_string</td>
+<td style="text-align:left">可为空的字符串，空字符串用-1表示，其他同string</td>
+</tr>
+<tr>
+<td style="text-align:left">bytes</td>
+<td style="text-align:left">字节序列，开头是int32的长度字段，代表字节序列长度 N，后面包含 N 个字节</td>
+</tr>
+<tr>
+<td style="text-align:left">nullable_bytes</td>
+<td style="text-align:left">可为空的字节序列，空为 -1</td>
+</tr>
+<tr>
+<td style="text-align:left">records</td>
+<td style="text-align:left">表示kafka 中的一个消息序列，可以看做 nullable_bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">array</td>
+<td style="text-align:left">给定类型T的数组，T可以是基础类型或基础类型组成的结构体，开头是int32的长度字段，表示有 N 个T示例，后面在跟 N 个 T 实例；空数组表示为 -1</td>
+</tr>
+</tbody>
+</table>
+<p>下面就以最常见的消息发送和消息拉取的两种协议类型做细致的讲解:</p>
+<ol>
+<li>消息发送的协议类型: <ul>
+<li>ProduceRequest/ProduceResponse，对应的api_key=0，表示PRODUCE</li>
+<li>经历了 7 个版本(V0-V6)，我们将讲解最新版本（V6，即api_version=6）</li>
+</ul>
+</li>
+<li>拉取消息的协议类型:<ul>
+<li>FetchRequest/FetchResponse，对应的api_key=1，表示FETCH</li>
+<li>经历了 9 个版本(V0-V8)，我们将讲解最新版本（V8，即api_version=8）</li>
+</ul>
+</li>
+</ol>
+<h3 id="1-1-ProduceRequest-ProduceResponse"><a href="#1-1-ProduceRequest-ProduceResponse" class="headerlink" title="1.1 ProduceRequest/ProduceResponse"></a>1.1 ProduceRequest/ProduceResponse</h3><h4 id="ProduceRequest"><a href="#ProduceRequest" class="headerlink" title="ProduceRequest"></a>ProduceRequest</h4><p>ProduceRequest 的组织结构如下图所示:</p>
+<p><img src="/images/kafka/produce_request.png" alt="ProduceRequest"></p>
+<p>除了请求头中的4个域，其余ProduceRequest请求体中各个域的含义如下:</p>
+<p><img src="/images/kafka/produce_request_mean.png" alt="ProduceRequest字段含义"></p>
+<p>在讲解生产者客户端时我们了解到:</p>
+<ol>
+<li>消息累加器 RecordAccumulator 中的消息是以＜分区，Deque＜ProducerBatch＞＞的形式进行缓存的</li>
+<li>之后由Sender线程转变成＜Node，List＜ProducerBatch＞＞的形式</li>
+<li>针对每个Node，Sender线程在发送消息前会将对应的List＜ProducerBatch＞形式的内容转变成 ProduceRequest 的具体结构</li>
+<li>List＜ProducerBatch＞中的内容首先会按照主题名称进行分类（对应ProduceRequest中的域topic），然后按照分区编号进行分类（对应ProduceRequest中的域partition），分类之后的ProducerBatch集合就对应ProduceRequest中的域record_set</li>
+</ol>
+<p>每个分区中的消息是顺序追加的，那么在客户端中按照分区归纳好之后就可以省去在服务端中转换的操作了，这样就将负载分摊到客户端，减轻了服务端的压力</p>
+<h4 id="ProducerResponse"><a href="#ProducerResponse" class="headerlink" title="ProducerResponse"></a>ProducerResponse</h4><p>V6版本中ProduceResponse的组织结构如下图所示:</p>
+<p><img src="/images/kafka/producer_response.png" alt="ProduceResponse"></p>
+<p>除了响应头中的correlation_id，其余ProduceResponse各个域的含义如下:</p>
+<p><img src="/images/kafka/producer_response_mean.png" alt="ProduceResponse字段含义"></p>
+<h3 id="1-2-FetchRequest-FetchResponse"><a href="#1-2-FetchRequest-FetchResponse" class="headerlink" title="1.2 FetchRequest/FetchResponse"></a>1.2 FetchRequest/FetchResponse</h3><h4 id="FetchRequest"><a href="#FetchRequest" class="headerlink" title="FetchRequest"></a>FetchRequest</h4><p>FetchRequest的组织结构如下图所示:</p>
+<p><img src="/images/kafka/fetch_request.png" alt="FetchRequest"></p>
+<p>除了请求头中的4个域，其余FetchRequest中各个域的含义如下</p>
+<p><img src="/images/kafka/fetch_request_mean1.png" alt="FetchRequest字段含义"><br><img src="/images/kafka/fetch_request_mean2.png" alt="FetchRequest字段含义"></p>
+<p>如果要拉取某个分区中的消息，就需要指定详细的拉取信息，也就是需要设定 partition、fetch_offset、log_start_offset和max_bytes这4个域的具体值，那么对每个分区而言，就需要占用4B+8B+8B+4B=24B的空间。</p>
+<p>一般情况下，不管是 follower 副本还是普通的消费者，它们的订阅信息是长期固定的。也就是说，FetchRequest 中的 topics 域的内容是长期固定的，只有在拉取开始时或发生某些异常时会有所变动。</p>
+<p>Kafka从1.1.0版本开始针对FetchRequest引入了session_id、epoch和forgotten_topics_data等域，session_id和epoch确定一条拉取链路的fetch session，当session建立或变更时会发送全量式的 FetchRequest，所谓的全量式就是指请求体中包含所有需要拉取的分区信息；当session稳定时则会发送增量式的FetchRequest请求，里面的topics域为空，因为topics域的内容已经被缓存在了session链路的两侧。如果需要从当前fetch session中取消对某些分区的拉取订阅，则可以使用forgotten_topics_data字段来实现。</p>
+<p>这个改进在大规模（有大量的分区副本需要及时同步）的Kafka集群中非常有用，它可以提升集群间的网络带宽的有效使用率。不过对客户端而言效果不是那么明显，一般情况下单个客户端不会订阅太多的分区，不过总体上这也是一个很好的优化改进。</p>
+<h4 id="FetchResponse"><a href="#FetchResponse" class="headerlink" title="FetchResponse"></a>FetchResponse</h4><p>FetchResponse 的结构如下:</p>
+<p><img src="/images/kafka/fetch_response.png" alt="FetchResponse"></p>
+<p>FetchResponse结构中的域也很多，它主要分为4层:</p>
+<ol>
+<li>第1层包含throttle_time_ms、error_code、session_id 和 responses</li>
+<li>第二层 reponse 包括具体的响应内容</li>
+<li>第3层中包含分区的元数据信息（partition、error_code 等）及具体的消息内容（record_set），aborted_transactions和事务相关</li>
+</ol>
+<h2 id="2-时间轮"><a href="#2-时间轮" class="headerlink" title="2. 时间轮"></a>2. 时间轮</h2><p>Kafka中存在大量的延时操作，比如延时生产、延时拉取和延时删除等。Kafka并没有使用JDK自带的Timer或DelayQueue来实现延时的功能，而是基于时间轮的概念自定义实现了一个用于延时功能的定时器（SystemTimer）。JDK中Timer和DelayQueue的插入和删除操作的平均时间复杂度为O（nlogn），而基于时间轮可以将插入和删除操作的时间复杂度都降为O（1）</p>
+<h3 id="2-1-时间轮的数据结构"><a href="#2-1-时间轮的数据结构" class="headerlink" title="2.1 时间轮的数据结构"></a>2.1 时间轮的数据结构</h3><p>时间轮的数据结构如下:</p>
+<p><img src="/images/kafka/time_tick.jpg" alt="时间轮"></p>
+<p>其由如下几个部分组成:</p>
+<ol>
+<li>TimingWheel: 时间轮<ul>
+<li>是一个存储定时任务的环形队列，底层采用数组实现</li>
+<li>数组中的每个元素可以存放一个定时任务列表（TimerTaskList）</li>
+<li>数组的每一项称为时间格，每个时间格代表当前时间轮的基本时间跨度（tickMs）</li>
+<li>时间轮的时间格个数是固定的，即数组长度，可用wheelSize来表示</li>
+<li>时间轮的总体时间跨度 = tickMs * wheelSize</li>
+</ul>
+</li>
+<li>TimerTaskList:<ul>
+<li>TimerTaskList是一个环形的双向链表</li>
+<li>链表中的每一项表示的都是定时任务项（TimerTaskEntry），其中封装了真正的定时任务（TimerTask）</li>
+</ul>
+</li>
+<li>currentTime:<ul>
+<li>表示事件轮的表盘指针，用来表示时间轮当前所处的时间，是tickMs的整数倍</li>
+<li>currentTime可以将整个时间轮划分为到期部分和未到期部分</li>
+<li>currentTime当前指向的时间格也属于到期部分，表示刚好到期，需要处理此时间格所对应的TimerTaskList中的所有任务。</li>
+</ul>
+</li>
+</ol>
+<h3 id="2-2-定时任务的执行"><a href="#2-2-定时任务的执行" class="headerlink" title="2.2 定时任务的执行"></a>2.2 定时任务的执行</h3><p>时间轮的tickMs为1ms且wheelSize等于20，初始情况下表盘指针currentTime指向时间格0:</p>
+<ol>
+<li>定时为2ms的任务会存放到时间格为2的TimerTaskList中</li>
+<li>2ms 后，currentTime 向后推移到时间格2，此时就需要执行时间格2中 TimerTaskList 中的任务</li>
+<li>此时定时为 8ms 的任务到来，它将被插入到时间格10中</li>
+<li>定时为 19ms 的任务会复用原来的TimerTaskList，被插入原本已经到期的时间格1中</li>
+</ol>
+<p>整个时间轮的总体跨度是不变的，随着指针currentTime的不断推进，当前时间轮所能处理的时间段也在不断后移，总体时间范围在currentTime和currentTime+interval之间。</p>
+<h3 id="2-3-多层时间轮"><a href="#2-3-多层时间轮" class="headerlink" title="2.3 多层时间轮"></a>2.3 多层时间轮</h3><p>加入定时任务的到期事件为 100w ms，应该怎么办呢？很显然我们不能创建一个 100w 项的数组。</p>
+<p>Kafka 为此引入了层级时间轮的概念，当任务的到期时间超过了当前时间轮所表示的时间范围时，就会尝试添加到上层时间轮中。</p>
+<p><img src="/images/kafka/multi_time_tick.png" alt="时间轮"></p>
+<p>复用之前的案例:</p>
+<ol>
+<li>每一层时间轮的wheelSize是固定的，都是20</li>
+<li>第一层的时间轮tickMs=1ms、wheelSize=20、interval=20ms</li>
+<li>第二层的时间轮的tickMs为第一层时间轮的interval，即20ms，interval=400ms</li>
+<li>以此类推，第三层时间轮 tickMs=400ms，interval=8000ms</li>
+</ol>
+<p>450ms的定时任务，的执行过程是这样的:</p>
+<ol>
+<li>450ms 超过了第二层能表示的最大范围 400ms，所以最终被插入第三层时间轮中时间格1的TimerTaskList。</li>
+<li>第三层的时间格1表示的时间范围[400ms，800ms），这个时间范围内可能有多个任务。当此TimerTaskList到期之时，原本定时为450ms的任务还剩下50ms的时间，还不能执行这个任务的到期操作。</li>
+<li>这里就有一个 <strong>时间轮降级</strong> 的操作，会将这个剩余时间为 50ms 的定时任务<strong>重新提交到层级时间轮</strong>中，此时第一层时间轮的总体时间跨度20ms不够，而第二层足够，所以该任务被放到第二层时间轮到期时间为[40ms，60ms）的时间格中</li>
+<li>再经历40ms之后，此任务还剩不到 10ms，将被再一次降级，被添加到第一层时间轮到期时间为[10ms，11ms）的时间格中</li>
+<li>再经历 10ms 后，此任务真正到期，最终执行相应的到期操作</li>
+</ol>
+<h3 id="2-4-kafka-实现"><a href="#2-4-kafka-实现" class="headerlink" title="2.4 kafka 实现"></a>2.4 kafka 实现</h3><p>在 Kafka 中:</p>
+<ol>
+<li>TimingWheel 在创建的时候以当前系统时间为第一层时间轮的起始时间（startMs）</li>
+<li>除了第一层时间轮，其余高层时间轮的起始时间（startMs）都设置为创建此层时间轮时前面第一轮的currentTime。</li>
+<li>每一轮的 currentTime=timeMs-（timeMs%tickMs），timeMs 为当前事件与 startMs 的插值，时间每推进一次，每个层级的时间轮的currentTime都会依据此公式执行推进。</li>
+<li>Kafka 中的定时器只需持有 TimingWheel 的第一层时间轮的引用，但每一层时间轮都会有一个引用（overflowWheel）指向更高一层的应用</li>
+</ol>
+<h3 id="2-5-Kafka如何推进时间"><a href="#2-5-Kafka如何推进时间" class="headerlink" title="2.5 Kafka如何推进时间"></a>2.5 Kafka如何推进时间</h3><p>在Kafka中到底是怎么推进时间的呢？Kafka中的定时器借了JDK中的DelayQueue来协助推进时间轮。</p>
+<p>具体做法是</p>
+<ol>
+<li>对于每个使用到的TimerTaskList都加入DelayQueue，“每个用到的TimerTaskList”特指非哨兵节点的定时任务项TimerTaskEntry对应的TimerTaskList。</li>
+<li>DelayQueue会根据TimerTaskList对应的超时时间expiration来排序，最短expiration的TimerTaskList会被排在DelayQueue的队头。</li>
+<li>Kafka中会有一个线程来获取 DelayQueue 中到期的任务列表，线程所对应的名称叫作“ExpiredOperationReaper”，可以直译为“过期操作收割机”。</li>
+<li>当“收割机”线程获取 DelayQueue 中超时的任务列表 TimerTaskList之后，既可以根据 TimerTaskList 的 expiration 来推进时间轮的时间，也可以就获取的TimerTaskList执行相应的操作，对里面的TimerTaskEntry该执行过期操作的就执行过期操作，该降级时间轮的就降级时间轮</li>
+</ol>
+<p>可以发现，Kafka 中的 <strong>TimingWheel 专门用来执行插入和删除 TimerTaskEntry的操作</strong>，而 <strong>DelayQueue 专门负责时间推进的任务</strong>。</p>
+<h2 id="3-延时操作"><a href="#3-延时操作" class="headerlink" title="3. 延时操作"></a>3. 延时操作</h2><p>在Kafka中有多种延时操作，比如延时生产，还有延时拉取（DelayedFetch）、延时数据删除（DelayedDeleteRecords）等。</p>
+<p>延时由如下几个部分组成:</p>
+<ol>
+<li>首先他必须由一个超时时间，如果在这个超时时间内未完成任务，就要强制返回</li>
+<li>，延时操作不同于定时操作，定时操作是指在特定时间之后执行的操作，而<strong>延时操作要在所设定的超时时间之前完成</strong>，所以延时操作能够支持外部事件的触发</li>
+<li>外部事件的触发，要配备一个监听池来负责监听每个分区的外部事件</li>
+<li>而超时操作则需要一个定时器</li>
+</ol>
+<p>前面我们提到，时间轮是由线程ExpiredOperationReaper来驱动的，所以: 定时器、ExpiredOperationReaper线程、延时管理器(DelayedOperationPurgatory)、监听池是一一对应的。</p>
+<p>ExpiredOperationReaper不仅可以推进时间轮，还会定期清理监听池中已完成的延时操作。</p>
+<h3 id="3-1-延时生产"><a href="#3-1-延时生产" class="headerlink" title="3.1 延时生产"></a>3.1 延时生产</h3><p>下图描绘了客户端在请求写入消息到收到响应结果的过程中与延时生产操作相关的细节:</p>
+<p><img src="/images/kafka/delay_write.png" alt="时间轮"></p>
+<p>其中:</p>
+<ol>
+<li>如果客户端设置的 acks 参数不为-1，或者没有成功的消息写入，那么就直接返回结果给客户端</li>
+<li>否则就需要创建延时生产操作并存入延时操作管理器</li>
+<li>最终要么由外部事件触发，要么由超时触发而执行。</li>
+</ol>
+<h3 id="3-2-延时拉取"><a href="#3-2-延时拉取" class="headerlink" title="3.2 延时拉取"></a>3.2 延时拉取</h3><p>有延时生产就有延时拉取。两个follower副本都已经拉取到了leader副本的最新位置，此时又向leader副本发送拉取请求，而leader副本并没有新的消息写入，那么此时leader副本该如何处理呢？</p>
+<p>如果 leader 没有新消息，而副本的拉取操作周而复始，只会平白消耗资源。</p>
+<p>Kafka选择了延时操作来处理这种情况:</p>
+<ol>
+<li>Kafka在处理拉取请求时，会先读取一次日志文件，如果收集不到足够多（fetchMinBytes，由参数fetch.min.bytes配置，默认值为1）的消息，那么就会创建一个延时拉取操作（DelayedFetch）以等待拉取到足够数量的消息</li>
+<li>当延时拉取操作执行时，会再读取一次日志文件，然后将拉取结果返回给 follower 副本</li>
+<li>如果拉取进度一直没有追赶上leader副本，那么在拉取leader副本的消息时一般拉取的消息大小都会不小于fetchMinBytes，这样Kafka也就不会创建相应的延时拉取操作，而是立即返回拉取结果</li>
+</ol>
+<p>延时拉取操作也会有一个专门的延时操作管理器负责管理。延时拉取操作同样是由超时触发或外部事件触发而被执行的。外部事件触发就稍复杂了一些，因为拉取请求不单单由 follower 副本发起，也可以由消费者客户端发起，两种情况所对应的外部事件也是不同的。</p>
+<p>follower副本的延时拉取，它的外部事件就是消息追加到了leader副本的本地日志文件中；如果是消费者客户端的延时拉取，它的外部事件可以简单地理解为HW的增长。</p>
+<h2 id="4-控制器"><a href="#4-控制器" class="headerlink" title="4. 控制器"></a>4. 控制器</h2><p>在 Kafka 集群中会有一个或多个 broker，其中有一个 broker 会被选举为控制器（Kafka Controller），它负责</p>
+<ol>
+<li>管理整个集群中所有分区和副本的状态。当某个分区的leader副本出现故障时，由控制器负责为该分区选举新的leader副本。</li>
+<li>当检测到某个分区的ISR集合发生变化时，由控制器负责通知所有broker更新其元数据信息。</li>
+<li>当使用kafka-topics.sh脚本为某个topic增加分区数量时，同样还是由控制器负责分区的重新分配。</li>
+</ol>
+<h3 id="4-1-控制器选举"><a href="#4-1-控制器选举" class="headerlink" title="4.1 控制器选举"></a>4.1 控制器选举</h3><p>Kafka中的控制器选举工作依赖于ZooKeeper:</p>
+<ol>
+<li>成功竞选为控制器的broker会在ZooKeeper中创建/controller这个临时（EPHEMERAL）节点。</li>
+<li>每个 broker 启动的时候会去尝试读取/controller节点的brokerid的值:<ul>
+<li>如果读取到brokerid的值不为-1，则表示已经有其他 broker 节点成功竞选为控制器，所以当前 broker 就会放弃竞选；</li>
+<li>如果 ZooKeeper 中不存在/controller节点，或者这个节点中的数据异常，那么就会尝试去创建/controller节点。</li>
+</ul>
+</li>
+<li>当前broker去创建节点的时候，也有可能其他broker同时去尝试创建这个节点，只有创建成功的那个broker才会成为控制器，而创建失败的broker竞选失败。</li>
+</ol>
+<p>每个broker都会在内存中保存当前控制器的brokerid值，这个值可以标识为activeControllerId。</p>
+<h3 id="4-2-屏蔽令牌"><a href="#4-2-屏蔽令牌" class="headerlink" title="4.2 屏蔽令牌"></a>4.2 屏蔽令牌</h3><p>ZooKeeper 中还有一个与控制器有关的/controller_epoch 节点，这个节点是持久（PERSISTENT）节点，节点中存放的是一个整型的controller_epoch值。controller_epoch用于记录控制器发生变更的次数，即记录当前的控制器是第几代控制器，我们也可以称之为“控制器的纪元”。</p>
+<p>controller_epoch 的更新过程是这样的:</p>
+<ol>
+<li>controller_epoch 的初始值为1，即集群中第一个控制器的纪元为1</li>
+<li>当控制器发生变更时，每选出一个新的控制器就将该字段值加1</li>
+<li>每个和控制器交互的请求都会携带controller_epoch这个字段<ul>
+<li>如果请求的controller_epoch值小于内存中的controller_epoch值，则认为这个请求是向已经过期的控制器所发送的请求，那么这个请求会被认定为无效的请求。</li>
+<li>如果请求的controller_epoch值大于内存中的controller_epoch值，那么说明已经有新的控制器当选了。由此可见，Kafka 通过 controller_epoch 来保证控制器的唯一性，进而保证相关操作的一致性。</li>
+</ul>
+</li>
+</ol>
+<h3 id="4-3-控制器职责"><a href="#4-3-控制器职责" class="headerlink" title="4.3 控制器职责"></a>4.3 控制器职责</h3><p>具备控制器身份的broker具有如下的额外职责:</p>
+<ol>
+<li>监听分区相关的变化:<ul>
+<li>为ZooKeeper中的/admin/reassign_partitions 节点注册 PartitionReassignmentHandler，用来处理分区重分配的动作</li>
+<li>为 ZooKeeper 中的/isr_change_notification节点注册IsrChangeNotificetionHandler，用来处理ISR集合变更的动作</li>
+<li>为ZooKeeper中的/admin/preferred-replica-election节点添加PreferredReplicaElectionHandler，用来处理优先副本的选举动作</li>
+</ul>
+</li>
+<li>监听主题相关的变化:<ul>
+<li>为 ZooKeeper 中的/brokers/topics 节点添加TopicChangeHandler，用来处理主题增减的变化</li>
+<li>为 ZooKeeper 中的/admin/delete_topics节点添加TopicDeletionHandler，用来处理删除主题的动作</li>
+</ul>
+</li>
+<li>监听broker相关的变化: 为ZooKeeper中的/brokers/ids节点添加BrokerChangeHandler，用来处理broker增减的变化</li>
+<li>对主题、分区及broker有关的信息进行管理。对所有主题对应的 ZooKeeper 中的/brokers/topics/＜topic＞节点添加PartitionModificationsHandler，用来监听主题中的分区分配变化</li>
+<li>启动并管理分区状态机和副本状态机</li>
+<li>更新集群的元数据信息</li>
+<li>如果参数 auto.leader.rebalance.enable 设置为 true，则还会开启一个名为“auto-leader-rebalance-task”的定时任务来负责维护分区的优先副本的均衡</li>
+</ol>
+<p>控制器在选举成功之后会读取 ZooKeeper 中各个节点的数据来初始化上下文信息（ControllerContext），控制需要对这些上下文信息进行管理，并将上下文信息的变更同步到其他普通的broker 节点中。</p>
+<p>不管是监听器触发的事件，还是定时任务触发的事件，或者是其他事件都会读取或更新控制器中的上下文信息，那么这样就会涉及多线程间的同步。如果单纯使用锁机制来实现，那么整体的性能会大打折扣。针对这一现象，Kafka 的控制器使用单线程基于事件队列的模型，将每个事件都做一层封装，然后按照事件发生的先后顺序暂存到 LinkedBlockingQueue 中，最后使用一个专用的线程（ControllerEventThread）按照FIFO（First Input First Output，先入先出）的原则顺序处理各个事件，这样不需要锁机制就可以在多线程间维护线程安全。</p>
+<p><img src="/images/kafka/controller.png" alt="控制器"></p>
+<h3 id="4-4-普通-broker"><a href="#4-4-普通-broker" class="headerlink" title="4.4 普通 broker"></a>4.4 普通 broker</h3><p>在最新的 kafka 实现中，普通broker极少需要再监听ZooKeeper中的数据变化，只对/controller节点添加监听器，以此来监听此节点的数据变化（ControllerChangeHandler）</p>
+<p>当/controller 节点的数据发生变化时，每个 broker 都会更新自身内存中保存的activeControllerId。</p>
+<p>如果broker 在数据变更前是控制器，在数据变更后自身的 brokerid 值与新的 activeControllerId 值不一致，那么就需要“退位”，关闭相应的资源，比如关闭状态机、注销相应的监听器等。</p>
+<p>有可能控制器由于异常而下线，造成/controller 这个临时节点被自动删除；当/controller节点被删除时，每个broker都会进行选举，如果broker在节点被删除前是控制器，那么在选举前还需要有一个“退位”的动作。</p>
+<h3 id="4-4-kafka-如何优雅关闭"><a href="#4-4-kafka-如何优雅关闭" class="headerlink" title="4.4 kafka 如何优雅关闭"></a>4.4 kafka 如何优雅关闭</h3><h3 id="4-5-分区-leader-选举"><a href="#4-5-分区-leader-选举" class="headerlink" title="4.5 分区 leader 选举"></a>4.5 分区 leader 选举</h3><h4 id="分区创建和上线的-leader-选举"><a href="#分区创建和上线的-leader-选举" class="headerlink" title="分区创建和上线的 leader 选举"></a>分区创建和上线的 leader 选举</h4><p>分区leader副本的选举由控制器负责具体实施。</p>
+<p>如下情况下会进行 leader 选举:</p>
+<ol>
+<li>创建分区（创建主题或增加分区都有创建分区的动作）</li>
+<li>分区上线（比如分区中原先的leader副本下线，此时分区需要选举一个新的leader 上线来对外提供服务）</li>
+</ol>
+<p>对应的选举策略为OfflinePartitionLeaderElectionStrategy。这种策略的基本思路是按照 AR 集合中副本的顺序查找第一个存活的副本，并且这个副本在ISR集合中。注意这里是根据AR的顺序而不是ISR的顺序进行选举的。</p>
+<p>如果ISR集合中没有可用的副本，那么此时还要再检查一下所配置的<code>unclean.leader.election.enable</code>参数（默认值为false）。如果这个参数配置为true，那么表示允许从非ISR列表中的选举leader，从AR列表中找到第一个存活的副本即为leader。</p>
+<h4 id="分区重分配的-leader-选举"><a href="#分区重分配的-leader-选举" class="headerlink" title="分区重分配的 leader 选举"></a>分区重分配的 leader 选举</h4><p>当分区进行重分配（可以先回顾一下4.3.2节的内容）的时候也需要执行leader的选举动作，对应的选举策略为 ReassignPartitionLeaderElectionStrategy。这个选举策略的思路比较简单：从重分配的AR列表中找到第一个存活的副本，且这个副本在目前的ISR列表中。</p>
+<h4 id="优先副本选举时的-leader-选举"><a href="#优先副本选举时的-leader-选举" class="headerlink" title="优先副本选举时的 leader 选举"></a>优先副本选举时的 leader 选举</h4><p>当发生优先副本（可以先回顾一下4.3.1节的内容）的选举时，直接将优先副本设置为leader即可</p>
+<h4 id="节点下线的-leader-选举"><a href="#节点下线的-leader-选举" class="headerlink" title="节点下线的 leader 选举"></a>节点下线的 leader 选举</h4><p>当某节点被优雅地关闭（也就是执行ControlledShutdown）时，位于这个节点上的leader副本都会下线，所以与此对应的分区需要执行leader的选举。与此对应的选举策略（ControlledShutdownPartitionLeaderElectionStrategy）为：从AR列表中找到第一个存活的副本，且这个副本在目前的ISR列表中，与此同时还要确保这个副本不处于正在被关闭的节点上。</p>
+<h2 id="5-重要参数解析"><a href="#5-重要参数解析" class="headerlink" title="5. 重要参数解析"></a>5. 重要参数解析</h2><h3 id="5-1-broker-id"><a href="#5-1-broker-id" class="headerlink" title="5.1 broker.id"></a>5.1 broker.id</h3><p>服务器端参数 broker.id是broker在启动之前必须设定的参数之一，在Kafka集群中，每个broker都有唯一的 id值用来区分彼此。</p>
+<p>broker 在启动时会在 ZooKeeper 中的 <strong>/brokers/ids</strong>路径下创建一个以当前brokerId为名称的虚节点，broker的健康状态检查就依赖于此虚节点。当 broker 下线时，该虚节点会自动删除，其他 broker 节点或客户端通过判断/brokers/ids路径下是否有此broker的brokerId节点来确定该broker的健康状态。</p>
+<p>broker.id 有三种配置方式:</p>
+<ol>
+<li>配置文件 config/server.properties 里的 broker.id，默认值为-1， 在Kafka中，brokerId值必须大于等于0才有可能正常启动</li>
+<li>meta.properties文件</li>
+<li>通过服务端如下参数自动生成新的brokerId:<ul>
+<li>broker.id.generation.enable: True 表示启用自动生成功能</li>
+<li>reserved.broker.max.id: 自动生成的 brokerId 有一个基准值，即自动生成的 brokerId 必须超过这个基准值</li>
+</ul>
+</li>
+</ol>
+<p>他们的优先级是从上往下，优先级越来越低。</p>
+<h4 id="自动生成-broker-id-的原理"><a href="#自动生成-broker-id-的原理" class="headerlink" title="自动生成 broker.id 的原理"></a>自动生成 broker.id 的原理</h4><p>自动生成的brokerId的原理是先往ZooKeeper中的 <strong>/brokers/seqid</strong> 节点中写入一个空字符串。然 后 获 取 返回的Stat 信息中的 version 值，进而将 version 的值和reserved.broker.max.id参数配置的值相加。</p>
+<p>brokers/seqid节点在被更新后，dataVersion就自增1，表示数据发生了变更，这样通过ZooKeeper 的这个功能来实现集群层面的序号递增，整体上相当于一个发号器。</p>
+<h3 id="5-2-bootstrap-servers"><a href="#5-2-bootstrap-servers" class="headerlink" title="5.2 bootstrap.servers"></a>5.2 bootstrap.servers</h3><p>客户端参数 bootstrap.servers 是Kafka Producer、Kafka Consumer客户端中的必备参数。</p>
+<p>我们一般可以简单地认为 bootstrap.servers 这个参数所要指定的就是将要连接的Kafka集群的broker地址列表。不过从深层次的意义上来讲，这个参数配置的是用来<strong>发现Kafka集群元数据信息的服务地址</strong>。</p>
+<p><img src="/images/kafka/broker_server.png" alt="Kafka连接过程"></p>
+<p>客户端连接Kafka集群要经历以下3个过程:</p>
+<ol>
+<li>与bootstrap.servers参数所指定的Server连接，并发送MetadataRequest请求来获取集群的元数据信息</li>
+<li>Server 通过 MetadataResponse 返回元数据信息</li>
+<li>客户端KafkaProducer2收到的MetadataResponse之后解析出其中包含的集群元数据信息，然后与集群中的各个节点建立连接，之后就可以发送消息了</li>
+</ol>
+<p>在绝大多数情况下，Kafka 本身就扮演着第一步和第二步中的 Server 角色，我们完全可以将这个Server的角色从Kafka中剥离出来，从而添加一些路由的功能、负载均衡的功能。</p>
+<h3 id="5-3-服务器端的配置参数"><a href="#5-3-服务器端的配置参数" class="headerlink" title="5.3 服务器端的配置参数"></a>5.3 服务器端的配置参数</h3><table>
+<thead>
+<tr>
+<th style="text-align:left">主题端参数</th>
+<th style="text-align:left">描述</th>
+<th style="text-align:left">对应的broker端参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">cleanup.policy</td>
+<td style="text-align:left">日志压缩策略。默认值为delete，还可以配置为compact</td>
+<td style="text-align:left">log.cleanup.policy</td>
+</tr>
+<tr>
+<td style="text-align:left">compression.type</td>
+<td style="text-align:left">消息的压缩类型。默认值是producer，表示保留生产者中所使用的原始压缩类型。还可以配置为uncompressed、snappy、lz4、gzip</td>
+<td style="text-align:left">compression.type</td>
+</tr>
+<tr>
+<td style="text-align:left">delete.retention.ms</td>
+<td style="text-align:left">被标识为删除的数据能够保留多久。默认值是86400000，即1天</td>
+<td style="text-align:left">log.clear.delete.retention.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">file.delete.delay.ms</td>
+<td style="text-align:left">清理文件之前可以等待多长时间，默认值是60000，即1分钟</td>
+<td style="text-align:left">log.segment.delete.delay.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">flush.messges</td>
+<td style="text-align:left">需要收集多少消息才会将它们强制刷新到磁盘，默认值是Long.MAX_VALUE,即让操作系统来决定。建议不要修改此参数的默认值</td>
+<td style="text-align:left">log.flush.interval.messges</td>
+</tr>
+<tr>
+<td style="text-align:left">flush.ms</td>
+<td style="text-align:left">需要等待多久才会将消息强制刷新到磁盘，默认值是Long.MAX_VALUE,即让操作系统来决定。建议不要修改此参数的默认值</td>
+<td style="text-align:left">log.flush.interval.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">follower.replication.throttled.replicas</td>
+<td style="text-align:left">用来配置被限制速率的主题所对应的follower副本列表</td>
+<td style="text-align:left">follower.replication.throttled.replicas</td>
+</tr>
+<tr>
+<td style="text-align:left">index.interval.bytes</td>
+<td style="text-align:left">用来控制添加索引项的频率。每超过这个参数所设置的消息字节数时就可以添加一个新的索引项，默认值是4096</td>
+<td style="text-align:left">log.index.interval.bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">leader.replication.throttled.replicas</td>
+<td style="text-align:left">用来配置被限制速率的主题所对应的leader副本列表</td>
+<td style="text-align:left">leader.replication.throttled.replicas</td>
+</tr>
+<tr>
+<td style="text-align:left">max.message.byte</td>
+<td style="text-align:left">消息的最大字节数，默认值是1000012</td>
+<td style="text-align:left">max.message.byte</td>
+</tr>
+<tr>
+<td style="text-align:left">message.format.version</td>
+<td style="text-align:left">消息格式的版本，默认值为2.0-IV1</td>
+<td style="text-align:left">log.message.format.version</td>
+</tr>
+<tr>
+<td style="text-align:left">message.timestamp.difference.max.ms</td>
+<td style="text-align:left">消息中自带的时间戳与broker收到消息时的时间戳之间的最大差值，默认值为Long.MAX_VALUE。此参数只有在message.timestamp.type参数设置为CreteTime时才有效</td>
+<td style="text-align:left">log.message.timestamp.difference.max.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">message.timestamp.type</td>
+<td style="text-align:left">消息的时间戳类型。默认值是CreteTime，还可以设置为LogAppendTime</td>
+<td style="text-align:left">log.message.timestamp.type</td>
+</tr>
+<tr>
+<td style="text-align:left">min.cleanable.dirty.ratio</td>
+<td style="text-align:left">日志清理时的最小污浊率，默认值是0.5</td>
+<td style="text-align:left">log.cleaner.min.cleanable.ratio</td>
+</tr>
+<tr>
+<td style="text-align:left">min.compaction.lag.ms</td>
+<td style="text-align:left">日志再被清理前的最小保留时间，默认值为0</td>
+<td style="text-align:left">log.cleaner.min.compaction.lag.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">min.insync.replicas</td>
+<td style="text-align:left">分区ISR集合中至少有多少个副本，默认值为1</td>
+<td style="text-align:left">min.insync.replicas</td>
+</tr>
+<tr>
+<td style="text-align:left">preallocate</td>
+<td style="text-align:left">在创建日志分段的时候是否要预分配空间，默认值为false</td>
+<td style="text-align:left">log.preallocate</td>
+</tr>
+<tr>
+<td style="text-align:left">retention.bytes</td>
+<td style="text-align:left">分区中所能保留的消息总量，默认值为-1，即没有限制</td>
+<td style="text-align:left">log.retention.bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">retention.ms</td>
+<td style="text-align:left">使用delete的日志清理策略时消息能够保留多长时间，默认值为604800000，即7天。如果设置为-1，则表示没有限制</td>
+<td style="text-align:left">log.retention.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">segment.bytes</td>
+<td style="text-align:left">日志分段的最大值，默认值为1073741824，即1GB</td>
+<td style="text-align:left">log.segment.bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">segment.index.bytes</td>
+<td style="text-align:left">日志分段索引的最大值，默认值为10485760，即10MB</td>
+<td style="text-align:left">log.index.size.max.bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">segment.jitter.ms</td>
+<td style="text-align:left">滚动日志分段时，在segment.ms的基础之上增加的随机数，默认为0</td>
+<td style="text-align:left">log.roll.jitter.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">segment.ms</td>
+<td style="text-align:left">最多多久滚动一次日志分段，默认值为604800000，即7天</td>
+<td style="text-align:left">log.roll.ms</td>
+</tr>
+<tr>
+<td style="text-align:left">unclean.leader.election.enable</td>
+<td style="text-align:left">是否可以从非ISR集合中选举leader副本，默认值为false，如果设置为true，则可能造成数据丢失</td>
+<td style="text-align:left">unclean.leader.election.enable</td>
+</tr>
+</tbody>
+</table>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/04/07/kafka/07_服务端/" data-id="ckminog2b0068mcu9znmmi9q2" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/04/08/kafka/08_深入理解客户端/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            8 深入理解客户端
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/04/06/kafka/06_日志存储/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">6 日志存储</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/03/21/redis/12_redis原理总结/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/03/21/redis/12_redis原理总结/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-03-21T04:20:55.555Z" itemprop="datePublished">2021-03-21</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T14:22:23.753Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kafka/">Kafka</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 12.86px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 14.29px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Kafka/" style="font-size: 15.71px;">Kafka</a> <a href="/tags/Linux性能调优/" style="font-size: 19.29px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.86px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15px;">React</a> <a href="/tags/Vue/" style="font-size: 15px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.14px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.71px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.29px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.43px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.43px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 14.29px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 15px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.57px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.86px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.57px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.14px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/04/07/kafka/07_服务端/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

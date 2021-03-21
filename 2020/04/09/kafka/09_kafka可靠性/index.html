@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>9 Kafka 可靠性 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Kafka" />
+    
+    <meta name="description" content="Kafka 如何保证数据一致性">
+<meta name="keywords" content="Kafka">
+<meta property="og:type" content="article">
+<meta property="og:title" content="9 Kafka 可靠性">
+<meta property="og:url" content="http://yoursite.com/2020/04/09/kafka/09_kafka可靠性/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="Kafka 如何保证数据一致性">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/kafka/lose_replicate.png">
+<meta property="og:updated_time" content="2021-03-13T15:33:41.581Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="9 Kafka 可靠性">
+<meta name="twitter:description" content="Kafka 如何保证数据一致性">
+<meta name="twitter:image" content="http://yoursite.com/images/kafka/lose_replicate.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/存储/">存储</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-kafka/09_kafka可靠性" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        9 Kafka 可靠性
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/04/09/kafka/09_kafka可靠性/" class="article-date">
+            <time datetime="2020-04-08T16:00:00.000Z" itemprop="datePublished">2020-04-09</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Kafka/">Kafka<span class="tag-count">15</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>Kafka 如何保证数据一致性</p>
+<a id="more"></a>
+<h2 id="1-Kafka-可靠性概述"><a href="#1-Kafka-可靠性概述" class="headerlink" title="1. Kafka 可靠性概述"></a>1. Kafka 可靠性概述</h2><p>Kafka 采用主从复制的复制方案，这就引出一系列问题：Kafka 多副本之间如何进行数据同步，尤其是在发生异常时候的处理机制又是什么？多副本间的数据一致性如何解决，基于的一致性协议又是什么？如何确保 Kafka 的可靠性？Kafka 中的可靠性和可用性之间的关系又如何？</p>
+<p>接下来我们就从副本的角度切入来深挖Kafka中的数据一致性、数据可靠性等问题，主要包括:</p>
+<ol>
+<li>副本剖析</li>
+<li>日志同步机制</li>
+<li>可靠性分析</li>
+</ol>
+<h2 id="2-副本剖析"><a href="#2-副本剖析" class="headerlink" title="2. 副本剖析"></a>2. 副本剖析</h2><h3 id="2-1-失效副本"><a href="#2-1-失效副本" class="headerlink" title="2.1 失效副本"></a>2.1 失效副本</h3><p>在ISR集合之外，也就是处于 <strong>同步失效</strong> 或 <strong>功能失效</strong> （比如副本处于非存活状态）的副本统称为失效副本，失效副本对应的分区也就称为同步失效分区，即under-replicated分区。</p>
+<p>通过kafka-topics.sh脚本的<code>under-replicated-partitions</code>参数我们可以查看主题中的失效副本:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">bin/kafka-topics.sh \</div><div class="line">    --zookeeper localhost:2181/kafka \</div><div class="line">    --describe \</div><div class="line">    --topic topic_partition \</div><div class="line">    --under-replicated-partitions</div></pre></td></tr></table></figure>
+<h4 id="同步失效"><a href="#同步失效" class="headerlink" title="同步失效"></a>同步失效</h4><p>失效副本不仅是指处于功能失效状态的副本，处于同步失效状态的副本也可以看作失效副本。</p>
+<p>怎么判定一个分区是否有副本处于同步失效的状态呢？:</p>
+<ol>
+<li>唯一的broker端参数<code>replica.lag.time.max.ms</code>可以配置一个最大的同步超时时间</li>
+<li>当ISR集合中的一个 follower 副本滞后leader副本的时间超过此参数指定的值时则判定为同步失败，需要将此follower副本剔除出ISR集合</li>
+<li>replica.lag.time.max.ms参数的默认值为10000</li>
+</ol>
+<p><img src="/images/kafka/lose_replicate.png" alt="副本失效判断"></p>
+<p>具体的实现原理如下:</p>
+<ol>
+<li>当follower副本将leader副本LEO（LogEndOffset）之前的日志全部同步时，则认为该 follower 副本已经追赶上 leader 副本，此时更新该副本的lastCaughtUpTimeMs 标识</li>
+<li>Kafka 的副本管理器会启动一个副本过期检测的定时任务，而这个定时任务会定时检查当前时间与副本的 lastCaughtUpTimeMs 差值是否大于参数replica.lag.time.max.ms 指定的值。</li>
+<li>千万不要错误地认为 follower 副本只要拉取 leader副本的数据就会更新 lastCaughtUpTimeMs。试想一下，当 leader 副本中消息的流入速度大于follower 副本中拉取的速度时，就算 follower 副本一直不断地拉取 leader 副本的消息也不能与leader副本同步。此时副本也会从 ISR 集合中剔除。</li>
+</ol>
+<p>一般有一下情况会导致副本失效：</p>
+<ol>
+<li>follower副本进程卡住，在一段时间内根本没有向leader副本发起同步请求，比如频繁的Full GC。</li>
+<li>follower副本进程同步过慢，在一段时间内都无法追赶上leader副本，比如I/O开销过大</li>
+<li>如果通过工具增加了副本因子，那么新增加的副本在赶上leader副本之前也都是处于失效状态的。</li>
+<li>如果一个follower副本由于某些原因（比如宕机）而下线，之后又上线，在追赶上leader副本之前也处于失效状态。</li>
+</ol>
+<p>同步失效分区是kafka 健康监测的一个重要指标。</p>
+<h3 id="2-2-ISR-伸缩"><a href="#2-2-ISR-伸缩" class="headerlink" title="2.2 ISR 伸缩"></a>2.2 ISR 伸缩</h3><p>Kafka 在启动的时候会开启两个与 ISR 相关的定时任务：</p>
+<ol>
+<li>isr-expiration: 周期性地检测每个分区是否需要缩减其ISR集合</li>
+<li>isr-change-propagation: 广播 ISR 的变更</li>
+</ol>
+<h4 id="isr-expiration"><a href="#isr-expiration" class="headerlink" title="isr-expiration"></a>isr-expiration</h4><ul>
+<li>周期和<code>replica.lag.time.max.ms</code>参数有关，大小是这个参数值的一半</li>
+<li>当检测到ISR集合中有失效副本时，就会收缩ISR集合</li>
+<li>如果某个分区的ISR集合发生变更，则会将变更后的数据记录到 ZooKeeper 对应的<code>/brokers/topics/＜topic＞/partition/＜parititon＞/state</code>节点中，内容为 <code>{&quot;controller_epoch&quot;: 26, &quot;leader&quot;: 0, &quot;version&quot;: 1, &quot;leader_epoch&quot;: 2,&quot;isr&quot;: [0,1]}</code><ul>
+<li>controller_epoch表示当前Kafka控制器的epoch</li>
+<li>leader表示当前分区的leader副本所在的broker的id编号</li>
+<li>version表示版本号（当前版本固定为1）</li>
+<li>leader_epoch表示当前分区的leader纪元</li>
+<li>isr表示变更后的ISR列表</li>
+</ul>
+</li>
+</ul>
+<h4 id="isr-change-propagation"><a href="#isr-change-propagation" class="headerlink" title="isr-change-propagation"></a>isr-change-propagation</h4><ul>
+<li>当 ISR 集合发生变更时还会将变更后的记录缓存到 isrChangeSet 中</li>
+<li>isr-change-propagation任务会周期性（固定值为 2500ms）地检查 isrChangeSet，如果发现isrChangeSet中有ISR集合的变更记录，那么它会在ZooKeeper的<code>/isr_change_notification</code>路径下创建一个以 isr<em>change</em>开头的持久顺序节点（比如<code>/isr_change_notification/isr_change_0000000000</code>），并将isrChangeSet中的信息保存到这个节点中</li>
+<li>Kafka控制器为/isr_change_notification添加了一个Watcher，当这个节点中有子节点发生变化时会触发Watcher的动作，以此通知控制器更新相关元数据信息并向它管理的broker节点发送更新元数据的请求，最后删除/isr_change_notification路径下已经处理过的节点</li>
+<li>频繁地触发Watcher会影响Kafka控制器、ZooKeeper甚至其他broker节点的性能。为了避免这种情况，Kafka添加了限定条件，当检测到分区的ISR集合发生变化时，还需要检查以下两个条件：<ol>
+<li>上一次ISR集合发生变化距离现在已经超过5s</li>
+<li>上一次写入ZooKeeper的时间距离现在已经超过60s</li>
+</ol>
+</li>
+<li>只有满足以上两个条件之一才可以将ISR集合的变化写入目标节点</li>
+</ul>
+<h4 id="isr-扩大"><a href="#isr-扩大" class="headerlink" title="isr 扩大"></a>isr 扩大</h4><p>follower 副本追赶上leader副本的判定准则是<code>此副本的LEO是否不小于leader副本的HW</code>，注意这里并不是和leader副本的LEO相比。</p>
+<p>ISR扩充之后同样会更新ZooKeeper中的<code>/brokers/topics/＜topic＞/partition/＜parititon＞/state</code>节点和isrChangeSet，之后的步骤就和ISR收缩时的相同。</p>
+<h4 id="HW-更新"><a href="#HW-更新" class="headerlink" title="HW 更新"></a>HW 更新</h4><p>当ISR集合发生增减时，或者ISR集合中任一副本的LEO发生变化时，都可能会影响整个分区的HW。</p>
+<h3 id="2-2-LEO-与-HW"><a href="#2-2-LEO-与-HW" class="headerlink" title="2.2 LEO 与 HW"></a>2.2 LEO 与 HW</h3><h4 id="消息同步过程"><a href="#消息同步过程" class="headerlink" title="消息同步过程"></a>消息同步过程</h4><p><img src="/images/kafka/local_replicate.png" alt="本地副本"></p>
+<p>如上图所示某个分区有3个副本分别位于broker0、broker1和broker2节点中，其中带阴影的方框表示本地副本(指代 broker 实际保存的副本)。假设broker0上的副本1为当前分区的leader副本，那么副本2和副本3就是follower副本，整个消息追加的过程可以概括如下：</p>
+<ol>
+<li>生产者客户端发送消息至leader副本（副本1）中</li>
+<li>消息被追加到leader副本的本地日志，并且会更新日志的偏移量</li>
+<li>follower副本（副本2和副本3）向leader副本请求同步数据</li>
+<li>leader副本所在的服务器读取本地日志，并更新对应拉取的follower副本的信息</li>
+<li>leader副本所在的服务器将拉取结果返回给follower副本</li>
+<li>follower副本收到leader副本返回的拉取结果，将消息追加到本地日志中，并更新日志的偏移量信息</li>
+</ol>
+<h4 id="follower-拉取消息"><a href="#follower-拉取消息" class="headerlink" title="follower 拉取消息"></a>follower 拉取消息</h4><p>follower副本向leader副本拉取消息，在拉取的请求中会带有自身的LEO信息，这个LEO信息对应的是FetchRequest请求中的fetch_offset。leader副本返回给follower副本相应的消息，并且还带有自身的HW信息。这个HW信息对应的是FetchResponse中的high_watermark。</p>
+<p>follower副本拉取到了消息后，更新各自的LEO。与此同时，还会更新自己的HW，更新HW的算法是比较<strong>当前LEO</strong>和leader副本中传送过来的HW的值，取较小值作为自己的HW值。</p>
+<h4 id="leader-收到-follower-拉取消息请求"><a href="#leader-收到-follower-拉取消息请求" class="headerlink" title="leader 收到 follower 拉取消息请求"></a>leader 收到 follower 拉取消息请求</h4><p>leader副本收到来自follower副本的FetchRequest请求，其中带有LEO的相关信息，选取其中的最小值作为新的HW。</p>
+<p>在一个分区中:</p>
+<ol>
+<li>leader副本所在的节点会记录所有副本的LEO，</li>
+<li>follower副本所在的节点只会记录自身的LEO</li>
+<li>对HW而言，各个副本所在的节点都只记录它自身的HW</li>
+</ol>
+<p>leader 副本收到 follower副本的FetchRequest请求之后，它首先会从自己的日志文件中读取数据，然后在返回给follower副本数据前先更新follower副本的LEO。</p>
+<p><img src="/images/kafka/leo_save.png" alt="LEO 和 HW 的保存"></p>
+<h3 id="2-3-LEO-和-HW-持久化"><a href="#2-3-LEO-和-HW-持久化" class="headerlink" title="2.3 LEO 和 HW 持久化"></a>2.3 LEO 和 HW 持久化</h3><p>Kafka 的根目录下有 cleaner-offset-checkpoint、log-start-offset-checkpoint、recovery-point-offset-checkpoint和replication-offset-checkpoint四个检查点文件。</p>
+<p>日志存储部门我们介绍了，<code>cleaner-offset-checkpoint</code> 就是清理检查点文件，用来记录每个主题的<strong>每个分区中已清理的偏移量</strong>。</p>
+<p>而其他几个检查点文件与 LEO 和 HW 有关:</p>
+<ol>
+<li>recovery-point-offset-checkpoint<ul>
+<li>对应 LEO</li>
+<li>Kafka 中会有一个定时任务负责将所有分区的 LEO 刷写到恢复点文件 <code>recovery-point-offset-checkpoint</code> 中</li>
+<li>定时周期由 broker 端参数 <code>log.flush.offset.checkpoint.interval.ms</code>来配置，默认值为60000</li>
+</ul>
+</li>
+<li>replication-offset-checkpoint:<ul>
+<li>对应 HW</li>
+<li>另一个定时任务负责将所有分区的HW刷写到复制点文件replication-offset-checkpoint中</li>
+<li>定时周期由broker端参数<code>replica.high.watermark.checkpoint.interval.ms</code>来配置，默认值为5000</li>
+</ul>
+</li>
+<li>log-start-offset-checkpoint<ul>
+<li>对应logStartOffset，用来标识日志的起始偏移量</li>
+<li>各个副本在变动 LEO 和 HW 的过程中，logStartOffset 也有可能随之而动</li>
+<li>Kafka 也有一个定时任务来负责将所有分区的 logStartOffset书写到起始点文件log-start-offset-checkpoint中</li>
+<li>定时周期由broker端参数log.flush.start.offset.checkpoint.interval.ms来配置，默认值为60000</li>
+</ul>
+</li>
+</ol>
+<h3 id="2-4-Leader-Epoch-非常重要"><a href="#2-4-Leader-Epoch-非常重要" class="headerlink" title="2.4 Leader Epoch(非常重要)"></a>2.4 Leader Epoch(非常重要)</h3><p>前面是正常情况下的leader副本与follower副本之间的同步过程，如果leader副本发生切换，那么同步过程又该如何处理呢？如果处理不当会出现数据丢失和数据不一致问题。</p>
+<h4 id="数据丢失"><a href="#数据丢失" class="headerlink" title="数据丢失"></a>数据丢失</h4><p>首先我们来看数据丢失问题。</p>
+<h4 id="数据不一致问题"><a href="#数据不一致问题" class="headerlink" title="数据不一致问题"></a>数据不一致问题</h4><h4 id="Leader-Epoch"><a href="#Leader-Epoch" class="headerlink" title="Leader Epoch"></a>Leader Epoch</h4><p>为了解决上述两种问题，Kafka引入了leader epoch的概念，在需要截断数据的时候使用leader epoch作为参考依据而不是原本的HW。</p>
+<p>leader epoch代表leader的纪元信息（epoch），初始值为0。每当leader变更一次，leader epoch的值就会加1，相当于为leader增设了一个版本号。</p>
+<p>与此同时，每个副本中还会增设一个矢量<code>＜LeaderEpoch=＞StartOffset＞</code>，其中StartOffset表示当前LeaderEpoch下写入的第一条消息的偏移量。每个副本的Log下都有一个<code>leader-epoch-checkpoint</code>文件，在发生leader epoch变更时，会将对应的矢量对追加到这个文件中。</p>
+<p>我们再来看一下引入 leader epoch 之后如何应付前面所说的数据丢失和数据不一致的场景。</p>
+<p><strong>我的理解是，这里的 Leader Epoch 相当于 Lamport 时间戳，用于确保全序关系</strong></p>
+<h3 id="2-5-Kafka-为什么不支持读写分离-非常重要"><a href="#2-5-Kafka-为什么不支持读写分离-非常重要" class="headerlink" title="2.5 Kafka 为什么不支持读写分离(非常重要)"></a>2.5 Kafka 为什么不支持读写分离(非常重要)</h3><p>在Kafka中，生产者写入消息、消费者读取消息的操作都是与leader副本进行交互的，从而实现的是一种主写主读的生产消费模型。</p>
+<p>Kafka并不支持主写从读，这是为什么呢？对于这个问题，我们可以从“收益点”这个角度来做具体分析。</p>
+<p>主写从读可以让从节点去分担主节点的负载压力，预防主节点负载过重而从节点却空闲的情况发生。但是主写从读需要解决主从复制延迟带来的问题: </p>
+<ol>
+<li>如何解决主从同步过程中，从节点读取到旧消息的问题。</li>
+<li>并且在Kafka中，主从同步会比 Redis 更加耗时，它需要经历<strong>网络→主节点内存→主节点磁盘→网络→从节点内存→从节点磁盘</strong>这几个阶段</li>
+</ol>
+<p>另一方面，读写分离要实现的负载均衡，通过分区和kafka 生产消费模型同样可以达到。所以没有必要去实现额外的读写分离。</p>
+<p>当然前面的结论成立的前提是，不存在巨大的扇出(分区数据不均衡)。</p>
+<p>有以下几种情况（包含但不仅限于）会造成一定程度上的负载不均衡：</p>
+<ol>
+<li>broker端的分区分配不均。当创建主题的时候可能会出现某些broker分配到的分区数多而其他broker分配到的分区数少，那么自然而然地分配到的leader副本也就不均</li>
+<li>生产者写入消息不均。生产者可能只对某些broker中的leader副本进行大量的写入操作，而对其他broker中的leader副本不闻不问</li>
+<li>消费者消费消息不均。消费者可能只对某些broker中的leader副本进行大量的拉取操作，而对其他broker中的leader副本不闻不问。</li>
+<li>leader副本的切换不均。在实际应用中可能会由于broker宕机而造成主从副本的切换，或者分区副本的重分配等，这些动作都有可能造成各个broker中leader副本的分配不均</li>
+</ol>
+<p>总的来说，Kafka 只支持主写主读有几个优点：<strong>可以简化代码的实现逻辑，减少出错的可能；将负载粒度细化均摊，与主写从读相比，不仅负载效能更好，而且对用户可控;没有延时的影响；在副本稳定的情况下，不会出现数据不一致的情况</strong>。</p>
+<h2 id="3-日志同步机制"><a href="#3-日志同步机制" class="headerlink" title="3. 日志同步机制"></a>3. 日志同步机制</h2><p>在分布式系统中，日志同步机制既要保证数据的一致性，也要保证数据的顺序性。虽然有许多方式可以实现这些功能，但最简单高效的方式还是从集群中<strong>选出一个leader来负责处理数据写入的顺序性</strong>。于此同时需要解决的是 leader 选举问题，必须确保选择具有最新日志消息的follower作为新的leader。</p>
+<p>日志同步机制的一个基本原则就是：如果告知客户端已经成功提交了某条消息，那么即使 leader宕机，也要保证新选举出来的leader中能够包含这条消息。这里就有一个需要权衡（tradeoff）的地方，如果leader在消息被提交前需要等待更多的follower确认，那么在它宕机之后就可以有更多的follower替代它，不过这也会造成性能的下降。</p>
+<p>在Kafka中动态维护着一个ISR集合，处于ISR集合内的节点保持与leader相同的高水位（HW），只有位列其中的副本（unclean.leader.election.enable配置为false）才有资格被选为新的 leader。写入消息时只有等到所有 ISR 集合中的副本都确认收到之后才能被认为已经提交。位于 ISR 中的任何副本节点都有资格成为 leader，选举过程简单、开销低。Kafka中包含大量的分区，leader副本的均衡保障了整体负载的均衡，所以这一因素也极大地影响Kafka的性能指标。</p>
+<p>另外，一般的同步策略依赖于稳定的存储系统来做数据恢复，也就是说，在数据恢复时日志文件不可丢失且不能有数据上的冲突。不过它们忽视了两个问题：首先，磁盘故障是会经常发生的，在持久化数据的过程中并不能完全保证数据的完整性；其次，即使不存在硬件级别的故障，我们也不希望在每次写入数据时执行同步刷盘（fsync）的动作来保证数据的完整性，这样会极大地影响性能。而 Kafka 不需要宕机节点必须从本地数据日志中进行恢复，Kafka 的同步方式允许宕机副本重新加入ISR集合，但在进入ISR之前必须保证自己能够重新同步完leader中的所有数据。</p>
+<h2 id="4-可靠性分析-非常重要"><a href="#4-可靠性分析-非常重要" class="headerlink" title="4. 可靠性分析(非常重要)"></a>4. 可靠性分析(非常重要)</h2><p>前提: 只考虑Kafka本身使用方式的前提下如何最大程度地提高可靠性。</p>
+<p>就Kafka而言，越多的副本数越能够保证数据的可靠性，一般而言，设置副本数为3即可满足绝大多数场景对可靠性的要求，更高的可靠性要求可以将副本数设置为 5。与此同时，如果能够在分配分区副本的时候引入基架信息（broker.rack 参数），那么还要应对机架整体宕机的风险。</p>
+<p>仅依靠副本数来支撑可靠性是远远不够的，大多数人还会想到生产者客户端参数 acks。</p>
+<h3 id="4-1-ack参数配置"><a href="#4-1-ack参数配置" class="headerlink" title="4.1 ack参数配置"></a>4.1 ack参数配置</h3><h4 id="ack-1"><a href="#ack-1" class="headerlink" title="ack=1"></a>ack=1</h4><p>对于acks=1的配置，生产者将消息发送到leader副本，leader副本在成功写入本地日志之后会告知生产者已经成功提交。如果此时ISR集合的follower副本还没来得及拉取到leader中新写入的消息，leader就宕机了，那么此次发送的消息就会丢失。</p>
+<p><img src="/images/kafka/ack_1.png" alt="ack=1数据丢失的情况"></p>
+<h4 id="ack-1-1"><a href="#ack-1-1" class="headerlink" title="ack=-1"></a>ack=-1</h4><p>对于ack=-1的配置，生产者将消息发送到leader副本，leader副本在成功写入本地日志之后还要等待 ISR 中的 follower 副本全部同步完成才能够告知生产者已经成功提交，即使此时leader副本宕机，消息也不会丢失</p>
+<p><img src="/images/kafka/ack_-1.png" alt="ack=-1可避免数据丢失"></p>
+<p>同样对于acks=-1的配置，如果在消息成功写入leader副本之后，并且在被ISR中的所有副本同步之前leader副本宕机了，那么生产者会收到异常以此告知此次发送失败。</p>
+<h3 id="4-2-可靠性"><a href="#4-2-可靠性" class="headerlink" title="4.2 可靠性"></a>4.2 可靠性</h3><h4 id="min-insync-replicas"><a href="#min-insync-replicas" class="headerlink" title="min.insync.replicas"></a>min.insync.replicas</h4><p>但是 ack=-1 并不代表数据一定不会丢失。试想一下这样的情形，leader 副本的消息流入速度很快，而follower副本的同步速度很慢，在某个临界点时所有的follower副本都被剔除出了ISR集合，那么ISR中只有一个leader副本，最终acks=-1演变为acks=1的情形，如此也就加大了消息丢失的风险。</p>
+<p>Kafka也考虑到了这种情况，并为此提供了<code>min.insync.replicas</code>参数（默认值为1）来作为辅助（配合acks=-1来使用），这个参数指定了ISR集合中最小的副本数，如果不满足条件就会抛出NotEnoughReplicasException或NotEnoughReplicasAfterAppendException。在正常的配置下，需要满足<code>副本数 &gt; min.insync.replicas</code>参数的值。一个典型的配置方案为：副本数配置为 3，min.insync.replicas 参数值配置为 2。</p>
+<p>注意 <strong>min.insync.replicas参数在提升可靠性的时候会从侧面影响可用性</strong>。试想如果ISR中只有一个leader副本，那么最起码还可以使用，而此时如果配置 min.insync.replicas＞1，则会使消息无法写入。</p>
+<h4 id="unclean-leader-election-enable"><a href="#unclean-leader-election-enable" class="headerlink" title="unclean.leader.election.enable"></a>unclean.leader.election.enable</h4><p>与可靠性和ISR集合有关的还有一个参数—unclean.leader.election.enable。这个参数的默认值为false，如果设置为true就意味着当leader下线时候可以从非ISR集合中选举出新的 leader，这样有可能造成数据的丢失。如果这个参数设置为 false，那么也会影响可用性，非ISR集合中的副本虽然没能及时同步所有的消息，但最起码还是存活的可用副本。</p>
+<h3 id="4-3-消息发送模式"><a href="#4-3-消息发送模式" class="headerlink" title="4.3 消息发送模式"></a>4.3 消息发送模式</h3><p>我们讨论了消息发送的3种模式，即发后即忘、同步和异步。发后即忘的模式，生产者对消息是否写入成功一无所知，不适合高可靠性要求的场景。采用同步或异步的模式，在出现异常情况时可以及时获得通知，以便可以做相应的补救措施，比如选择重试发送（可能会引起消息重复）</p>
+<h4 id="重试配置"><a href="#重试配置" class="headerlink" title="重试配置"></a>重试配置</h4><p>对于可重试异常，客户端内部本身提供了重试机制来应对这种类型的异常，通过 <code>retries</code> 参数即可配置。默认情况下，retries参数设置为0，即不进行重试，对于高可靠性要求的场景，需要将这个值设置为大于 0 的值。</p>
+<p>与 retries 参数相关的还有一个<code>retry.backoff.ms参数</code>，它用来设定两次重试之间的时间间隔，以此避免无效的频繁重试。在配置retries和retry.backoff.ms之前，最好先估算一下可能的异常恢复时间，这样可以设定总的重试时间大于这个异常恢复时间，以此来避免生产者过早地放弃重试。如果不知道 retries 参数应该配置为多少，则可以参考 KafkaAdminClient，在 KafkaAdminClient 中retries参数的默认值为5。</p>
+<p>retries参数值大于0，则可能引起一些负面的影响:</p>
+<ol>
+<li>由于默认的max.in.flight.requests.per.connection参数值为5，这样可能会影响消息的顺序性，对此要么放弃客户端内部的重试功 能，要么将max.in.flight.requests.per.connection参数设置为1，这样也就放弃了吞吐</li>
+<li>其次，有些应用对于时延的要求很高，很多时候都是需要快速失败的，设置retries&gt;0会增加客户端对于异常的反馈时延，如此可能会对应用造成不良的影响</li>
+</ol>
+<h3 id="4-4-磁盘同步"><a href="#4-4-磁盘同步" class="headerlink" title="4.4 磁盘同步"></a>4.4 磁盘同步</h3><p>在broker端还有两个参数log.flush.interval.messages和log.flush.interval.ms，用来调整同步刷盘的策略，默认是不做控制而交由操作系统本身来进行处理。</p>
+<p>同步刷盘是增强一个组件可靠性的有效方式，但也极其损耗性能。更好的方式是多副本机制，所以这两个参数通常不用修改。</p>
+<h3 id="4-5-消息的可靠性"><a href="#4-5-消息的可靠性" class="headerlink" title="4.5 消息的可靠性"></a>4.5 消息的可靠性</h3><p>对于消息的可靠性，很多人都会忽视消费端的重要性，如果一条消息成功地写入 Kafka，并且也被Kafka完好地保存，而在消费时由于某些疏忽造成没有消费到这条消息，那么对于应用来说，这条消息也是丢失的。</p>
+<p>enable.auto.commit 参数的默认值为 true，即开启自动位移提交的功能，虽然这种方式非常简便，但它会带来重复消费和消息丢失的问题，对于高可靠性要求的应用来说显然不可取，所以需要将 enable.auto.commit 参数设置为 false 来执行手动位移提交。</p>
+<p>在执行手动位移提交的时候也要遵循一个原则：如果消息没有被成功消费，那么就不能提交所对应的消费位移。对于高可靠要求的应用来说，宁愿重复消费也不应该因为消费异常而导致消息丢失。</p>
+<p>有时候，由于应用解析消息的异常，可能导致部分消息一直不能够成功被消费，那么这个时候为了不影响整体消费的进度，可以将这类消息暂存到死信队列中，以便后续的故障排除。</p>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/04/09/kafka/09_kafka可靠性/" data-id="ckminog1y005jmcu9p8f3q6j6" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/05/01/redis/01_redis开篇入门/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            1. redis 开篇入门
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/04/08/kafka/08_深入理解客户端/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">8 深入理解客户端</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/03/21/redis/12_redis原理总结/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/03/21/redis/12_redis原理总结/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-03-21T04:20:55.555Z" itemprop="datePublished">2021-03-21</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T14:22:23.753Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kafka/">Kafka</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 12.86px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 14.29px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Kafka/" style="font-size: 15.71px;">Kafka</a> <a href="/tags/Linux性能调优/" style="font-size: 19.29px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.86px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15px;">React</a> <a href="/tags/Vue/" style="font-size: 15px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.14px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.71px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.29px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.43px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.43px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 14.29px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 15px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.57px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.86px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.57px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.14px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/04/09/kafka/09_kafka可靠性/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>

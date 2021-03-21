@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    
+
+    
+    <title>2. redis 基础篇 | 宋涛的博客</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+        <meta name="keywords" content="Kafka" />
+    
+    <meta name="description" content="Redis 基础篇: Redis 提供的那些数据结构">
+<meta name="keywords" content="Kafka">
+<meta property="og:type" content="article">
+<meta property="og:title" content="2. redis 基础篇">
+<meta property="og:url" content="http://yoursite.com/2020/05/02/redis/02_基础篇/index.html">
+<meta property="og:site_name" content="宋涛的博客">
+<meta property="og:description" content="Redis 基础篇: Redis 提供的那些数据结构">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/redis/high_plus.png">
+<meta property="og:updated_time" content="2021-03-16T14:39:05.958Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="2. redis 基础篇">
+<meta name="twitter:description" content="Redis 基础篇: Redis 提供的那些数据结构">
+<meta name="twitter:image" content="http://yoursite.com/images/redis/high_plus.png">
+    
+
+    
+        <link rel="alternate" href="/" title="宋涛的博客" type="application/atom+xml" />
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/titillium-web/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="wrap">
+        <header id="header">
+    <div id="header-outer" class="outer">
+        <div class="container">
+            <div class="container-inner">
+                <div id="header-title">
+                    <h1 class="logo-wrap">
+                        <a href="/" class="logo"></a>
+                    </h1>
+                    
+                        <h2 class="subtitle-wrap">
+                            <p class="subtitle">漫步在大陆上的海龟</p>
+                        </h2>
+                    
+                </div>
+                <div id="header-inner" class="nav-container">
+                    <a id="main-nav-toggle" class="nav-icon fa fa-bars"></a>
+                    <div class="nav-container-inner">
+                        <ul id="main-nav">
+                            
+                                <li class="main-nav-list-item" >
+                                    <a class="main-nav-list-link" href="/">主页</a>
+                                </li>
+                            
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Go/">Go</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/Python/">Python</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/分布式/">分布式</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/前端/">前端</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/存储/">存储</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/运维/">运维</a></li></ul>
+                                    
+                        </ul>
+                        <nav id="sub-nav">
+                            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <div class="container">
+            <div class="main-body container-inner">
+                <div class="main-body-inner">
+                    <section id="main">
+                        <div class="main-body-header">
+    <h1 class="header">
+    
+    <a class="page-title-link" href="/categories/存储/">存储</a>
+    </h1>
+</div>
+
+                        <div class="main-body-content">
+                            <article id="post-redis/02_基础篇" class="article article-single article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+        2. redis 基础篇
+        </h1>
+    
+
+            </header>
+        
+        
+            <div class="article-meta">
+                
+    <div class="article-date">
+        <a href="/2020/05/02/redis/02_基础篇/" class="article-date">
+            <time datetime="2020-05-01T16:00:00.000Z" itemprop="datePublished">2020-05-02</time>
+        </a>
+    </div>
+
+		
+
+                
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Kafka/">Kafka<span class="tag-count">15</span></a>
+    </div>
+
+            </div>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            <p>Redis 基础篇: Redis 提供的那些数据结构</p>
+<a id="more"></a>
+<h2 id="1-基础篇概述"><a href="#1-基础篇概述" class="headerlink" title="1. 基础篇概述"></a>1. 基础篇概述</h2><p>基础篇我们将介绍 Redis 的如下内容:</p>
+<ul>
+<li>Redis 基础数据结构</li>
+<li>分布式锁的实现</li>
+<li>延时队列的实现</li>
+<li>位图</li>
+<li>HyperLogLog: 做不精确统计用的</li>
+<li>布隆过滤器</li>
+<li>限流</li>
+<li>GeoHash: 找附近的人</li>
+<li>scan: 字典扫描</li>
+</ul>
+<h2 id="1-Redis-基础数据结构"><a href="#1-Redis-基础数据结构" class="headerlink" title="1. Redis 基础数据结构"></a>1. Redis 基础数据结构</h2><p>Redis 有五种基础数据结构:</p>
+<ol>
+<li>string: 字符串</li>
+<li>list: 列表</li>
+<li>hash: 字典</li>
+<li>set: 集合</li>
+<li>zset: 有序集合</li>
+</ol>
+<h3 id="1-1-string"><a href="#1-1-string" class="headerlink" title="1.1 string"></a>1.1 string</h3><p>在 redis 内部 string 就是一个<strong>字符数组</strong>。Reids 全称是 Remote Dictionary Service(远程字典服务)，所有的数据结构都以唯一的 key 字符串作为名称，然后通过这个唯一的 key 获取相应的 value 数据。不同的数据结构差异就在于 value 的不同。</p>
+<p>Redis 字符串是可以修改的，内部结构类似 Java 的 ArrayList，采用预分配冗余空间的方式来减少内存的频繁分配。</p>
+<ol>
+<li>当字符串大小小于 1MB 时，扩容都是加倍的</li>
+<li>当字符串大小大于 1MB 事，扩容一次只会多增加 1MB 的空间</li>
+<li>字符串最大长度为 512MB</li>
+</ol>
+<p>string 支持如下操作:</p>
+<ol>
+<li>键值对操作<ul>
+<li>get key</li>
+<li>set key value</li>
+<li>del key</li>
+</ul>
+</li>
+<li>批量键值对操作<ul>
+<li>mget key key key</li>
+<li>mset key value key value</li>
+</ul>
+</li>
+<li>键过期设置<ul>
+<li>expire key time: 对 key 设置过期时间 time 单位为秒</li>
+<li>ttl key: 获取 key 的过期时间</li>
+</ul>
+</li>
+<li>set 扩展命令<ul>
+<li>setex: == set + expire</li>
+<li>setnx: 不存在则执行 set 创建</li>
+</ul>
+</li>
+<li>计数: 前提是 value 是一个整数，范围在 signed long 内<ul>
+<li>incr key : 加 1</li>
+<li>incrby key num: 加 num</li>
+</ul>
+</li>
+</ol>
+<h3 id="1-2-list-列表"><a href="#1-2-list-列表" class="headerlink" title="1.2 list(列表)"></a>1.2 list(列表)</h3><p>在 Redis 内部 list 被实现为 <strong>quicklist</strong>，这是一个特殊实现的<strong>快速链表</strong>而不是数组。因为普通的链表指针太多会浪费空间，还会加重内存的碎片化。所以 Redis 将多个元素合并成一个 ziplist(压缩列表)，ziplist 是一块连续内存，内部可以存放多个元素，多个 ziplist 使用双向指针连接成 quicklist。quicklist 的具体实现后面我们会详细介绍。</p>
+<p>当列表弹出最后一个元素后，该数据结构被自动删除，内存被回收。常用来做异步队列使用。</p>
+<p>list 支持如下操作:</p>
+<ol>
+<li>队列和栈操作<ul>
+<li>rpush key v v v: 右进</li>
+<li>lpush key v v v: 左进</li>
+<li>rpop key: 右出 </li>
+<li>lpop key: 左出</li>
+<li>llen key: 获取长度</li>
+</ul>
+</li>
+<li>查询<ul>
+<li>lindex key index: 索引</li>
+<li>lrange key start end: 切片</li>
+<li>ltrim key start end: 保留切片内的元素，删除所有其他元素</li>
+</ul>
+</li>
+</ol>
+<h3 id="1-3-hash-字典"><a href="#1-3-hash-字典" class="headerlink" title="1.3 hash(字典)"></a>1.3 hash(字典)</h3><p>Redis 的字典使用 链表法解决哈希冲突，与其他的字典实现不同，Redis 字典还有如下特点:</p>
+<ol>
+<li>字典的值也只能是字符串</li>
+<li>使用渐进式 rehash 进行扩容</li>
+</ol>
+<p>hash 支持如下操作:</p>
+<ol>
+<li>hset key k v</li>
+<li>hget key k</li>
+<li>hgetall key</li>
+<li>hlen key</li>
+<li>hmset key k v k v</li>
+<li>hincrby key k num: 对单个 key 进行计数</li>
+</ol>
+<h3 id="1-4-set-集合"><a href="#1-4-set-集合" class="headerlink" title="1.4 set(集合)"></a>1.4 set(集合)</h3><p>set 的内部实现相当于一个特殊的字典，字典中所有 key 的 value 都是 NULL。</p>
+<p>set 支持如下操作:</p>
+<ol>
+<li>sadd key v</li>
+<li>smembers key: 查看所有</li>
+<li>sismember key v: 是否包含</li>
+<li>scard key: 获取长度</li>
+<li>spop key: 弹出一个</li>
+</ol>
+<h3 id="1-5-zset-有序集合"><a href="#1-5-zset-有序集合" class="headerlink" title="1.5 zset(有序集合)"></a>1.5 zset(有序集合)</h3><p>zset 有序结合被实现为跳表，zset 是另一种映射的实现，redis 将 zset 的 key 表示为 value，而 value 表示为 score，代表 value 的排序权重。</p>
+<p>zset 支持如下操作:</p>
+<ol>
+<li>zadd key score v: 添加 v</li>
+<li>zrem key v: 删除 v</li>
+<li>zcard key: 获取长度</li>
+<li>zscore key v: 获取 value 的score</li>
+<li>zrank key v: 获取 value 排名</li>
+<li>zrange key r1 r2: 按 score 排序输出，r1，r2 是排名范围</li>
+<li>zrevrange key r1 r2: 按 score 逆序输出</li>
+<li><code>zrangebyscore key s1 s2 [withscores]</code>: <ul>
+<li>按照 score 排序输出，s1,s2 是 score 范围</li>
+<li>withscores 表示同时输出 score 分数</li>
+<li>s1,s2 值可为 -inf/inf 表示负正无穷大</li>
+<li>score 在 zset 中存储为 double 类型，注意存在精度问题</li>
+</ul>
+</li>
+</ol>
+<h3 id="1-6-容器型类型结构的通用规则"><a href="#1-6-容器型类型结构的通用规则" class="headerlink" title="1.6 容器型类型结构的通用规则"></a>1.6 容器型类型结构的通用规则</h3><p>list、hash、set、zset 是容器型数据结构，它们共享下面通用规则:</p>
+<ol>
+<li>create if not exists: 不存在就创建，再进行操作</li>
+<li>drop if no element: 如果容器里没有元素了，会立即删除，释放内存</li>
+</ol>
+<h3 id="1-7-过期时间"><a href="#1-7-过期时间" class="headerlink" title="1.7 过期时间"></a>1.7 过期时间</h3><p>Redis 所有数据结构都可以设置过期时间，时间到了，Redis 会自动删除相应的对象。过期是以对象为单位的，一个 hash 结构的过期是整个 hash 对象的过期，不存在某个子 key 过期。</p>
+<p>另外需要注意的是，如果一个字符串已经设置了过期时间，然后调用 set 方法修改了它，它的过期时间会消失。</p>
+<h2 id="2-分布式锁"><a href="#2-分布式锁" class="headerlink" title="2. 分布式锁"></a>2. 分布式锁</h2><p>用 redis 实现的分布式锁有如下几个要点:</p>
+<ol>
+<li>本质上就是在 redis 占一个”坑”，一般使用 setnx(set if not exists)，抢占成功即加锁成功，用完了在调用 del 指令删除键即释放锁</li>
+<li>为了避免因<strong>del 删除指令</strong>未被执行而导致的死锁，需要给锁加一个过期时间</li>
+<li>由于 setnx + expire 也不是原子的，因此加锁需要 set 指令的扩展  </li>
+<li>如果加锁和释放锁之间的逻辑执行太长，以至于超过锁的超时限制，就很好有可能出现并发问题，因此 Redis 分布式锁不适合较长时间的任务</li>
+<li>通过占位实现锁，可能会被未占用锁的进程误删除，稍微安全的做法是，将 set 指令的 value 设置为一个随机数，相当于版本号，释放锁时先验证，然后再删除 key。但是匹配 value 和 删除 key 不是一个原子操作，这里就需要 Lua 脚本处理了，因为 Lua 脚本可以保证连续多个指令的原子性执行(我觉得这里不能说是原子执行，只能说严格串行执行)</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 可能死锁</span></div><div class="line">&gt; setnx lock:codehole <span class="literal">true</span></div><div class="line">&gt; del lock:codehole</div><div class="line"></div><div class="line"><span class="comment"># 2. 异常完全有可能在 setnx 和 expire 之间发生 </span></div><div class="line">&gt; setnx lock:codehole <span class="literal">true</span></div><div class="line">&gt; expire lock:codehole 5</div><div class="line">&gt; del lock:codehole</div><div class="line"></div><div class="line"><span class="comment"># 3. 正确的实现，创建和设置超时是一个原子操作</span></div><div class="line">&gt; <span class="built_in">set</span> lock:codehole <span class="literal">true</span> ex 5 nx</div><div class="line">&gt; del lock:codehole</div></pre></td></tr></table></figure>
+<p>Redis 分布式锁如果要支持可重入，需要对客户端的 set 方法进行包装，使用线程的 Threadlocal 变量存储当前持有锁的计数。是否需要可重入依赖于业务逻辑，这里不再详述。</p>
+<p>至此我们讨论的 redis 分布式锁实现依旧是不完备的，后面我们会继续深入讨论。</p>
+<h2 id="3-延时队列"><a href="#3-延时队列" class="headerlink" title="3. 延时队列"></a>3. 延时队列</h2><p>redis 队列有多种实现方式，为了内容的完整性，我们将延时队列的实现放入了后面拓展篇。</p>
+<h2 id="4-位图"><a href="#4-位图" class="headerlink" title="4. 位图"></a>4. 位图</h2><h3 id="4-1-位图实现"><a href="#4-1-位图实现" class="headerlink" title="4.1 位图实现"></a>4.1 位图实现</h3><p>Redis 中的字符串是动态的字节数组，是可以修改的，所以可以直接把字符串当做 byte 数组来使用。</p>
+<h3 id="4-2-位图操作"><a href="#4-2-位图操作" class="headerlink" title="4.2 位图操作"></a>4.2 位图操作</h3><p>Redis 提供一下指令进行位操作:</p>
+<ol>
+<li><code>getbit index 0|1</code> : 读取特定位的值</li>
+<li><code>setbit key index 0|1</code> : 设置特定位的值</li>
+<li><code>bitcount key [start, end]</code>: 统计指定范围内 1 的个数</li>
+<li><code>bitpos key 0|1 [start, end]</code>: 查找指定范围内出现的第一个 0 或 1</li>
+<li><code>bitfield</code>: 一次进行多个位操作</li>
+</ol>
+<p>注: </p>
+<ul>
+<li>byte 数组是自动扩展的，如果设置的偏移量超过了现在范围，redis 将自动对位数组进行 0 扩充。</li>
+<li>bitcount/bitpos 的范围参数 [start, end] 是字符索引，[0, 0] 表示第一个字符，即前 8 个位</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 位设置和读取</span></div><div class="line">&gt; setbit s 1 1</div><div class="line">&gt; setbit s 2 1</div><div class="line">&gt; setbit s 4 1</div><div class="line">&gt; get s          <span class="comment"># get 返回的是 bytes 对应的字符</span></div><div class="line"><span class="string">"h"</span></div><div class="line"></div><div class="line">&gt; <span class="built_in">set</span> w h        <span class="comment"># 整存零取</span></div><div class="line">&gt; getbit w 1</div><div class="line">(<span class="built_in">integer</span>) 1</div><div class="line"></div><div class="line"><span class="comment"># 2. 位统计</span></div><div class="line">&gt; <span class="built_in">set</span> w hello</div><div class="line">&gt; bitcount 0 0  <span class="comment"># 第一个字符中 1 的个数</span></div><div class="line">&gt; bitpos w 1 1 1    <span class="comment"># 从第二字符起，第一 1 的位置</span></div></pre></td></tr></table></figure>
+<h4 id="bitfield"><a href="#bitfield" class="headerlink" title="bitfield"></a>bitfield</h4><p>bitfield 有三个子命令，get、set、incrby 可以对指定位片段进行读写，但是最多只能处理 64 个连续的位。如果超过 64 位就要使用多个子命令，bitfield 可以一次执行多个子命令。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">&gt; <span class="built_in">set</span> w hello</div><div class="line">&gt; bitfield w get u4 0   <span class="comment"># 从第 1 位开始取 4 位作为无符号整数(u) 返回</span></div><div class="line">&gt; bitfield w get i3 2</div><div class="line"></div><div class="line">&gt; bitfield w <span class="built_in">set</span> u8 8 97 <span class="comment"># 从第 9 位开始将接下来的 8 个位用无符号整数 97 替代</span></div><div class="line"></div><div class="line"><span class="comment">#  incrby 用于执行自增操作</span></div><div class="line">&gt; bitfield w incrby u4 2 1 <span class="comment"># 从第 3 位开始，对接下来的 4 位无符号整数 + 1</span></div></pre></td></tr></table></figure>
+<p>incrby 自增指令可能会导致溢出，bitfield 提供了 overflow 子命令用于选择溢出行为:</p>
+<ol>
+<li>wrap: 折返，默认值</li>
+<li>fail：报错不执行</li>
+<li>sat：饱和截断，停留在最大或最小值。</li>
+</ol>
+<p>overflow 只会影响下一个指令，下一个指令执行完成后溢出策略会变成默认的 wrap。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">&gt; <span class="built_in">set</span> w hellp</div><div class="line">&gt; bitfield w overflow sat incrby u4 2 1</div><div class="line">&gt; bitfield w overflow fail incrby u4 2 1</div></pre></td></tr></table></figure>
+<h2 id="5-HyperLogLog"><a href="#5-HyperLogLog" class="headerlink" title="5. HyperLogLog"></a>5. HyperLogLog</h2><p>HyperLogLog 提供<strong>不精确的去重计数方案</strong>，虽然不精确，但是也不是非常离谱，标准误差 0.81%。</p>
+<p>HyperLogLog 需要占据 12KB 的存储空间(无论对多少数据去重，最多占用 12K)，所以不适合统计单个用户的相关数据。Redis 对 HyperLogLog 的存储进行了优化，在计数较小时，它的存储空间采用稀疏矩阵存储，空间占用很小，仅仅在计数慢慢变大，稀疏矩阵占用的空间渐渐超过阈值时，才会一次性转变成稠密矩阵。</p>
+<h3 id="5-1-使用"><a href="#5-1-使用" class="headerlink" title="5.1 使用"></a>5.1 使用</h3><p>HyperLogLog 提供了三个指令:</p>
+<ol>
+<li>pfadd: 增加计数</li>
+<li>pfcount: 获取计数</li>
+<li>pfmerge: 将多个 pf 计数值累加在一起</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">&gt; pfadd codehole user1</div><div class="line">&gt; pfadd codehole user2</div><div class="line">&gt; pfcount codehole</div><div class="line">2</div></pre></td></tr></table></figure>
+<h2 id="5-2-原理"><a href="#5-2-原理" class="headerlink" title="5.2 原理"></a>5.2 原理</h2><p>HyperLogLog 的计数利用了这样一个统计规律: 一堆随机数的数量N与随机数中低位连续零位的最大长度K满足这样一个关系: <code>N=2^K</code>。而通过哈希，就可以将字符串映射为随机数，并且可以去重。</p>
+<p>Redis 使用 2^14 个桶，对随机数进行独立计数，每个桶使用 6bit 记录连续零位的最大长度。使用这些桶计算N并求平均值。所以一个 HyperLogLog 需要占用: <code>2^14 * 6 / 8=12KB</code></p>
+<h2 id="6-布隆过滤器"><a href="#6-布隆过滤器" class="headerlink" title="6. 布隆过滤器"></a>6. 布隆过滤器</h2><p>布隆过滤器，类似于不精确的 set 用于元素去重和快速判断元素是否在集合中。使用布隆过滤器空间上能节省 90%，当然过滤就不是特别准确，存在误判。</p>
+<p>布隆过滤器判断某个值存在时，值可能不存在，但是判断某个值不存在时，肯定不存在。</p>
+<h3 id="6-1-使用"><a href="#6-1-使用" class="headerlink" title="6.1 使用"></a>6.1 使用</h3><p>Redis 4.0 提供了插件功能之后，布隆过滤器通过插件的方式添加到 Redis 中。布隆过滤器有如下几个命令:</p>
+<ol>
+<li>bf.add: 添加元素，只能一次添加一个元素</li>
+<li>bf.madd: 用于一次添加多个元素</li>
+<li>bf.exists: 查询元素是否存在</li>
+<li>bf.mexists: 一次判断多个元素是否存在</li>
+<li><code>bf.reserve key error_rate initial_size</code>:<ul>
+<li>作用: 自定义布隆过滤器，设置最大错误率，如果 key 已经存在会报错</li>
+<li>参数: <ul>
+<li>error_rate: 最大错误率，越小，需要的空间越大</li>
+<li>initial_size: 预计放入的元素数量，实际数量超过这个数量时，误判率会上升，所以需要预估一个合理的数值</li>
+</ul>
+</li>
+<li>默认: <ul>
+<li>error_rate=0.01</li>
+<li>initial_size=100</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">&gt; bf.add codehole user1</div><div class="line">&gt; bf.add codehole user2</div><div class="line">&gt; bf.exists codehole user1</div><div class="line">1</div><div class="line">&gt; bf.madd codehole user10 user11 user12</div><div class="line">&gt; bf.mexists codehole user4 user5</div><div class="line">0</div><div class="line">0</div></pre></td></tr></table></figure>
+<h3 id="6-2-原理"><a href="#6-2-原理" class="headerlink" title="6.2 原理"></a>6.2 原理</h3><p>布隆过滤器就是大型的位数组和几个不一样的无偏 hash 函数。</p>
+<h3 id="6-3-空间占用估计"><a href="#6-3-空间占用估计" class="headerlink" title="6.3 空间占用估计"></a>6.3 空间占用估计</h3><p>布隆过滤器的空间计算，</p>
+<ul>
+<li>输入有两个参数:<ul>
+<li>n: 预计元素数量</li>
+<li>f: 错误率</li>
+</ul>
+</li>
+<li>输出也有两个元素:<ul>
+<li>L: 位数组的长度</li>
+<li>k: hash 函数的最佳数量</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">k=0.7*(L/n)</div><div class="line">f=0.6185^(L/n)</div></pre></td></tr></table></figure>
+<p>在线的布隆计算器参见 <a href="https://krisives.github.io/bloom-calculator" target="_blank" rel="external">https://krisives.github.io/bloom-calculator</a></p>
+<h3 id="6-4-实际数量超限事的错误率"><a href="#6-4-实际数量超限事的错误率" class="headerlink" title="6.4 实际数量超限事的错误率"></a>6.4 实际数量超限事的错误率</h3><p>实际数量超出预计元素时，错误率的变化参见公式: </p>
+<p><code>f=(1-0.5^t)^k</code></p>
+<ul>
+<li>f: 错误率</li>
+<li>k: hash 函数的最佳数量</li>
+<li>t: 实际元素数量与预计元素(initial_size) 的倍数</li>
+</ul>
+<p>当实际数量超出预计元素时，错误率会随着倍数 t 显著增大。</p>
+<h3 id="6-5-应用"><a href="#6-5-应用" class="headerlink" title="6.5 应用"></a>6.5 应用</h3><p>布隆过滤器在 NoSQL 中使用广泛，当用户查询某个 row 时，可先通过内存中的布隆过滤器过滤掉大量不存在 row 请求，然后再去磁盘进行查询，可以显著降低 IO 请求的数量。</p>
+<p>布隆过滤器也长用在爬虫，对大量 URL 进行去重。</p>
+<h2 id="7-限流"><a href="#7-限流" class="headerlink" title="7 限流"></a>7 限流</h2><p>本片文章我们来介绍如何使用 Redis 实现限流算法，包括两种实现方式:</p>
+<ol>
+<li>简单限流: 通过 zset 实现</li>
+<li>漏斗限流: Redis4.0 提供的限流模块，Redis-Cell</li>
+</ol>
+<h3 id="7-1-简单限流"><a href="#7-1-简单限流" class="headerlink" title="7.1 简单限流"></a>7.1 简单限流</h3><p>使用 zset 结构记录用户的行为历史，每一个行为都会作为一个 zset ，使用 score 记录时间戳，用于计算滑动时间的窗口，value 为什么值不重要，只要唯一即可，也可使用时间戳。而且只要保留最近的一个时间窗口即可。下面是一个实现示例:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">client = redis.StrictRedis()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">is_action_allow</span><span class="params">(user_id, action_key, period, max_count)</span>:</span></div><div class="line">    key = <span class="string">'hit:%s:%s'</span> % (user_id, action_key)</div><div class="line">    now_ts = int(time.time() * <span class="number">1000</span>)</div><div class="line">    <span class="keyword">with</span> client().pipeline() <span class="keyword">as</span> pipe:</div><div class="line">        pip.zadd(key, now_ts, now_ts)</div><div class="line">        <span class="comment"># 只保留窗口内的记录</span></div><div class="line">        pipe.zremrangebyscore(key, <span class="number">0</span>, now_ts -  period * <span class="number">1000</span>)</div><div class="line">        pipe.zcard(key)</div><div class="line">        <span class="comment"># 设置过期时间，避免冷用户持续占用内存</span></div><div class="line">        <span class="comment"># 过期时间为时间窗口长度，再多宽限 1s</span></div><div class="line">        pip.expire(key, period + <span class="number">1</span>) </div><div class="line">        _, _, current_count, _ = pipe.execute()</div><div class="line">    <span class="keyword">return</span> current_count &lt; max_count</div></pre></td></tr></table></figure>
+<p>连续的 Redis 操作都是针对同一 key，使用 pipeline 可以显著提高 Redis 存储效率。</p>
+<p>这种方案有个缺点，因为它要<strong>记录时间窗口内所有的行为记录</strong>，如果量很大，比如限定 60s 内不得超过 100万次，就会消耗大量的空间。</p>
+<h3 id="7-2-漏斗限流"><a href="#7-2-漏斗限流" class="headerlink" title="7.2 漏斗限流"></a>7.2 漏斗限流</h3><p>Redis-Cell 提供了 cl.throttle 指令用于执行限流算法，使用示例如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">&gt; cl.throttle user_id:key 15 30 60 1</div><div class="line">1) (interger) 0  # 0-允许，1-拒绝</div><div class="line">1) (interger) 15 # 漏斗容量</div><div class="line">1) (interger) 14 # 漏斗剩余空间</div><div class="line">1) (interger) -1 # 如果被拒绝，需要多长时间后再试</div><div class="line">1) (interger) 2  # 多长时间漏斗完全空</div></pre></td></tr></table></figure>
+<p><code>cl.throttle user_id:key 15 30 60 1</code></p>
+<ul>
+<li>参数:<ul>
+<li>15: capacity 漏斗的容量</li>
+<li>30 60: 每 60s 最多 30 次，漏水速率</li>
+<li>1: quota 可选参数默认值为 1</li>
+</ul>
+</li>
+</ul>
+<h2 id="8-GeoHash"><a href="#8-GeoHash" class="headerlink" title="8. GeoHash"></a>8. GeoHash</h2><p>Redis3.2 增加了地理位置模块 Geo，我们可以实现类似附近的餐馆这样的功能。</p>
+<h3 id="8-1-附近的人计算方法"><a href="#8-1-附近的人计算方法" class="headerlink" title="8.1 附近的人计算方法"></a>8.1 附近的人计算方法</h3><p>如果要计算“附近的人”，也就是给定一个元素的坐标，然后计算这个坐标附近的其他元素，按照距离进行排序，该如何处理？</p>
+<p>如果现在元素的经纬度坐标使用关系数据库 （元素 id， 经度 x， 纬度 y） 存储，你该如何计算？</p>
+<p>首先，你不可能通过遍历来计算所有的元素和目标元素的距离然后再进行排序，这个计算量太大了，性能指标肯定无法满足。一般的方法都是通过矩形区域来限定元素的数量，然后对区域内的元素进行全量距离计算再排序。这样可以明显减少计算量。如何划分矩形区域呢？可以指定一个半径 r，使用一条 SQL 就可以圈出来。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">select id from position <span class="built_in">where</span> x0-r &lt; x &lt; x0+r and y0-r &lt; y &lt; y0+r</div></pre></td></tr></table></figure>
+<p>但是数据库查询不适合大并发的场景。</p>
+<h3 id="8-2-GeoHash"><a href="#8-2-GeoHash" class="headerlink" title="8.2 GeoHash"></a>8.2 GeoHash</h3><p>业界比较通用的地理位置距离排序算法是 GeoHash 算法，GeoHash 算法将二维的经纬度数据映射到一维的整数，这样所有的元素都将挂载到一条线上，距离靠近的二维坐标映射到一维后的点之间距离也会很接近。当我们想要计算“附近的人”时，首先将目标位置映射到这条线上，然后在这个一维的线上获取附近的点就行了。</p>
+<p>在 Redis 中，经纬度使用 52 位整数值编码，放在 zset 中，value 是元素的 key，score 是 GeoHash 的 52 位整数值。zset 的score 虽然是浮点数，但是对于 52 位整数值可以无损存储。通过 zset 的score 排序就可以得到坐标附近的其他元素。通过 score 可以还原坐标值就可以得到元素的原始坐标。</p>
+<p>GeoHash 对二维坐标进行的一维映射时有损的，通过映射还原的值也会出现小的偏差。</p>
+<h3 id="8-3-Geo指令"><a href="#8-3-Geo指令" class="headerlink" title="8.3 Geo指令"></a>8.3 Geo指令</h3><p>Geo 有 6 个指令</p>
+<ol>
+<li>geoadd: 添加经纬度，值为(经度，维度，元素)的三元组</li>
+<li>zrem: 删除 Geo 元素(Geo 底层只是一个普通的 zset)</li>
+<li>geolist：计算两个元素之间的距离，参数是(集合名称，元素A，元素B，距离单位)</li>
+<li>geopos: 获取集合中任意元素的经纬度坐标，一次可获得多个</li>
+<li>geohas: 获取元素经纬度编码字符串，base32编码</li>
+<li>georadiusbymeember: 查询指定元素附近的其他元素</li>
+<li>genradius: 根据经纬度查询附近的元素，参数与georadiusbymeember相同，只不过把元素换成经纬度</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">&gt; geoadd company  116.88888 39.92343 juejin</div><div class="line">&gt; geoadd company  126.88888 49.92343 jd</div><div class="line">&gt; geoadd company  78.88888 20.92343 abc</div><div class="line">&gt; zrem company abc</div><div class="line"></div><div class="line">&gt; geolist company juejin jd km  </div><div class="line"></div><div class="line">&gt; geopos company juejin  jd</div><div class="line"></div><div class="line">&gt; geohash company jd</div><div class="line"></div><div class="line"><span class="comment"># 范围 20 公里以内最多 3 个元素按距离正排，不排除自身</span></div><div class="line">&gt; georadiusbymember company jd 20 km count 3 asc</div><div class="line"><span class="comment"># # 范围 20 公里以内最多 3 个元素按距离倒排</span></div><div class="line">&gt; georadiusbymember company jd 20 km count 3 asc</div><div class="line"></div><div class="line"><span class="comment"># withdist: 显示实际距离</span></div><div class="line"><span class="comment"># withhash: 显示距离编码信息</span></div><div class="line"><span class="comment"># withcoord: 显示经纬度</span></div><div class="line">&gt; georadiusbymember company jd 20 km withcoord withdist withhash count 3 asc</div><div class="line"></div><div class="line">&gt; genradius company 59.223, 46.134 20 km withdist count 3 asc</div></pre></td></tr></table></figure>
+<h3 id="8-4-Geo-使用注意事项"><a href="#8-4-Geo-使用注意事项" class="headerlink" title="8.4 Geo 使用注意事项"></a>8.4 Geo 使用注意事项</h3><p>如果将所有的地理的位置放在同一个 Geo 结构中，就会导致 zset 集合过大。Redis 集群环境中，集合可能从一个节点迁移到另一节点，如果单个 key 的数据过大，会对集群的迁移工作造成较大的影响，所以<strong>集群环境中一个单个 key 对应的数据量不宜超过 1MB，否则会导致集群迁移出现卡顿现象，影响线上服务的正常运行</strong>。</p>
+<p>所以建议 Geo 的数据使用单独的Redis 实例部署，不使用集群环境。如果数据过大，可以按照省市区进行拆分。</p>
+<h2 id="9-key-查找"><a href="#9-key-查找" class="headerlink" title="9. key 查找"></a>9. key 查找</h2><h3 id="9-1-keys-和-scan-命令"><a href="#9-1-keys-和-scan-命令" class="headerlink" title="9.1 keys 和 scan 命令"></a>9.1 keys 和 scan 命令</h3><p>Redis 提供了一个简答指令 keys 用于列出所有满足正则匹配的 key。但是 keys 指令有两个明显的缺点:</p>
+<ol>
+<li>没有 offset，limit，一次输出满足所有的 key</li>
+<li>复杂度 O(n)，如果实例中 key 太多，因为Redis 是单线程程序，就会导致Redis 服务卡顿，所有的读写操作就会被延迟。</li>
+</ol>
+<p>Redis 为了解决这个问题，加入了 scan 指令，scan 相比 keys 有如下特点:</p>
+<ol>
+<li>复杂度O(n)，但是通过游标分步进行，不会阻塞线程</li>
+<li>提供 limit 参数，限制返回的最大条数，注意 limit 限制的是 Redis 遍历的条数不是返回条数</li>
+<li>服务器不维护游标状态，当前的位置是通过 scan 返回给客户端的游标整数</li>
+<li>返回结果<strong>可能有重复</strong>，需要客户端去重</li>
+<li>遍历过程中如有数据被修改，<strong>改动后的数据能不能被遍历具有不确定性</strong></li>
+<li>单次返回结果为空不代表遍历结果，遍历结束只能通过 scan 返回的游标值判断。</li>
+</ol>
+<p><code>scan cursor match pattern count limit</code></p>
+<ul>
+<li>cursor: 查询的游标</li>
+<li>pattern: key 匹配的正则表达式</li>
+<li>limit: <ul>
+<li>返回的最大条数</li>
+<li>特别要注意，limit 不是限定返回结果的数量，而是限定服务器单次遍历的字典槽位数量(约等于)</li>
+<li>所以返回结果的集合可能为空，但是游标值不为 0，遍历未结束</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">&gt; keys *</div><div class="line">&gt; keys code*</div><div class="line"></div><div class="line">&gt; scan 0  match key* count 1000</div><div class="line">1) 8843</div><div class="line">2)  1) key1</div><div class="line">    2) key2</div><div class="line">    .......</div><div class="line"></div><div class="line">&gt; scan 8843  match key* count 1000</div></pre></td></tr></table></figure>
+<h3 id="9-2-scan-原理"><a href="#9-2-scan-原理" class="headerlink" title="9.2 scan 原理"></a>9.2 scan 原理</h3><p>redis 中所有 Key 都存储在一个很大的字典中。字典由一位数组和二维链表组成。scan 指令返回的游标就是第一维数组的位置索引(又称槽)，不考虑扩缩容直接按照数组下标进行遍历即可，limit 参数控制的就是需要遍历的槽位数。之所以范湖结果有多又少，是因为槽位有可能为空，也有可能槽位上的链表有多个元素。</p>
+<p>scan 的遍历顺序不是从数组 0 索引开始直至结尾，而是采用了<strong>高位进位加法</strong>来遍历。之所以采用这个方法是考虑到字典的扩缩容，避免槽位遍历的重复和遗漏(原因见下)。</p>
+<p>高位进位加法如下: 加法从左边加，进位往右边移动。</p>
+<p><img src="/images/redis/high_plus.png" alt="scan原理示意图"></p>
+<h3 id="9-3-Redis-Key-扩缩容"><a href="#9-3-Redis-Key-扩缩容" class="headerlink" title="9.3 Redis Key 扩缩容"></a>9.3 Redis Key 扩缩容</h3><p>Redis 存储所有 Key 的字典，一维数组的大小总是 2^n，扩容一次，空间加倍。因为数组长度总是 2^n 次方，字典哈希过程中对数组长度的取模运算，等价于位与操作:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">a mod 8 == a &amp; (8-1) = a &amp; 7</div><div class="line">a mod 16 == a &amp; (16-1) = a &amp; 15</div><div class="line">a mod 32 == a &amp; (32-1) = a &amp; 31</div></pre></td></tr></table></figure></p>
+<p>这里的 8/16/32 是数组的长度而 7、15、31 称为字典的 mask 值，mask 的作用就是保留 hash 值的低位。注意这里可以这么计算的前提是数组大小总是 2^n。</p>
+<p>假设当前的字典的数组长度由 8 扩容到 16，那么 3号槽位内的值将被 rehash 到 3号和 11 号槽位。11 的二进制 1011 就是对 3 的二进制 011 增加了一个高位。</p>
+<p>抽象一点说如果开始槽位的二进制数是 xxx，那么该槽位中的元素将被 rehash 到 0xxx 和 1xxx(xxx+8)。如果字典长度由 16 扩展成 32，那么对应 xxxx 中的元素将被 rehash 到 0xxxx 和 1xxxx(xxxx + 16)中。</p>
+<p><img src="/images/redis/redis-scan-cap-change.png" alt="scan原理示意图"></p>
+<p>如上图所示，假设我们采用高位进位加法即将要遍历 110 这个位置:</p>
+<ol>
+<li>扩容情况下<ul>
+<li>扩容后，当前槽位上所有的元素对应的新槽位是0110和1110</li>
+<li>此时可以直接从0110这个槽位开始往后继续遍历，0110槽位之前的所有槽位都已经遍历过了</li>
+<li>这样可以避免扩容后对已经遍历过的槽位进行重复遍历</li>
+</ul>
+</li>
+<li>缩容情况下<ul>
+<li>当前槽位所有的元素对应的新槽位是10</li>
+<li>此时可以直接从10这个槽位开始往后继续遍历，10槽位之前的所有槽位都已经遍历过了，这样能避免缩容的重复遍历</li>
+<li>但是这会对 <strong>010这个槽位</strong> 上的元素进行重复遍历，因为 010 槽位缩容后也会进入到 10 槽位，而 010 之前已经遍历过了</li>
+</ul>
+</li>
+</ol>
+<p>注意图中的每一行就是高位进位加法的连续值，也是我们的遍历顺序。</p>
+<h3 id="9-4-渐进式-rehash"><a href="#9-4-渐进式-rehash" class="headerlink" title="9.4 渐进式 rehash"></a>9.4 渐进式 rehash</h3><p>Redis采用渐进式rehash，需要同时保留旧数组和新数组，然后在定时任务中以及后续对hash的指令操作中渐渐地将旧数组中挂接的元素迁移到新数组上。</p>
+<p>这意味着如果要操作处于rehash中的字典，需要同时访问新旧两个数组结构。scan处于rehash中的字典，也需要同时扫描新旧槽位，然后将结果融合后返回给客户端</p>
+<p>scan 是一些列指令，除了 scan 本身还包括</p>
+<ol>
+<li>zscan: 遍历 zset 集合元素</li>
+<li>hscan: 遍历 hash 字典中的元素</li>
+<li>sscan: 遍历 set 集合的元素</li>
+</ol>
+<p>这些命令的原理与 scan 类似，因为 hash 底层就是字典，set 是一个特殊的 hash (所有的 value 指向同一个元素)，<strong>zset 内部也使用了字典来存储所有的元素内容</strong>。</p>
+<h3 id="9-5-大-Key-问题"><a href="#9-5-大-Key-问题" class="headerlink" title="9.5 大 Key 问题"></a>9.5 大 Key 问题</h3><p>有时候由于操作不当，会在Redis 生成很大的Key，很大的 Key 会导致:</p>
+<ol>
+<li>集群环境中，数据迁移卡顿</li>
+<li>key 扩容时，一次性申请更大的内存，导致卡顿(因为字典内部数组的大小总是 2^n)</li>
+<li>Key被删除，内存会一次性回收，导致卡顿</li>
+</ol>
+<p><strong>在平时的业务开发中，要尽量避免大Key的产生</strong>！redis-cli 提供了 <code>–-bigkeys</code> 选项用于定位 redis 中的大 key。</p>
+<p><code>redis-cli –-bigkeys</code> 内部就用到了 scan 指令过程大概是这样:</p>
+<ol>
+<li>扫描每一个 key，并使用 type 指令获取 key 的类型</li>
+<li>获取类型后，使用相应数据结构的 size 或 len 方法获取它的大小</li>
+<li>对于每一种类型，将大小排名的前几个作为扫描结果展示出来</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 可能会提升 Redis 的 ops，因为会使用 scan 扫描所有 Key</span></div><div class="line">&gt; redis-cli -h 127.0.0.1 -p 7001  --bigkeys </div><div class="line"></div><div class="line"><span class="comment"># 限制 bigkeys 的扫描频率</span></div><div class="line"><span class="comment"># -i 0.1 表示每隔 100 条，scan 就会休眠 0.1s</span></div><div class="line">&gt; redis-cli -h 127.0.0.1 -p 7001 --bigkeys -i 0.1</div></pre></td></tr></table></figure>
+
+        </div>
+        <!--  -->
+        <footer class="article-footer">
+            
+
+
+
+    <a data-url="http://yoursite.com/2020/05/02/redis/02_基础篇/" data-id="ckminog5n00aomcu9ixfdd1d4" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+<script>
+    (function ($) {
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+        </footer>
+    </div>
+</article>
+
+    <section id="comments">
+    
+        
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+
+    
+    </section>
+
+
+
+                        </div>
+                    </section>
+                    <aside id="sidebar">
+    <a class="sidebar-toggle" title="Expand Sidebar"><i class="toggle icon"></i></a>
+    <div class="sidebar-top">
+        <p>关注我 :</p>
+        <ul class="social-links">
+            
+                
+                <li>
+                    <a class="social-tooltip" title="twitter" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-twitter"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="facebook" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-facebook"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="google-plus" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-google-plus"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="github" href="https://github.com/ppoffice/hexo-theme-hueman" target="_blank" rel="noopener">
+                        <i class="icon fa fa-github"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="weibo" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-weibo"></i>
+                    </a>
+                </li>
+                
+            
+                
+                <li>
+                    <a class="social-tooltip" title="rss" href="/" target="_blank" rel="noopener">
+                        <i class="icon fa fa-rss"></i>
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2020/05/03/redis/03_原理篇/" id="article-nav-newer" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">下一篇</strong>
+        <p class="article-nav-title">
+        
+            3. redis 原理篇
+        
+        </p>
+        <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
+    </a>
+    
+    
+        <a href="/2020/05/01/redis/01_redis开篇入门/" id="article-nav-older" class="article-nav-link-wrap">
+        <strong class="article-nav-caption">上一篇</strong>
+        <p class="article-nav-title">1. redis 开篇入门</p>
+        <i class="icon fa fa-chevron-left" id="icon-chevron-left"></i>
+        </a>
+    
+</nav>
+
+    
+    <div class="widgets-container">
+        
+            
+                
+
+            
+                
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/03/21/redis/12_redis原理总结/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/03/21/redis/12_redis原理总结/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-03-21T04:20:55.555Z" itemprop="datePublished">2021-03-21</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/09/web/html_css/test/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"></p>
+                            <p class="item-title"><a href="/2021/01/09/web/html_css/test/" class="title"></a></p>
+                            <p class="item-date"><time datetime="2021-01-09T14:22:23.753Z" itemprop="datePublished">2021-01-09</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/01/01/go/go_design/go_design_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/01/01/go/go_design/go_design_1/" class="title">1 Go 设计模式</a></p>
+                            <p class="item-date"><time datetime="2020-12-31T16:00:00.000Z" itemprop="datePublished">2021-01-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_1/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_1/" class="title">1 go 标准库和第三方库入门</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2020/12/01/go/go_module/go_module_2/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2020/12/01/go/go_module/go_module_2/" class="title">2 文件 IO 和字符操作</a></p>
+                            <p class="item-date"><time datetime="2020-11-30T16:00:00.000Z" itemprop="datePublished">2020-12-01</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">35</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">56</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">188</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript-入门/">JavaScript 入门</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kafka/">Kafka</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-float">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 12.86px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 14.29px;">JavaScript</a> <a href="/tags/JavaScript-入门/" style="font-size: 10px;">JavaScript 入门</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Kafka/" style="font-size: 15.71px;">Kafka</a> <a href="/tags/Linux性能调优/" style="font-size: 19.29px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 17.86px;">MySQL实战45讲</a> <a href="/tags/React/" style="font-size: 15px;">React</a> <a href="/tags/Vue/" style="font-size: 15px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.14px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.71px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.29px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.43px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.43px;">wrapt</a> <a href="/tags/入门指南/" style="font-size: 14.29px;">入门指南</a> <a href="/tags/数据密集型应用/" style="font-size: 15px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.57px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 17.86px;">极客时间</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.57px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 12.14px;">高性能的MySQL</a>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">讨论区</h3>
+        <div class="widget">
+            <h4> 联系我 <h4>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+            
+        
+    </div>
+</aside>
+
+                </div>
+            </div>
+        </div>
+        <footer id="footer">
+    <div class="container">
+        <div class="container-inner">
+            <a id="back-to-top" href="javascript:;"><i class="icon fa fa-angle-up"></i></a>
+            <div class="credit">
+                <h1 class="logo-wrap">
+                    <a href="/" class="logo"></a>
+                </h1>
+                <p>&copy; 2021 宋涛</p>
+                <p>Powered by <a href="//hexo.io/" target="_blank">Hexo</a>. Theme by <a href="//github.com/ppoffice" target="_blank">PPOffice</a></p>
+            </div>
+            <div class="footer-plugins">
+              
+    
+
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+        
+    
+    <script>
+    var disqus_shortname = 'hexo-theme-hueman';
+    
+    
+    var disqus_url = 'http://yoursite.com/2020/05/02/redis/02_基础篇/';
+    
+    (function() {
+    var dsq = document.createElement('script');
+    dsq.type = 'text/javascript';
+    dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+    </script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
