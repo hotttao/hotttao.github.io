@@ -21,7 +21,7 @@
 <meta property="og:description" content="要想写并执行我们的汇编代码，编码环境我们先折腾一番。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://yoursite.com/images/assembly/cpu_structure.png">
-<meta property="og:updated_time" content="2021-08-15T04:33:36.356Z">
+<meta property="og:updated_time" content="2021-11-03T14:36:55.561Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="3. x86 汇编环境准备">
 <meta name="twitter:description" content="要想写并执行我们的汇编代码，编码环境我们先折腾一番。">
@@ -166,7 +166,7 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/x86-汇编/">x86 汇编<span class="tag-count">5</span></a>
+        <a class="tag-link" href="/tags/x86-汇编/">x86 汇编<span class="tag-count">6</span></a>
     </div>
 
             </div>
@@ -200,10 +200,9 @@
 <p>8086 可以访问 1MB 的内存空间，地址范围为0x00000 到0xFFFFF，其中 0xF0000-0xFFFFF 的 64KB 范围分配给了各类 ROM 地址空间。</p>
 <p>ROM 全称为只读存储器（Read Only Memory，ROM）它的内容是预先写入的，即使掉电也不会消失，ROM 中存储着 BOIS(Base Input &amp; Output System，BIOS)。BOIS 是主板和各类接口卡(显卡、网卡等)厂商提供的软件系统。BOIS 提供了操作硬件设备的基本接口，主要是进行硬件的诊断、检测和初始化。所谓初始化，就是让硬件处于一个正常的、默认的工作状态。最后，它还负责提供一套软件例程，让人们在不必了解硬件细节的情况下从外围设备（比如键盘）获取输入数据，或者向外围设备（比如显示器）输出数据。设备当然是很多的，所以这块ROM 芯片只针对那些最基本的、对于使用计算机而言最重要的设备，而它所提供的软件例程，也只包含最基本、最常规的功能。</p>
 <h3 id="2-3-加电启动"><a href="#2-3-加电启动" class="headerlink" title="2.3 加电启动"></a>2.3 加电启动</h3><p>因为 8086 加电或者复位时，CS=0xFFFF，IP=0x0000，所以，它取的第一条指令位于物理地址0xFFFF0，正好位于ROM 中，那里固化了开机时需要执行的指令。ROM 中位于物理地址 0xFFFF0 的地方，通常是一个跳转指令，它通过改变CS 和IP的内容，使处理器从ROM 中的较低地址处开始取指令执行。</p>
-<p>当 BIOS 完成自己的使命之前，最后要做的一件事是从外存储设备读取更多的指令来交给处理器执行。如果计算机的设置是从硬盘启动，那么，BIOS 将读取硬盘主引导扇区的内容，将它加载到内存地址0x0000:0x7c00 处（也就是物理地址0x07C00），然后用一个jmp 指令跳到那里接着执行：<code>jmp 0x0000:0x7c00</code>。</p>
-<p>通常，主引导扇区的功能是继续从硬盘的其他部分读取更多的内容加以执行。从而一步步的加载更多的内容，运行我们其操作系统。</p>
+<p>当 BIOS 完成自己的使命之前，最后要做的一件事是从外存储设备读取更多的指令来交给处理器执行。如果计算机的设置是从硬盘启动，如果硬盘是首选的启动设备，那么，ROM-BIOS 将试图读取硬盘的0 面0 道1 扇区。传统上，这就是主引导扇区（Main Boot Sector，MBR）。读取的主引导扇区数据有512 字节，ROM-BIOS 程序将它加载到逻辑地址0x0000:0x7c00处，也就是物理地址0x07c00 处，然后判断它是否有效。一个有效的主引导扇区，其最后两字节应当是0x55 和0xAA。ROM-BIOS 程序首先检测这两个标志，如果主引导扇区有效，则以一个段间转移指令jmp 0x0000:0x7c00 跳到那里继续执行。</p>
+<p>一般来说，主引导扇区是由操作系统负责的。正常情况下，一段精心编写的主引导扇区代码将检测用来启动计算机的操作系统，并计算出它所在的硬盘位置。然后，它把操作系统的自举代码加载到内存，也用jmp 指令跳转到那里继续执行，直到操作系统完全启动。</p>
 <p>所以我们把自己编译好的程序写到主引导扇区，就能够让处理器执行，书中也是这么做的。原书中使用自带的工具将上面生成的bin文件转换成VHD格式，实际上没有必要，可以使用VirtualBox自带的工具VBoxManage来生成，如：<code>VBoxManage convertfromraw mbr.bin myfile.vhd --format VHD</code>。所以接下来我们就用一个最简单的汇编程序作为示例，将其写入虚拟磁盘的主引导扇区中，并让处理器运行它。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure>
 <h2 id="3-准备-VirtualBox-虚拟机"><a href="#3-准备-VirtualBox-虚拟机" class="headerlink" title="3. 准备 VirtualBox 虚拟机"></a>3. 准备 VirtualBox 虚拟机</h2><h3 id="3-1-准备和编译汇编程序"><a href="#3-1-准备和编译汇编程序" class="headerlink" title="3.1 准备和编译汇编程序"></a>3.1 准备和编译汇编程序</h3><p>我们使用下面这个汇编程序作为示例，将其编译为 test_mbr 文件:</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">org 07c00h</div><div class="line"></div><div class="line">mov ax, cs</div><div class="line">mov ds, ax</div><div class="line">mov es, ax</div><div class="line"></div><div class="line">call Disp</div><div class="line"></div><div class="line">jmp $</div><div class="line">Disp: </div><div class="line">	mov ax, BootMsg</div><div class="line">	mov bp, ax</div><div class="line">	mov cx, 16</div><div class="line">	mov ax, 01301h</div><div class="line">	mov bx, 000ch</div><div class="line">	mov dl, 0</div><div class="line">	int 10h</div><div class="line">BootMsg: db &quot;Hello Lyra OS!&quot;</div><div class="line">times 510 - ($-$$) db 0 ;510个字节后全部使用0来填充</div><div class="line">dw 0xaa55</div></pre></td></tr></table></figure>
 <p>硬盘的读写是以扇区为最小单位的。所以，无论什么时候，要从硬盘读数据，或者向硬盘写数据，至少得是1 个扇区。如果汇编程序不足一个扇区 512 bytes 的大小，就需要补齐，上述代码的 <code>times 510 - ($-$$) db 0</code> 就是自动补齐的部分。一个有效的主引导扇区，其最后两字节应当是0x55 和0xAA，所以最后一条指令是 <code>dw 0xaa55</code>。有关汇编语言的讲解，后面我们在详述。</p>
@@ -220,7 +219,7 @@
 <p><img src="/images/assembly/bind_disk.png" alt="3.绑定磁盘"></p>
 <p><img src="/images/assembly/create_success.jpg" alt="4.创建成功"></p>
 <p>最后显示 Hello Lyra OS! 即创建成功。</p>
-<h3 id="3-4-使用-Bochs-进行程序调试"><a href="#3-4-使用-Bochs-进行程序调试" class="headerlink" title="3.4 使用 Bochs 进行程序调试"></a>3.4 使用 Bochs 进行程序调试</h3><p>Bochs 是开源软件，是你唯一可选择的调试器，它本身就是一个虚拟机，类似于VirtualBox，它可以很容易让你单步跟踪硬盘的启动过程，查看寄存器的内容和机器状态。下载地址是 <a href="https://sourceforge.net/projects/bochs/" target="_blank" rel="external">https://sourceforge.net/projects/bochs/</a> </p>
+<h3 id="3-4-使用-Bochs-进行程序调试"><a href="#3-4-使用-Bochs-进行程序调试" class="headerlink" title="3.4 使用 Bochs 进行程序调试"></a>3.4 使用 Bochs 进行程序调试</h3><p>Bochs 是开源软件，是你唯一可选择的调试器，它本身就是一个虚拟机，类似于VirtualBox，它可以很容易让你单步跟踪硬盘的启动过程，查看寄存器的内容和机器状态。下载地址是 <a href="https://sourceforge.net/projects/bochs/files/bochs/2.7/" target="_blank" rel="external">https://sourceforge.net/projects/bochs/files/bochs/2.7/</a> 。详细的调试步骤可以参考: <a href="https://www.cxyzjd.com/article/BakerTheGreat/107240392" target="_blank" rel="external">https://www.cxyzjd.com/article/BakerTheGreat/107240392</a></p>
 <h2 id="4-通过-GRUB-运行汇编程序"><a href="#4-通过-GRUB-运行汇编程序" class="headerlink" title="4. 通过 GRUB 运行汇编程序"></a>4. 通过 GRUB 运行汇编程序</h2><p>除了这种将代码直接写入MBR主引导扇区，让处理器直接运行的方式，我们还可以借助 GRUB 引导程序让处理器来运行我们的代码。这个过程就跟正常的操作系统启动流程一致了。整个流程大体上是这样的:</p>
 <ol>
 <li>GRUB 引导程序会在操作系统安装时被写入 MBR 主引导扇区</li>
@@ -243,7 +242,7 @@
 <h4 id="格式化磁盘文件"><a href="#格式化磁盘文件" class="headerlink" title="格式化磁盘文件"></a>格式化磁盘文件</h4><p>虚拟硬盘也需要格式化才能使用，所谓格式化就是在硬盘上建立文件系统。只有建立了文件系统，现有的成熟操作系统才能在其中存放数据。</p>
 <p>Linux 下可以使用下面的命令:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 1. 将磁盘文件挂载为回环设备</span></div><div class="line">sudo losetup /dev/loop0 hd.img</div><div class="line"></div><div class="line"><span class="comment"># 2. 格式化 /dev/loop0 回环块设备</span></div><div class="line">sudo mkfs.ext4 -q /dev/loop0</div><div class="line"></div><div class="line"><span class="comment"># 3. 挂载格式化后的回环设备</span></div><div class="line">sudo mount -o loop ./hd.img ./hdisk/</div></pre></td></tr></table></figure>
-<p>在 win10 完成类似操作好像就比较困难了，还真没研究过。还是直接安装一个 Centos 简单。</p>
+<p>在 win10 完成类似操作好像就比较困难了，还真没研究过。还是直接安装一个 Centos 简单。此时就有刅一个问题，我可以用 vmware 里的 centos 来生成所需要的镜像文件，但是为了用生成的镜像在 virtualbox 上启动虚机，每次需要在 centos 和 本地 windows 之间来回拷贝镜像文件。此时 vmware 的共享目录可以解决这个麻烦的问题。共享目录的设置参见: <a href="https://www.pianshen.com/article/7101163019/" target="_blank" rel="external">https://www.pianshen.com/article/7101163019/</a> </p>
 <h4 id="安装-GRUB"><a href="#安装-GRUB" class="headerlink" title="安装 GRUB"></a>安装 GRUB</h4><p>我们现在要把 GRUB 安装在我们的虚拟硬盘上，Centos 安装完默认就有 Grub 的命令行工具，执行下面的命令即可:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 建立boot目录</span></div><div class="line">sudo mkdir ./hdisk/boot/ </div><div class="line"></div><div class="line"><span class="comment">#  挂载硬盘文件</span></div><div class="line">sudo losetup /dev/loop0 hd.imgsudo mount -o loop ./hd.img ./hdisk/ </div><div class="line"></div><div class="line"><span class="comment"># 安装GRUBsudo </span></div><div class="line">grub-install --boot-directory=./hdisk/boot/ --force --allow-floppy /dev/loop0；</div><div class="line"><span class="comment"># --boot-directory 指向先前我们在虚拟硬盘中建立的boot目录</span></div><div class="line"><span class="comment"># --force --allow-floppy ：指向我们的虚拟硬盘设备文件/dev/loop0</span></div></pre></td></tr></table></figure>
 <p>现在 /hdisk/boot/ 目录下多了一个 grub 目录，表示我们的 GRUB 安装成功。请注意，这里还要在 /hdisk/boot/grub/ 目录下建立一个 grub.cfg 文本文件，GRUB 正是通过这个文件内容，查找到我们的操作系统映像文件的。</p>
@@ -263,7 +262,7 @@
 
 
 
-    <a data-url="http://yoursite.com/2021/07/03/assembley/x86/x86_03/" data-id="ckvgqi82i00e3h0u9ngc7dv1z" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
+    <a data-url="http://yoursite.com/2021/07/03/assembley/x86/x86_03/" data-id="ckvqqm16d00d2aou92o8xjvnc" class="article-share-link"><i class="fa fa-share"></i>分享到</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -405,7 +404,7 @@
         <strong class="article-nav-caption">下一篇</strong>
         <p class="article-nav-title">
         
-            4. x86 实模式(一)
+            4. x86 汇编基础
         
         </p>
         <i class="icon fa fa-chevron-right" id="icon-chevron-right"></i>
@@ -456,10 +455,10 @@
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2021/07/05/assembley/x86/x86_05/" class="thumbnail">
+                            <a href="/2021/07/06/assembley/x86/x86_06/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/assembly/memery_stack.png)" alt="5. x86 实模式(一)" class="thumbnail-image"></span>
+        <span class="thumbnail-image thumbnail-none"></span>
     
     
 </a>
@@ -468,7 +467,27 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
-                            <p class="item-title"><a href="/2021/07/05/assembley/x86/x86_05/" class="title">5. x86 实模式(一)</a></p>
+                            <p class="item-title"><a href="/2021/07/06/assembley/x86/x86_06/" class="title">6. 中断</a></p>
+                            <p class="item-date"><time datetime="2021-07-05T16:00:00.000Z" itemprop="datePublished">2021-07-06</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2021/07/05/assembley/x86/x86_05/" class="thumbnail">
+    
+    
+        <span style="background-image:url(/images/assembly/loader_memory_space.png)" alt="5. 用户程序加载程序" class="thumbnail-image"></span>
+    
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
+                            <p class="item-title"><a href="/2021/07/05/assembley/x86/x86_05/" class="title">5. 用户程序加载程序</a></p>
                             <p class="item-date"><time datetime="2021-07-04T16:00:00.000Z" itemprop="datePublished">2021-07-05</time></p>
                         </div>
                     </li>
@@ -479,7 +498,7 @@
                             <a href="/2021/07/04/assembley/x86/x86_04/" class="thumbnail">
     
     
-        <span style="background-image:url(/images/assembly/video.png)" alt="4. x86 实模式(一)" class="thumbnail-image"></span>
+        <span style="background-image:url(/images/assembly/video.png)" alt="4. x86 汇编基础" class="thumbnail-image"></span>
     
     
 </a>
@@ -488,7 +507,7 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
-                            <p class="item-title"><a href="/2021/07/04/assembley/x86/x86_04/" class="title">4. x86 实模式(一)</a></p>
+                            <p class="item-title"><a href="/2021/07/04/assembley/x86/x86_04/" class="title">4. x86 汇编基础</a></p>
                             <p class="item-date"><time datetime="2021-07-03T16:00:00.000Z" itemprop="datePublished">2021-07-04</time></p>
                         </div>
                     </li>
@@ -513,26 +532,6 @@
                         </div>
                     </li>
                 
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2021/07/02/assembley/x86/x86_02/" class="thumbnail">
-    
-    
-        <span style="background-image:url(/images/assembly/cpu_ram_rom.jpg)" alt="2. 硬件系统的结构" class="thumbnail-image"></span>
-    
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"><a class="article-category-link" href="/categories/Go/">Go</a></p>
-                            <p class="item-title"><a href="/2021/07/02/assembley/x86/x86_02/" class="title">2. 硬件系统的结构</a></p>
-                            <p class="item-date"><time datetime="2021-07-01T16:00:00.000Z" itemprop="datePublished">2021-07-02</time></p>
-                        </div>
-                    </li>
-                
             </ul>
         </div>
     </div>
@@ -542,7 +541,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">39</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">61</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/操作系统/">操作系统</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">198</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Go/">Go</a><span class="category-list-count">40</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Python/">Python</a><span class="category-list-count">61</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式/">分布式</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/前端/">前端</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/存储/">存储</a><span class="category-list-count">58</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/操作系统/">操作系统</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/运维/">运维</a><span class="category-list-count">198</span></li></ul>
         </div>
     </div>
 
@@ -552,7 +551,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/10/">十月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/07/">七月 2021</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/10/">十月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/07/">七月 2021</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">一月 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/11/">十一月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/08/">八月 2020</a><span class="archive-list-count">25</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/03/">三月 2020</a><span class="archive-list-count">32</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/02/">二月 2020</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/01/">一月 2020</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a><span class="archive-list-count">21</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a><span class="archive-list-count">26</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a><span class="archive-list-count">48</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">31</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">28</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">29</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">4</span></li></ul>
         </div>
     </div>
 
@@ -562,7 +561,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">12</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kafka/">Kafka</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Openstack/">Openstack</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86-汇编/">x86 汇编</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/好玩的数据结构与算法/">好玩的数据结构与算法</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/程序员的自我修养/">程序员的自我修养</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Brendan-Gregg/">Brendan Gregg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ES6/">ES6</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HTML-CSS/">HTML&CSS</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/">JavaScript</a><span class="tag-list-count">12</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/K8S/">K8S</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kafka/">Kafka</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Linux性能调优/">Linux性能调优</a><span class="tag-list-count">49</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL实战45讲/">MySQL实战45讲</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Openstack/">Openstack</a><span class="tag-list-count">10</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/React/">React</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Vue/">Vue</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go并发编程/">go并发编程</a><span class="tag-list-count">21</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go标准库及第三方库/">go标准库及第三方库</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go语言入门/">go语言入门</a><span class="tag-list-count">11</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo/">hexo</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/python/">python</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/wrapt/">wrapt</a><span class="tag-list-count">16</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/x86-汇编/">x86 汇编</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/入门指南/">入门指南</a><span class="tag-list-count">15</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/好玩的数据结构与算法/">好玩的数据结构与算法</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据密集型应用/">数据密集型应用</a><span class="tag-list-count">13</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/数据结构与算法/">数据结构与算法</a><span class="tag-list-count">39</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/极客时间/">极客时间</a><span class="tag-list-count">29</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/程序员的自我修养/">程序员的自我修养</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/设计模式/">设计模式</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-Linux/">马哥 Linux</a><span class="tag-list-count">135</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/马哥-MySQL-运维/">马哥 MySQL 运维</a><span class="tag-list-count">9</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能的MySQL/">高性能的MySQL</a><span class="tag-list-count">5</span></li></ul>
         </div>
     </div>
 
@@ -572,7 +571,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15.63px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 12.5px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 15px;">JavaScript</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Kafka/" style="font-size: 16.25px;">Kafka</a> <a href="/tags/Linux性能调优/" style="font-size: 19.38px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 18.13px;">MySQL实战45讲</a> <a href="/tags/Openstack/" style="font-size: 13.75px;">Openstack</a> <a href="/tags/React/" style="font-size: 15.63px;">React</a> <a href="/tags/Vue/" style="font-size: 15.63px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.5px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.63px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.38px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.25px;">python</a> <a href="/tags/wrapt/" style="font-size: 16.88px;">wrapt</a> <a href="/tags/x86-汇编/" style="font-size: 11.88px;">x86 汇编</a> <a href="/tags/入门指南/" style="font-size: 16.25px;">入门指南</a> <a href="/tags/好玩的数据结构与算法/" style="font-size: 11.88px;">好玩的数据结构与算法</a> <a href="/tags/数据密集型应用/" style="font-size: 15.63px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.75px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 18.13px;">极客时间</a> <a href="/tags/程序员的自我修养/" style="font-size: 10px;">程序员的自我修养</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.13px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 11.88px;">高性能的MySQL</a>
+            <a href="/tags/Brendan-Gregg/" style="font-size: 10px;">Brendan Gregg</a> <a href="/tags/ES6/" style="font-size: 15.88px;">ES6</a> <a href="/tags/HTML-CSS/" style="font-size: 12.94px;">HTML&CSS</a> <a href="/tags/JavaScript/" style="font-size: 15.29px;">JavaScript</a> <a href="/tags/K8S/" style="font-size: 10px;">K8S</a> <a href="/tags/Kafka/" style="font-size: 16.47px;">Kafka</a> <a href="/tags/Linux性能调优/" style="font-size: 19.41px;">Linux性能调优</a> <a href="/tags/MySQL实战45讲/" style="font-size: 18.24px;">MySQL实战45讲</a> <a href="/tags/Openstack/" style="font-size: 14.12px;">Openstack</a> <a href="/tags/React/" style="font-size: 15.88px;">React</a> <a href="/tags/Vue/" style="font-size: 15.88px;">Vue</a> <a href="/tags/go并发编程/" style="font-size: 17.65px;">go并发编程</a> <a href="/tags/go标准库及第三方库/" style="font-size: 10.59px;">go标准库及第三方库</a> <a href="/tags/go语言入门/" style="font-size: 14.71px;">go语言入门</a> <a href="/tags/hexo/" style="font-size: 10px;">hexo</a> <a href="/tags/python/" style="font-size: 11.18px;">python</a> <a href="/tags/wrapt/" style="font-size: 17.06px;">wrapt</a> <a href="/tags/x86-汇编/" style="font-size: 12.35px;">x86 汇编</a> <a href="/tags/入门指南/" style="font-size: 16.47px;">入门指南</a> <a href="/tags/好玩的数据结构与算法/" style="font-size: 11.76px;">好玩的数据结构与算法</a> <a href="/tags/数据密集型应用/" style="font-size: 15.88px;">数据密集型应用</a> <a href="/tags/数据结构与算法/" style="font-size: 18.82px;">数据结构与算法</a> <a href="/tags/极客时间/" style="font-size: 18.24px;">极客时间</a> <a href="/tags/程序员的自我修养/" style="font-size: 10px;">程序员的自我修养</a> <a href="/tags/设计模式/" style="font-size: 10px;">设计模式</a> <a href="/tags/马哥-Linux/" style="font-size: 20px;">马哥 Linux</a> <a href="/tags/马哥-MySQL-运维/" style="font-size: 13.53px;">马哥 MySQL 运维</a> <a href="/tags/高性能的MySQL/" style="font-size: 11.76px;">高性能的MySQL</a>
         </div>
     </div>
 
