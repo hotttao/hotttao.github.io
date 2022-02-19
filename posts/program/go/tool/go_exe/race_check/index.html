@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Go 并发调试工具 - LoveIt</title><meta name="Description" content="Go 提供的并发冲突以及死循环检测"><meta property="og:title" content="Go 并发调试工具" />
+<meta property="og:description" content="Go 提供的并发冲突以及死循环检测" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-07-01T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-02-19T16:41:10+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Go 并发调试工具"/>
+<meta name="twitter:description" content="Go 提供的并发冲突以及死循环检测"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/sync/go_sync_4/" /><link rel="next" href="https://hotttao.github.io/posts/about/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Go 并发调试工具",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/tool\/go_exe\/race_check\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2537 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/tool\/go_exe\/race_check\/","datePublished": "2021-07-01T22:00:00+08:00","dateModified": "2022-02-19T16:41:10+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "Go 提供的并发冲突以及死循环检测"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">Go 并发调试工具</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-07-01">2021-07-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2537 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-go-race-detector">1. Go race detector</a>
+      <ul>
+        <li><a href="#11-使用">1.1 使用</a></li>
+        <li><a href="#12-race-编译后代码">1.2 race 编译后代码</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-go-vet-复制检测">2. go vet 复制检测</a>
+      <ul>
+        <li><a href="#21-go-vet-使用">2.1 go vet 使用</a></li>
+        <li><a href="#22-检测原理">2.2 检测原理</a></li>
+        <li><a href="#23-nocopy-辅助-vet-检查">2.3 noCopy 辅助 vet 检查</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-死锁检测">3. 死锁检测</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Go 语言提供了一些并发调试工具，这些工具可以帮我们有效的发现并发编程中的 bug</p>
+<!-- more -->
+<h2 id="1-go-race-detector">1. Go race detector</h2>
+<p><a href="https://blog.golang.org/race-detector" target="_blank" rel="noopener noreffer">Go race detector</a>可以帮助我们自动发现程序有没有数据竞争(data race)，它是基于 Google 的 C/C++ sanitizers 技术实现的，编译器通过探测所有的内存访问，加入代码能监视对这些内存地址的访问（读还是写）。在代码运行的时候，race detector 就能监控到对共享变量的非同步访问，出现 race 时，就会打印出警告信息。</p>
+<h3 id="11-使用">1.1 使用</h3>
+<p>在编译（compile）、测试（test）或者运行（run）Go 代码的时候，加上 race 参数，就有可能发现并发问题。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// -race 启动 data race 检测
+</span><span class="c1"></span><span class="k">go</span> <span class="nx">run</span> <span class="o">-</span><span class="nx">race</span> <span class="nx">counter</span><span class="p">.</span><span class="k">go</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>虽然这个工具使用起来很方便，但是，因为它的实现方式，只能通过真正对实际地址进行读写访问的时候才能探测，所以它不能再编译的时候发现 data race 问题，而且只有在运行时出现 data race 才能检测到。如果碰巧没有出现 data race 是检测不出来的。而且，把开启了 race 的程序部署在线上，还是比较影响性能的。</p>
+<h3 id="12-race-编译后代码">1.2 race 编译后代码</h3>
+<p>运行 <code>go tool compile -race -S counter.go</code>，可以查看计数器例子的代码，下面是一个编译后代码示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">// 显示添加 -race 后编译的 go 代码
+go tool compile -race -S counter.go
+
+
+0x002a <span class="m">00042</span> <span class="o">(</span>counter.go:13<span class="o">)</span>    CALL    runtime.racefuncenter<span class="o">(</span>SB<span class="o">)</span>
+       ......
+        0x0061 <span class="m">00097</span> <span class="o">(</span>counter.go:14<span class="o">)</span>    JMP     <span class="m">173</span>
+        0x0063 <span class="m">00099</span> <span class="o">(</span>counter.go:15<span class="o">)</span>    MOVQ    AX, <span class="s2">&#34;&#34;</span>.j+8<span class="o">(</span>SP<span class="o">)</span>
+        0x0068 <span class="m">00104</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$1</span>
+        0x0068 <span class="m">00104</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>.<span class="p">&amp;</span>count+128<span class="o">(</span>SP<span class="o">)</span>, AX
+        0x0070 <span class="m">00112</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$0</span>
+        0x0070 <span class="m">00112</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    AX, <span class="o">(</span>SP<span class="o">)</span>
+        0x0074 <span class="m">00116</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    CALL    runtime.raceread<span class="o">(</span>SB<span class="o">)</span>
+        0x0079 <span class="m">00121</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$1</span>
+        0x0079 <span class="m">00121</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>.<span class="p">&amp;</span>count+128<span class="o">(</span>SP<span class="o">)</span>, AX
+        0x0081 <span class="m">00129</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="o">(</span>AX<span class="o">)</span>, CX
+        0x0084 <span class="m">00132</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    CX, <span class="s2">&#34;&#34;</span>..autotmp_8+16<span class="o">(</span>SP<span class="o">)</span>
+        0x0089 <span class="m">00137</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$0</span>
+        0x0089 <span class="m">00137</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    AX, <span class="o">(</span>SP<span class="o">)</span>
+        0x008d <span class="m">00141</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    CALL    runtime.racewrite<span class="o">(</span>SB<span class="o">)</span>
+        0x0092 <span class="m">00146</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>..autotmp_8+16<span class="o">(</span>SP<span class="o">)</span>, AX
+       ......
+        0x00b6 <span class="m">00182</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    CALL    runtime.deferreturn<span class="o">(</span>SB<span class="o">)</span>
+        0x00bb <span class="m">00187</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    CALL    runtime.racefuncexit<span class="o">(</span>SB<span class="o">)</span>
+        0x00c0 <span class="m">00192</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    MOVQ    104<span class="o">(</span>SP<span class="o">)</span>, BP
+        0x00c5 <span class="m">00197</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    ADDQ    <span class="nv">$112</span>, SP
+</code></pre></td></tr></table>
+</div>
+</div><p>在编译的代码中，增加了 runtime.racefuncenter、runtime.raceread、runtime.racewrite、runtime.racefuncexit 等检测 data race 的方法。通过这些插入的指令，Go race detector 工具就能够成功地检测出 data race 问题了。</p>
+<p>总结一下，通过在编译的时候插入一些指令，在运行时通过这些插入的指令检测并发读写从而发现 data race 问题，就是这个工具的实现机制。</p>
+<h2 id="2-go-vet-复制检测">2. go vet 复制检测</h2>
+<p>Package sync 的同步原语在使用后是不能复制的。原因在于，Mutex 是一个有状态的对象，它的 state 字段记录这个锁的状态。如果你要复制一个已经加锁的 Mutex 给一个新的变量，那么新的刚初始化的变量居然被加锁了，这显然不符合你的期望，因为你期望的是一个零值的 Mutex。关键是在并发环境下，你根本不知道要复制的 Mutex 状态是什么，因为要复制的 Mutex 是由其它 goroutine 并发访问的，状态可能总是在变化。</p>
+<h3 id="21-go-vet-使用">2.1 go vet 使用</h3>
+<p>Go 在运行时，有死锁的检查机制（<a href="https://golang.org/src/runtime/proc.go?h=checkdead#L4345" target="_blank" rel="noopener noreffer">checkdead</a> 方法），它能够发现死锁的 goroutine。但是显然我们不想运行的时候才发现这个因为复制 Mutex 导致的死锁问题。我们可以使用 vet 工具: <code>go vet counter.go</code>，把检查写在 Makefile 文件中，在持续集成的时候跑一跑，这样可以及时发现问题，及时修复。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="nx">vet</span> <span class="nx">counter</span><span class="p">.</span><span class="k">go</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/go/sync/go_vet_check.png"
+        data-srcset="/images/go/sync/go_vet_check.png, /images/go/sync/go_vet_check.png 1.5x, /images/go/sync/go_vet_check.png 2x"
+        data-sizes="auto"
+        alt="/images/go/sync/go_vet_check.png"
+        title="go vet" /></p>
+<p>报错信息清楚提示了发生了 lock value 复制的情况，并且显示出了出问题的代码行数以及 copy lock 导致的错误。</p>
+<h3 id="22-检测原理">2.2 检测原理</h3>
+<p>vet 检查是通过<a href="https://github.com/golang/tools/blob/master/go/analysis/passes/copylock/copylock.go" target="_blank" rel="noopener noreffer">copylock</a>分析器静态分析实现的。这个分析器会分析函数调用、range 遍历、复制、声明、函数返回值等位置，有没有锁的值 copy 的情景，以此来判断有没有问题。可以说，只要是实现了 Locker 接口，就会被分析。</p>
+<p>我们看到，下面的代码就是确定什么类型会被分析，其实就是实现了 Lock/Unlock 两个方法的 Locker 接口：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">var</span> <span class="nx">lockerType</span> <span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Interface</span>
+  
+  <span class="c1">// Construct a sync.Locker interface type.
+</span><span class="c1"></span>  <span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">nullary</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">NewSignature</span><span class="p">(</span><span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span><span class="p">)</span> <span class="c1">// func()
+</span><span class="c1"></span>    <span class="nx">methods</span> <span class="o">:=</span> <span class="p">[]</span><span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Func</span><span class="p">{</span>
+      <span class="nx">types</span><span class="p">.</span><span class="nf">NewFunc</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">NoPos</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;Lock&#34;</span><span class="p">,</span> <span class="nx">nullary</span><span class="p">),</span>
+      <span class="nx">types</span><span class="p">.</span><span class="nf">NewFunc</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">NoPos</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;Unlock&#34;</span><span class="p">,</span> <span class="nx">nullary</span><span class="p">),</span>
+    <span class="p">}</span>
+    <span class="nx">lockerType</span> <span class="p">=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">NewInterface</span><span class="p">(</span><span class="nx">methods</span><span class="p">,</span> <span class="kc">nil</span><span class="p">).</span><span class="nf">Complete</span><span class="p">()</span>
+  <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="23-nocopy-辅助-vet-检查">2.3 noCopy 辅助 vet 检查</h3>
+<p>其实，有些没有实现 Locker 接口的同步原语，也能被分析，比如 WaitGroup。WaitGroup 的结构如下所示:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">WaitGroup</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// 避免复制使用的一个技巧，可以告诉vet工具违反了复制使用的规则
+</span><span class="c1"></span>    <span class="nx">noCopy</span> <span class="nx">noCopy</span>
+    <span class="c1">// 64bit(8bytes)的值分成两段，高32bit是计数值，低32bit是waiter的计数
+</span><span class="c1"></span>    <span class="c1">// 另外32bit是用作信号量的
+</span><span class="c1"></span>    <span class="c1">// 因为64bit值的原子操作需要64bit对齐，但是32bit编译器不支持，所以数组中的元素在不同的架构中不一样，具体处理看下面的方法
+</span><span class="c1"></span>    <span class="c1">// 总之，会找到对齐的那64bit作为state，其余的32bit做信号量
+</span><span class="c1"></span>    <span class="nx">state1</span> <span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="kt">uint32</span>
+<span class="p">}</span>
+
+
+<span class="c1">// 得到state的地址和信号量的地址
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">state</span><span class="p">()</span> <span class="p">(</span><span class="nx">statep</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">))</span><span class="o">%</span><span class="mi">8</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="c1">// 如果地址是64bit对齐的，数组前两个元素做state，后一个元素做信号量
+</span><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">)),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 如果地址是32bit对齐的，数组后两个元素用来做state，它可以用来做64bit的原子操作，第一个元素32bit用来做信号量
+</span><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>它有一个 noCopy 的辅助字段，它的作用就是指示 vet 工具在做检查的时候，这个数据结构不能做值复制使用。更严谨地说，是不能在第一次使用之后复制使用 ( must not be copied after first use)。</p>
+<p>通过给 WaitGroup 添加一个 noCopy 字段，我们就可以为 WaitGroup 实现 Locker 接口，这样 vet 工具就可以做复制检查了。而且因为 noCopy 字段是未输出类型，所以 WaitGroup 不会暴露 Lock/Unlock 方法。</p>
+<p>noCopy 字段的类型是 noCopy，它只是一个辅助的、用来帮助 vet 检查用的类型:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">noCopy</span> <span class="kd">struct</span><span class="p">{}</span>
+
+<span class="c1">// Lock is a no-op used by -copylocks checker from `go vet`.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span>   <span class="p">{}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>noCopy 是一个通用的计数技术，其他并发原语中也会用到。同样的，如果你想要自己定义的数据结构不被复制使用，或者说，不能通过 vet 工具检查出复制使用的报警，就可以通过嵌入 noCopy 这个数据类型来实现。</p>
+<h2 id="3-死锁检测">3. 死锁检测</h2>
+<p>前面我们提到Go 在运行时，有死锁的检查机制（<a href="https://golang.org/src/runtime/proc.go?h=checkdead#L4345" target="_blank" rel="noopener noreffer">checkdead</a> 方法），能够检查出是否出现了死锁的情况。</p>
+<p>Go 死锁探测工具只能探测整个程序是否因为死锁而冻结了，<strong>不能检测出一组 goroutine 死锁导致的某一块业务冻结的情况</strong>。你还可以通过 Go 运行时自带的死锁检测工具，或者是第三方的工具（比如<a href="https://github.com/sasha-s/go-deadlock" target="_blank" rel="noopener noreffer">go-deadlock</a>、<a href="https://github.com/dominikh/go-tools" target="_blank" rel="noopener noreffer">go-tools</a>）进行检查，这样可以尽早发现一些死锁的问题。不过，有些时候，死锁在某些特定情况下才会被触发，所以，如果你的测试或者短时间的运行没问题，不代表程序一定不会有死锁问题。</p>
+<p>并发程序最难跟踪调试的就是很难重现，死锁的 Bug 可能会在极端的情况下出现。通过搜索日志、查看日志，我们能够知道程序有异常了，比如某个流程一直没有结束。这个时候，可以通过 Go pprof 工具分析，它提供了一个 block profiler 监控阻塞的 goroutine。除此之外，我们还可以查看全部的 goroutine 的堆栈信息，通过它，你可以查看阻塞的 groutine 究竟阻塞在哪一行哪一个对象上了。</p>
+<h2 id="参考">参考</h2>
+<p>上面这些调试工具的使用，参考自:</p>
+<ol>
+<li><a href="https://time.geekbang.org/column/article/294905" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战01</a></li>
+<li><a href="https://time.geekbang.org/column/article/295850" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战03</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-02-19&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/b33c29e2cf623c4c66096a497d65f0a27c1210ce" target="_blank" title="commit by WardSong(1556824234@qq.com) b33c29e2cf623c4c66096a497d65f0a27c1210ce: go sync mutex 扩展">
+                                    <i class="fas fa-hashtag fa-fw"></i>b33c29e</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/tool/go_exe/race_check/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" data-title="Go 并发调试工具" data-hashtags="go 并发"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" data-hashtag="go 并发"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" data-title="Go 并发调试工具"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" data-title="Go 并发调试工具"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" data-title="Go 并发调试工具" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">go 并发</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/sync/go_sync_4/" class="prev" rel="prev" title="Mutex 扩展"><i class="fas fa-angle-left fa-fw"></i>Mutex 扩展</a>
+            <a href="/posts/about/" class="next" rel="next" title="要写点什么">要写点什么<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2021-07-01T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Go 并发调试工具"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,50 @@
+# go hacker 编程
+
+
+每个语言都有一些 hacker 编程，这些 hacker 编程在某些时候能起到奇效，但是不能被乱用。
+<!-- more -->
+
+## 1. 获取 goroutine id
+获取 goroutine id，方式有两种，分别是
+1. 简单方式：通过 runtime.Stack 方法获取栈帧信息，栈帧信息里包含 goroutine id
+2. hacker 方式: 
+    - 原理: 我们获取运行时的 g 指针，反解出对应的 g 的结构。每个运行的 goroutine 结构的 g 指针保存在当前 goroutine 的一个叫做 TLS 对象中
+    - 第一步：我们先获取到 TLS 对象
+    - 第二步：再从 TLS 中获取 goroutine 结构的 g 指针
+    - 第三步：再从 g 指针中取出 goroutine id。
+    - 需要注意的是，不同 Go 版本的 goroutine 的结构可能不同，所以需要根据 Go 的不同版本进行调整。没必要重复造轮子，直接使用第三方库就可以: [petermattis/goid](https://github.com/petermattis/goid) 
+
+### 1.1 普通方式
+runtime.Stack 方法可以获取当前的 goroutine 信息，第二个参数为 true 会输出所有的 goroutine 信息，信息的格式如下：
+
+```go
+goroutine 1 [running]:
+main.main()
+        ....../main.go:19 +0xb1
+```
+
+第一行格式为 goroutine xxx，其中 xxx 就是 goroutine id，你只要解析出这个 id 即可。解析的方法可以采用下面的代码：
+
+```go
+func GoID() int {
+    var buf [64]byte
+    n := runtime.Stack(buf[:], false)
+    // 得到id字符串
+    idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+    id, err := strconv.Atoi(idField)
+    if err != nil {
+        panic(fmt.Sprintf("cannot get goroutine id: %v", err))
+    }
+    return id
+}
+```
+
+### 1.2 hacker 方式
+```go
+import (
+	"github.com/petermattis/goid" // 使用第三方包通过 hacker 方式获取 goroutine id 
+)
+
+gid := goid.Get()
+```
+
