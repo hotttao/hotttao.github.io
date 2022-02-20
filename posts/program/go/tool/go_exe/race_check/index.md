@@ -102,7 +102,7 @@ type WaitGroup struct {
     state1 [3]uint32
 }
 
-
+ 
 // 得到state的地址和信号量的地址
 func (wg *WaitGroup) state() (statep *uint64, semap *uint32) {
     if uintptr(unsafe.Pointer(&wg.state1))%8 == 0 {

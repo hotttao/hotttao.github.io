@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>WaitGroup - LoveIt</title><meta name="Description" content="go WaitGroup 任务编排"><meta property="og:title" content="WaitGroup" />
+<meta property="og:description" content="go WaitGroup 任务编排" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-05-05T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-02-20T12:59:29+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="WaitGroup"/>
+<meta name="twitter:description" content="go WaitGroup 任务编排"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/sync/go_sync_5/" /><link rel="next" href="https://hotttao.github.io/posts/program/go/tool/go_exe/race_check/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "WaitGroup",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_6\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  4641 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_6\/","datePublished": "2021-05-05T22:00:00+08:00","dateModified": "2022-02-20T12:59:29+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "go WaitGroup 任务编排"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">WaitGroup</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-05">2021-05-05</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4641 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 10 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-waitgroup-使用">1. WaitGroup 使用</a>
+      <ul>
+        <li><a href="#11-waitgroup-使用">1.1 WaitGroup 使用</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-waitgroup-实现">2. WaitGroup 实现</a>
+      <ul>
+        <li><a href="#21-add-方法实现">2.1 Add 方法实现</a></li>
+        <li><a href="#22-wait-方法实现">2.2 Wait 方法实现</a></li>
+        <li><a href="#23-异常检测">2.3 异常检测</a></li>
+        <li><a href="#24-错误示例">2.4 错误示例</a></li>
+        <li><a href="#24-waitgroup-的-race-check">2.4 WaitGroup 的 Race Check</a>
+          <ul>
+            <li><a href="#add-的-race-check">Add 的 Race Check</a></li>
+            <li><a href="#wait-的-race-check">Wait 的 Race Check</a></li>
+          </ul>
+        </li>
+        <li><a href="#25-nocopy-辅助-vet-检查">2.5 noCopy 辅助 vet 检查</a></li>
+        <li><a href="#26-总结">2.6 总结</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>WaitGroup 任务编排</p>
+<!-- more -->
+<h2 id="1-waitgroup-使用">1. WaitGroup 使用</h2>
+<p>WaitGroup 很简单，就是 package sync 用来做任务编排的一个并发原语。它要解决的就是并发 - 等待的问题: goroutine A 等待一组 goroutine 全部完成。</p>
+<p>很多操作系统和编程语言都提供了类似的并发原语。比如，Linux 中的 barrier、Pthread（POSIX 线程）中的 barrier、C++ 中的 std::barrier、Java 中的 CyclicBarrier 和 CountDownLatch 等。</p>
+<p>WaitGroup 非常适用于此类场景: 需要启动多个 goroutine 执行任务，主 goroutine 需要等待子 goroutine 都完成后才继续执行。</p>
+<h3 id="11-waitgroup-使用">1.1 WaitGroup 使用</h3>
+<p>Go 标准库中的 WaitGroup 提供了三个方法:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Add</span><span class="p">(</span><span class="nx">delta</span> <span class="kt">int</span><span class="p">)</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Done</span><span class="p">()</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>Add，用来设置 WaitGroup 的计数值；</li>
+<li>Done，用来将 WaitGroup 的计数值减 1，其实就是调用了 Add(-1)；</li>
+<li>Wait，调用这个方法的 goroutine 会一直阻塞，直到 WaitGroup 的计数值变为 0</li>
+</ol>
+<p>下面是 WaitGroup 的使用示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="c1">// 线程安全的计数器
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Counter</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">mu</span>    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+    <span class="nx">count</span> <span class="kt">uint64</span>
+<span class="p">}</span>
+<span class="c1">// 对计数值加一
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Counter</span><span class="p">)</span> <span class="nf">Incr</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nx">count</span><span class="o">++</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+<span class="p">}</span>
+<span class="c1">// 获取当前的计数值
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Counter</span><span class="p">)</span> <span class="nf">Count</span><span class="p">()</span> <span class="kt">uint64</span> <span class="p">{</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+    <span class="k">defer</span> <span class="nx">c</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nx">c</span><span class="p">.</span><span class="nx">count</span>
+<span class="p">}</span>
+<span class="c1">// sleep 1秒，然后计数值加1
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">worker</span><span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Counter</span><span class="p">,</span> <span class="nx">wg</span> <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+    <span class="nx">c</span><span class="p">.</span><span class="nf">Incr</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">counter</span> <span class="nx">Counter</span>
+    
+    <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="c1">// WaitGroup的值设置为10
+</span><span class="c1"></span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span> <span class="c1">// 启动10个goroutine执行加1任务
+</span><span class="c1"></span>        <span class="k">go</span> <span class="nf">worker</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">counter</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1">// 检查点，等待goroutine都完成任务
+</span><span class="c1"></span>    <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+    <span class="c1">// 输出当前计数器的值
+</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">counter</span><span class="p">.</span><span class="nf">Count</span><span class="p">())</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="2-waitgroup-实现">2. WaitGroup 实现</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">WaitGroup</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// 避免复制使用的一个技巧，可以告诉vet工具违反了复制使用的规则
+</span><span class="c1"></span>    <span class="nx">noCopy</span> <span class="nx">noCopy</span>
+    <span class="c1">// 64bit(8bytes)的值分成两段，高32bit是计数值，低32bit是waiter的计数
+</span><span class="c1"></span>    <span class="c1">// 另外32bit是用作信号量的
+</span><span class="c1"></span>    <span class="c1">// 因为64bit值的原子操作需要64bit对齐，但是32bit编译器不支持，所以数组中的元素在不同的架构中不一样，具体处理看下面的方法
+</span><span class="c1"></span>    <span class="c1">// 总之，会找到对齐的那64bit作为state，其余的32bit做信号量
+</span><span class="c1"></span>    <span class="nx">state1</span> <span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="kt">uint32</span>
+<span class="p">}</span>
+
+
+<span class="c1">// 得到state的地址和信号量的地址
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">state</span><span class="p">()</span> <span class="p">(</span><span class="nx">statep</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// %8 表示 8 个字节，注意不是位
+</span><span class="c1"></span>    <span class="c1">// 32位还是64位计算机不是关键点，关键点是 state1 有没有按照 64 位对齐，32位计算机上 state1 也可能刚好对齐到 64 位上
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">))</span><span class="o">%</span><span class="mi">8</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="c1">// 如果地址是64bit对齐的，数组前两个元素做state，后一个元素做信号量
+</span><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">)),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 如果地址是32bit对齐的，数组后两个元素用来做state，它可以用来做64bit的原子操作，第一个元素32bit用来做信号量
+</span><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>WaitGroup 的数据结构包括两个字段:</p>
+<ol>
+<li><code>noCopy noCopy</code>: 辅助字段，主要就是辅助 vet 工具检查是否通过 copy 赋值这个 WaitGroup 实例</li>
+<li><code>state1 [3]uint32</code>:
+<ul>
+<li>一个具有复合意义的字段，包含 WaitGroup 的计数、阻塞在检查点的 waiter 数和信号量。</li>
+<li>因为64bit值的原子操作需要64bit对齐，但是32bit编译器不支持，所以数组中的元素在不同的架构中不一样，处理方法在 state() 方法中</li>
+<li>在 64 位环境下，state1 的第一个元素是 waiter 数，第二个元素是 WaitGroup 的计数值，第三个元素是信号量</li>
+<li>在 32 位环境下，如果 state1 不是 64 位对齐的地址，那么 state1 的第一个元素是信号量，后两个元素分别是 waiter 数和计数值</li>
+</ul>
+</li>
+</ol>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/go/sync/waitgroup_state1.jpg"
+        data-srcset="/images/go/sync/waitgroup_state1.jpg, /images/go/sync/waitgroup_state1.jpg 1.5x, /images/go/sync/waitgroup_state1.jpg 2x"
+        data-sizes="auto"
+        alt="/images/go/sync/waitgroup_state1.jpg"
+        title="WaitGroup State1字段含义" /></p>
+<p>接下来我们来看 Add、Done 和 Wait 这三个方法的实现。在查看这部分源码实现时，除了这些方法本身的实现外，还会有一些额外的代码，主要是 race 检查和异常检查的代码。其中，有几个检查非常关键，如果检查不通过，会出现 panic。我们在介绍完这三个方法的实现之后再来统一介绍。</p>
+<h3 id="21-add-方法实现">2.1 Add 方法实现</h3>
+<p>Add 方法主要操作的是 state 的计数部分，可以为计数值增加一个 delta 值，内部通过原子操作把这个值加到计数值上，delta 也可以是个负数，相当于为计数值减去一个值，Done 方法内部其实就是通过 Add(-1) 实现的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Add</span><span class="p">(</span><span class="nx">delta</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">statep</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">:=</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">state</span><span class="p">()</span>
+    <span class="c1">// 高32bit是计数值v，所以把delta左移32，增加到计数上
+</span><span class="c1"></span>    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddUint64</span><span class="p">(</span><span class="nx">statep</span><span class="p">,</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">delta</span><span class="p">)</span><span class="o">&lt;&lt;</span><span class="mi">32</span><span class="p">)</span>
+    <span class="nx">v</span> <span class="o">:=</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">state</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">)</span> <span class="c1">// 当前计数值
+</span><span class="c1"></span>    <span class="nx">w</span> <span class="o">:=</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">state</span><span class="p">)</span> <span class="c1">// waiter count
+</span><span class="c1"></span>
+    <span class="k">if</span> <span class="nx">v</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">w</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 如果计数值v为0并且waiter的数量w不为0，那么state的值就是waiter的数量
+</span><span class="c1"></span>    <span class="c1">// 将waiter的数量设置为0，因为计数值v也是0,所以它们俩的组合*statep直接设置为0即可。此时需要并唤醒所有的waiter
+</span><span class="c1"></span>    <span class="c1">// Add(-n) 的处理逻辑
+</span><span class="c1"></span>    <span class="o">*</span><span class="nx">statep</span> <span class="p">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="p">;</span> <span class="nx">w</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">w</span><span class="o">--</span> <span class="p">{</span>
+        <span class="nf">runtime_Semrelease</span><span class="p">(</span><span class="nx">semap</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+
+<span class="c1">// Done方法实际就是计数器减1
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Done</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="22-wait-方法实现">2.2 Wait 方法实现</h3>
+<p>Wait 方法的实现逻辑是：</p>
+<ol>
+<li>不断检查 state 的值。如果其中的计数值变为了 0，那么说明所有的任务已完成，调用者不必再等待，直接返回</li>
+<li>如果计数值大于 0，说明此时还有任务没完成，那么调用者就变成了等待者，需要加入 waiter 队列，并且阻塞住自己。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">statep</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">:=</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">state</span><span class="p">()</span>
+    
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadUint64</span><span class="p">(</span><span class="nx">statep</span><span class="p">)</span>
+        <span class="nx">v</span> <span class="o">:=</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">state</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">)</span> <span class="c1">// 当前计数值
+</span><span class="c1"></span>        <span class="nx">w</span> <span class="o">:=</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">state</span><span class="p">)</span> <span class="c1">// waiter的数量
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">v</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+            <span class="c1">// 如果计数值为0, 调用这个方法的goroutine不必再等待，继续执行它后面的逻辑即可
+</span><span class="c1"></span>            <span class="k">return</span>
+        <span class="p">}</span>
+        <span class="c1">// 否则把waiter数量加1。期间可能有并发调用Wait的情况，所以最外层使用了一个for循环
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapUint64</span><span class="p">(</span><span class="nx">statep</span><span class="p">,</span> <span class="nx">state</span><span class="p">,</span> <span class="nx">state</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 阻塞休眠等待
+</span><span class="c1"></span>            <span class="nf">runtime_Semacquire</span><span class="p">(</span><span class="nx">semap</span><span class="p">)</span>
+            <span class="c1">// 被唤醒，不再阻塞，返回
+</span><span class="c1"></span>            <span class="k">return</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="23-异常检测">2.3 异常检测</h3>
+<p>前面我们分析 Add 和 Wait 实现的时候删除了异常检测的代码，这些异常检测的逻辑就是我们使用 WaitGroup 的避坑指南。通常使用 WaitGroup 时会出现以下三个问题:</p>
+<ol>
+<li>计数器设置为负值:
+<ul>
+<li>检查点: WaitGroup 的计数器的值必须大于等于 0。我们在更改这个计数值的时候，WaitGroup 会先做检查，如果计数值被设置为负数，就会导致 panic。</li>
+<li>错误点: 一般情况下，有两种方法会导致计数器设置为负数
+<ul>
+<li>调用 Add 的时候传递一个负数，导致计数器加上这个负值后小于 0</li>
+<li>调用 Done 方法的次数过多，超过了 WaitGroup 的计数值</li>
+</ul>
+</li>
+<li>建议: 使用 WaitGroup 的正确姿势是，预先确定好 WaitGroup 的计数值，然后调用相同次数的 Done 完成相应的任务</li>
+</ul>
+</li>
+<li>不期望的 Add 时机: 在使用 WaitGroup 的时候，你一定要遵循的原则就是，等所有的 Add 方法调用之后再调用 Wait，否则就可能导致 panic 或者不期望的结果</li>
+<li>前一个 Wait 还没结束就重用 WaitGroup
+<ul>
+<li>WaitGroup 是可以重用的。只要 WaitGroup 的计数值恢复到零值的状态，那么它就可以被看作是新创建的 WaitGroup，被重复使用。</li>
+<li>但是，如果我们在 WaitGroup 的计数值还没有恢复到零值的时候就重用，就会导致程序 panic</li>
+<li>这个并发的 Data Race 在于: <strong>Add() 方法在将计数器归零时，需要唤醒所有被 Wait 住的协程，在这个过程中间是不能有并发的 Add 和 Wait 方法调用的</strong></li>
+</ul>
+</li>
+</ol>
+<h3 id="24-错误示例">2.4 错误示例</h3>
+<p>在这个例子中，我们原本设想的是，等四个 goroutine 都执行完毕后输出 Done 的信息，但是它的错误之处在于，将 WaitGroup.Add 方法的调用放在了子 gorotuine 中。等主 goorutine 调用 Wait 的时候，因为四个任务 goroutine 一开始都休眠，所以可能 WaitGroup 的 Add 方法还没有被调用，WaitGroup 的计数还是 0，所以它并没有等待四个子 goroutine 执行完毕才继续执行，而是立刻执行了下一步。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 不期望的 Add 时机
+</span><span class="c1"></span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+    <span class="c1">// 解决方法一: 
+</span><span class="c1"></span>    <span class="c1">// wg.Add(4) // 预先设定WaitGroup的计数值
+</span><span class="c1"></span>
+    <span class="k">go</span> <span class="nf">dosomething</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">)</span> <span class="c1">// 启动第一个goroutine
+</span><span class="c1"></span>    <span class="k">go</span> <span class="nf">dosomething</span><span class="p">(</span><span class="mi">110</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">)</span> <span class="c1">// 启动第二个goroutine
+</span><span class="c1"></span>    <span class="k">go</span> <span class="nf">dosomething</span><span class="p">(</span><span class="mi">120</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">)</span> <span class="c1">// 启动第三个goroutine
+</span><span class="c1"></span>    <span class="k">go</span> <span class="nf">dosomething</span><span class="p">(</span><span class="mi">130</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">)</span> <span class="c1">// 启动第四个goroutine
+</span><span class="c1"></span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span> <span class="c1">// 主goroutine等待完成
+</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Done&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">dosomething</span><span class="p">(</span><span class="nx">millisecs</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">,</span> <span class="nx">wg</span> <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">duration</span> <span class="o">:=</span> <span class="nx">millisecs</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span>
+    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">duration</span><span class="p">)</span> <span class="c1">// 故意sleep一段时间
+</span><span class="c1"></span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;后台执行, duration:&#34;</span><span class="p">,</span> <span class="nx">duration</span><span class="p">)</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>在下面的例子中，第 6 行虽然让 WaitGroup 的计数恢复到 0，但是因为第 9 行有个 waiter 在等待，如果等待 Wait 的 goroutine，刚被唤醒就和 Add 调用（第 7 行）有并发执行的冲突，所以就会出现 panic。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 前一个 Wait 还没结束就重用 WaitGroup
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+        <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span> <span class="c1">// 计数器减1
+</span><span class="c1"></span>        <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">// 计数值加1
+</span><span class="c1"></span>    <span class="p">}()</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span> <span class="c1">// 主goroutine等待，有可能和第7行并发执行
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>总结一下：WaitGroup 虽然可以重用，但是是有一个前提的，那就是必须等到上一轮的 Wait 完成之后，才能重用 WaitGroup 执行下一轮的 Add/Wait，如果你在 Wait 还没执行完的时候就调用下一轮 Add 方法，就有可能出现 panic。</p>
+<h3 id="24-waitgroup-的-race-check">2.4 WaitGroup 的 Race Check</h3>
+<p>WaitGroup 的异常检查，我看几遍，都没能彻底理解 WaitGroup 重用导致 panic 的根本原因。其实 WaitGroup 代码很少，直接看代码可能更容易帮助理解 panic 发生确切时机。</p>
+<h4 id="add-的-race-check">Add 的 Race Check</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Copyright 2011 The Go Authors. All rights reserved.
+</span><span class="c1">// Use of this source code is governed by a BSD-style
+</span><span class="c1">// license that can be found in the LICENSE file.
+</span><span class="c1"></span>
+<span class="kn">package</span> <span class="nx">sync</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;internal/race&#34;</span>
+	<span class="s">&#34;sync/atomic&#34;</span>
+	<span class="s">&#34;unsafe&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Add</span><span class="p">(</span><span class="nx">delta</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">statep</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">:=</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">state</span><span class="p">()</span>
+	<span class="k">if</span> <span class="nx">race</span><span class="p">.</span><span class="nx">Enabled</span> <span class="p">{</span>
+		<span class="nx">_</span> <span class="p">=</span> <span class="o">*</span><span class="nx">statep</span> <span class="c1">// trigger nil deref early
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">delta</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
+			<span class="c1">// Synchronize decrements with Wait.
+</span><span class="c1"></span>			<span class="nx">race</span><span class="p">.</span><span class="nf">ReleaseMerge</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">wg</span><span class="p">))</span>
+		<span class="p">}</span>
+		<span class="nx">race</span><span class="p">.</span><span class="nf">Disable</span><span class="p">()</span>
+		<span class="k">defer</span> <span class="nx">race</span><span class="p">.</span><span class="nf">Enable</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddUint64</span><span class="p">(</span><span class="nx">statep</span><span class="p">,</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">delta</span><span class="p">)</span><span class="o">&lt;&lt;</span><span class="mi">32</span><span class="p">)</span>
+	<span class="nx">v</span> <span class="o">:=</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">state</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">)</span>
+	<span class="nx">w</span> <span class="o">:=</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">state</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">race</span><span class="p">.</span><span class="nx">Enabled</span> <span class="o">&amp;&amp;</span> <span class="nx">delta</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">v</span> <span class="o">==</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">delta</span><span class="p">)</span> <span class="p">{</span>
+		<span class="c1">// The first increment must be synchronized with Wait.
+</span><span class="c1"></span>		<span class="c1">// Need to model this as a read, because there can be
+</span><span class="c1"></span>		<span class="c1">// several concurrent wg.counter transitions from 0.
+</span><span class="c1"></span>		<span class="nx">race</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">semap</span><span class="p">))</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">v</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync: negative WaitGroup counter&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">w</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">delta</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">v</span> <span class="o">==</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">delta</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync: WaitGroup misuse: Add called concurrently with Wait&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">v</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">w</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="k">return</span>
+	<span class="p">}</span>
+	<span class="c1">// This goroutine has set counter to 0 when waiters &gt; 0.
+</span><span class="c1"></span>	<span class="c1">// Now there can&#39;t be concurrent mutations of state:
+</span><span class="c1"></span>	<span class="c1">// - Adds must not happen concurrently with Wait,
+</span><span class="c1"></span>	<span class="c1">// - Wait does not increment waiters if it sees counter == 0.
+</span><span class="c1"></span>	<span class="c1">// Still do a cheap sanity check to detect WaitGroup misuse.
+</span><span class="c1"></span>	<span class="k">if</span> <span class="o">*</span><span class="nx">statep</span> <span class="o">!=</span> <span class="nx">state</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync: WaitGroup misuse: Add called concurrently with Wait&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// Reset waiters count to 0.
+</span><span class="c1"></span>	<span class="o">*</span><span class="nx">statep</span> <span class="p">=</span> <span class="mi">0</span>
+	<span class="k">for</span> <span class="p">;</span> <span class="nx">w</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">w</span><span class="o">--</span> <span class="p">{</span>
+		<span class="nf">runtime_Semrelease</span><span class="p">(</span><span class="nx">semap</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>从代码可以看到 Add 是触发 panic 有三个地方:</p>
+<ol>
+<li><code>v &lt; 0</code>: 即计数器设置为负值</li>
+<li><code>w != 0 &amp;&amp; delta &gt; 0 &amp;&amp; v == int32(delta)</code>:
+<ul>
+<li>waiter 数不为 0, 此时添加了 Add，并且 <strong>state 字段记录的计数器等于此次 Add 的值</strong>，说明上一次 Wait() 还没有结束就 Add 了新值。这是并发修改的场景一</li>
+</ul>
+</li>
+<li><code>*statep != state</code>:
+<ul>
+<li>执行到此处，经过前面的判断条件过滤，此处 <strong>v 只能等于 0，此时需要做的只有唤醒所有 Wait 住的协程，不能有并发的 Add() 和 Wait() 方法调用</strong>，这是并发修改的场景二。</li>
+<li>同时正如注释里面所说的这是一个&quot;连接的检查&quot;，如果并发是发生在 这个检查和下面触发 Wait 住的协程之间是不会异常的，但是程序已经出现了意料之外的结果。</li>
+</ul>
+</li>
+</ol>
+<h4 id="wait-的-race-check">Wait 的 Race Check</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Done decrements the WaitGroup counter by one.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Done</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// Wait blocks until the WaitGroup counter is zero.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">statep</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">:=</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">state</span><span class="p">()</span>
+	<span class="k">if</span> <span class="nx">race</span><span class="p">.</span><span class="nx">Enabled</span> <span class="p">{</span>
+		<span class="nx">_</span> <span class="p">=</span> <span class="o">*</span><span class="nx">statep</span> <span class="c1">// trigger nil deref early
+</span><span class="c1"></span>		<span class="nx">race</span><span class="p">.</span><span class="nf">Disable</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadUint64</span><span class="p">(</span><span class="nx">statep</span><span class="p">)</span>
+		<span class="nx">v</span> <span class="o">:=</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">state</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">)</span>
+		<span class="nx">w</span> <span class="o">:=</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">state</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">v</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+			<span class="c1">// Counter is 0, no need to wait.
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">race</span><span class="p">.</span><span class="nx">Enabled</span> <span class="p">{</span>
+				<span class="nx">race</span><span class="p">.</span><span class="nf">Enable</span><span class="p">()</span>
+				<span class="nx">race</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">wg</span><span class="p">))</span>
+			<span class="p">}</span>
+			<span class="k">return</span>
+		<span class="p">}</span>
+		<span class="c1">// Increment waiters count.
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapUint64</span><span class="p">(</span><span class="nx">statep</span><span class="p">,</span> <span class="nx">state</span><span class="p">,</span> <span class="nx">state</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">race</span><span class="p">.</span><span class="nx">Enabled</span> <span class="o">&amp;&amp;</span> <span class="nx">w</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="c1">// Wait must be synchronized with the first Add.
+</span><span class="c1"></span>				<span class="c1">// Need to model this is as a write to race with the read in Add.
+</span><span class="c1"></span>				<span class="c1">// As a consequence, can do the write only for the first waiter,
+</span><span class="c1"></span>				<span class="c1">// otherwise concurrent Waits will race with each other.
+</span><span class="c1"></span>				<span class="nx">race</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">semap</span><span class="p">))</span>
+			<span class="p">}</span>
+			<span class="nf">runtime_Semacquire</span><span class="p">(</span><span class="nx">semap</span><span class="p">)</span>
+			<span class="k">if</span> <span class="o">*</span><span class="nx">statep</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync: WaitGroup is reused before previous Wait has returned&#34;</span><span class="p">)</span>
+			<span class="p">}</span>
+			<span class="k">if</span> <span class="nx">race</span><span class="p">.</span><span class="nx">Enabled</span> <span class="p">{</span>
+				<span class="nx">race</span><span class="p">.</span><span class="nf">Enable</span><span class="p">()</span>
+				<span class="nx">race</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">wg</span><span class="p">))</span>
+			<span class="p">}</span>
+			<span class="k">return</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>从代码可以看到 Wait() 触发的异常只有一个地方: <code>*statep != 0</code>:</p>
+<ul>
+<li>因为在 Add 唤醒阻塞的 Wait 协程前，已经将 <code>*statep = 0</code>，而如果此时 <code>*statep != 0</code> 说明在 Add() 触发被 Wait 住协程之后，有其他 Add() 和 Wait() 方法调用，是并发修改的场景。</li>
+</ul>
+<h3 id="25-nocopy-辅助-vet-检查">2.5 noCopy 辅助 vet 检查</h3>
+<p>noCopy 就是指示 vet 工具在做检查的时候，这个数据结构不能做值复制使用。更严谨地说，是不能在第一次使用之后复制使用 ( must not be copied after first use)。noCopy 是一个通用的计数技术，其他并发原语中也会用到。</p>
+<p>我们在前面学习 Mutex 的时候用到了 vet 工具。vet 会对实现 Locker 接口的数据类型做静态检查，一旦代码中有复制使用这种数据类型的情况，就会发出警告。WaitGroup 同步原语不就是 Add、Done 和 Wait 方法吗？vet 能检查出来吗？其实是可以的。通过给 WaitGroup 添加一个 noCopy 字段，我们就可以为 WaitGroup 实现 Locker 接口，这样 vet 工具就可以做复制检查了。而且因为 noCopy 字段是未输出类型，所以 WaitGroup 不会暴露 Lock/Unlock 方法。</p>
+<p>noCopy 字段的类型是 noCopy，它只是一个辅助的、用来帮助 vet 检查用的类型:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">noCopy</span> <span class="kd">struct</span><span class="p">{}</span>
+
+<span class="c1">// Lock is a no-op used by -copylocks checker from `go vet`.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span>   <span class="p">{}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>如果你想要自己定义的数据结构不被复制使用，或者说，不能通过 vet 工具检查出复制使用的报警，就可以通过嵌入 noCopy 这个数据类型来实现。</p>
+<h3 id="26-总结">2.6 总结</h3>
+<p>关于如何避免错误使用 WaitGroup 的情况，我们只需要尽量保证下面 5 点就可以了：</p>
+<ol>
+<li>不重用 WaitGroup。新建一个 WaitGroup 不会带来多大的资源开销，重用反而更容易出错</li>
+<li>保证所有的 Add 方法调用都在 Wait 之前</li>
+<li>不传递负数给 Add 方法，只通过 Done 来给计数值减 1</li>
+<li>不做多余的 Done 方法调用，保证 Add 的计数值和 Done 方法调用的数量是一样的</li>
+<li>不遗漏 Done 方法的调用，否则会导致 Wait hang 住无法返回</li>
+</ol>
+<h2 id="参考">参考</h2>
+<p>本文内容摘录自:</p>
+<ol>
+<li><a href="https://time.geekbang.org/column/intro/100061801?tab=catalog" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-02-20&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/92be9980baf88da118fd65772d721630b597d355" target="_blank" title="commit by WardSong(1556824234@qq.com) 92be9980baf88da118fd65772d721630b597d355: go waitGroup">
+                                    <i class="fas fa-hashtag fa-fw"></i>92be998</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/sync/go_sync_6/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" data-title="WaitGroup" data-hashtags="go 并发"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" data-hashtag="go 并发"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" data-title="WaitGroup"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" data-title="WaitGroup"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_6/" data-title="WaitGroup" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">go 并发</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/sync/go_sync_5/" class="prev" rel="prev" title="RWMutex"><i class="fas fa-angle-left fa-fw"></i>RWMutex</a>
+            <a href="/posts/program/go/tool/go_exe/race_check/" class="next" rel="next" title="Go 并发调试工具">Go 并发调试工具<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2021-05-05T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"WaitGroup"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
