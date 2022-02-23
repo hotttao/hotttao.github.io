@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>13.3 Centos7 Systemd 启动流程 - LoveIt</title><meta name="Description" content="13.3 Centos7 Systemd 启动流程"><meta property="og:title" content="13.3 Centos7 Systemd 启动流程" />
+<meta property="og:description" content="13.3 Centos7 Systemd 启动流程" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-02-21T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-02-21T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="13.3 Centos7 Systemd 启动流程"/>
+<meta name="twitter:description" content="13.3 Centos7 Systemd 启动流程"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/grub%E7%B3%BB%E7%BB%9F%E9%85%8D%E7%BD%AE%E4%B8%8E%E4%BD%BF%E7%94%A8/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "13.3 Centos7 Systemd 启动流程",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86\/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  4165 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86\/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B\/","datePublished": "2018-02-21T22:10:00+08:00","dateModified": "2018-02-21T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "13.3 Centos7 Systemd 启动流程"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">13.3 Centos7 Systemd 启动流程</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-02-21">2018-02-21</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4165 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-sysmted-概述">1. Sysmted 概述：</a>
+      <ul>
+        <li><a href="#12--systemd的新特性">1.2  Systemd的新特性</a>
+          <ul>
+            <li><a href="#12-服务配置">1.2 服务配置</a></li>
+            <li><a href="#unit的常见类型">unit的常见类型</a></li>
+            <li><a href="#systemd-的配置文件">systemd 的配置文件</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-systemctl-命令使用">2. systemctl 命令使用</a>
+      <ul>
+        <li><a href="#21-管理系统服务-service-unit">2.1 管理系统服务 (service unit)</a>
+          <ul>
+            <li><a href="#服务启动与关闭">服务启动与关闭</a></li>
+            <li><a href="#服务状态查看">服务状态查看</a></li>
+            <li><a href="#开机自启">开机自启</a></li>
+            <li><a href="#依赖关系">依赖关系</a></li>
+          </ul>
+        </li>
+        <li><a href="#22-管理-target-units">2.2 管理 target units</a></li>
+        <li><a href="#23-其它常用快捷命令">2.3 其它常用快捷命令</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-service-unit-file-配置">3. service unit file 配置</a>
+      <ul>
+        <li><a href="#31-unit-file-组成">3.1 unit file 组成</a>
+          <ul>
+            <li><a href="#unit段">Unit段</a></li>
+            <li><a href="#service段">Service段</a></li>
+            <li><a href="#install段">Install段</a></li>
+          </ul>
+        </li>
+        <li><a href="#32-修改配置文件后重启">3.2 修改配置文件后重启</a></li>
+      </ul>
+    </li>
+    <li><a href="#4target-的配置文件">4.Target 的配置文件</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Centos7 Systemd 启动流程</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_mt.jpg"
+        data-srcset="/images/linux_mt/linux_mt.jpg, /images/linux_mt/linux_mt.jpg 1.5x, /images/linux_mt/linux_mt.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_mt.jpg"
+        title="linux-mt" /></p>
+<!-- more -->
+<p>本节我们学习 Centos7 的开机启动程序 Systemd，及其服务管理工具 systemctl。我们会与 Centos6 中的 upstart 的启动程序对比来讲解。大家也可以参考<a href="http://www.ruanyifeng.com/blog/2016/03/systemd-tutorial-part-two.html" target="_blank" rel="noopener noreffer">阮一峰老师的博客</a>。本节内容如下:</p>
+<ol>
+<li>Systemd 概述</li>
+<li>Systemctl 命令的使用</li>
+<li>Systemd 配置文件格式</li>
+</ol>
+<h2 id="1-sysmted-概述">1. Sysmted 概述：</h2>
+<p>MBR 架构的系统，开机启动过程是 <code>POST --&gt; Boot Sequeue(BIOS) --&gt; Bootloader(MBR) --&gt; Kernel(ramdisk) --&gt; rootfs --&gt; /sbin/init</code>，而 Systemd 正是 Centos7 的/sbin/init 程序</p>
+<h3 id="12--systemd的新特性">1.2  Systemd的新特性</h3>
+<p>systemd 相比于 Centos5 的 SysV init，和 Centos 的 Upstart，具有如下特性:</p>
+<ol>
+<li>新特性
+<ul>
+<li>系统引导时实现服务并行启动；</li>
+<li>按需激活进程；</li>
+<li>系统状态快照；</li>
+<li>基于依赖关系定义服务控制逻辑；</li>
+</ul>
+</li>
+<li>关键特性：
+<ul>
+<li>基于socket的激活机制：socket与程序分离；</li>
+<li>基于bus的激活机制；</li>
+<li>基于device的激活机制；</li>
+<li>基于Path的激活机制；</li>
+<li>系统快照：保存各unit的当前状态信息于持久存储设备中；</li>
+<li>向后兼容sysv init脚本；/etc/init.d/</li>
+<li>不兼容：
+<ul>
+<li>systemctl的命令是固定不变的；</li>
+<li>非由systemd启动的服务，systemctl无法与之通信；</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h4 id="12-服务配置">1.2 服务配置</h4>
+<p>Sysv init 和 Upstart 中，服务的管理单元是一个个具有特定格式的 shell 脚本，由 service 命令统一进行管理。而 Systemd 中服务的核心单元叫 Unit，unit 由其相关配置文件进行标识、识别和配置，配置文件中主要包含了系统服务、监听的socket、保存的快照以及其它与init相关的信息。systemd 按照功能将 unit 分为了如下几种类型。</p>
+<h4 id="unit的常见类型">unit的常见类型</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">类型</th>
+<th style="text-align:left">文件扩展名</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Service unit</td>
+<td style="text-align:left">.service</td>
+<td style="text-align:left">用于定义系统服务</td>
+</tr>
+<tr>
+<td style="text-align:left">Target unit</td>
+<td style="text-align:left">.target</td>
+<td style="text-align:left">用于模拟实现运行级别</td>
+</tr>
+<tr>
+<td style="text-align:left">Device unit</td>
+<td style="text-align:left">.device</td>
+<td style="text-align:left">用于定义内核识别的设备</td>
+</tr>
+<tr>
+<td style="text-align:left">Mount unit</td>
+<td style="text-align:left">.mount</td>
+<td style="text-align:left">定义文件系统挂载点</td>
+</tr>
+<tr>
+<td style="text-align:left">Socket unit</td>
+<td style="text-align:left">.socket</td>
+<td style="text-align:left">用于标识进程间通信用到的socket文件</td>
+</tr>
+<tr>
+<td style="text-align:left">Snapshot unit</td>
+<td style="text-align:left">.snapshot</td>
+<td style="text-align:left">管理系统快照</td>
+</tr>
+<tr>
+<td style="text-align:left">Swap unit</td>
+<td style="text-align:left">.swap</td>
+<td style="text-align:left">用于标识swap设备</td>
+</tr>
+<tr>
+<td style="text-align:left">Automount unit</td>
+<td style="text-align:left">.automount</td>
+<td style="text-align:left">文件系统自动点设备</td>
+</tr>
+<tr>
+<td style="text-align:left">Path unit</td>
+<td style="text-align:left">.path</td>
+<td style="text-align:left">用于定义文件系统中的一文件或目录</td>
+</tr>
+</tbody>
+</table>
+<h4 id="systemd-的配置文件">systemd 的配置文件</h4>
+<p>systemd 的配置文件位于以下三个目录中</p>
+<ul>
+<li><code>/usr/lib/systemd/system</code>: 实际配置文件的存存放位置</li>
+<li><code>/run/systemd/system</code>：不常用</li>
+<li><code>/etc/systemd/system</code>: 基本上都是软连接</li>
+</ul>
+<p>对于那些支持 Systemd 的软件，安装的时候，会自动在<code>/usr/lib/systemd/system</code>目录添加一个配置文件。
+如果你想让该软件开机启动，就执行下面的命令（以httpd.service为例）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">[root@hp system]# ll /etc/systemd/system/default.target
+lrwxrwxrwx. 1 root root 40 3月   5 17:37 /etc/systemd/system/default.target -&gt; /usr/lib/systemd/system/graphical.target
+
+[root@hp system]# systemctl enable httpd
+Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+</code></pre></td></tr></table>
+</div>
+</div><p>上面的命令相当于在 <code>/etc/systemd/system</code> 目录添加一个符号链接，指向 <code>/usr/lib/systemd/system</code> 里面的httpd.service文件。
+这是因为开机时，Systemd只执行 <code>/etc/systemd/system</code> 目录里面的配置文件。这也意味着，如果把修改后的配置文件放在该目录，就可以达到覆盖原始配置的效果。</p>
+<p>除了使用普通的文本查看命令外查看配置文件外，<code>systemctl cat NAME.service</code> 可通过服务名称直接查看配置文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="o">[</span>root@hp system<span class="o">]</span>$ systemctl cat httpd
+<span class="c1"># /usr/lib/systemd/system/httpd.service</span>
+<span class="o">[</span>Unit<span class="o">]</span>
+<span class="nv">Description</span><span class="o">=</span>The Apache HTTP Server
+<span class="nv">After</span><span class="o">=</span>network.target remote-fs.target nss-lookup.target
+<span class="nv">Documentation</span><span class="o">=</span>man:httpd<span class="o">(</span>8<span class="o">)</span>
+<span class="nv">Documentation</span><span class="o">=</span>man:apachectl<span class="o">(</span>8<span class="o">)</span>
+
+<span class="o">[</span>Service<span class="o">]</span>
+<span class="nv">Type</span><span class="o">=</span>notify
+<span class="nv">EnvironmentFile</span><span class="o">=</span>/etc/sysconfig/httpd
+<span class="nv">ExecStart</span><span class="o">=</span>/usr/sbin/httpd <span class="nv">$OPTIONS</span> -DFOREGROUND
+<span class="nv">ExecReload</span><span class="o">=</span>/usr/sbin/httpd <span class="nv">$OPTIONS</span> -k graceful
+<span class="nv">ExecStop</span><span class="o">=</span>/bin/kill -WINCH <span class="si">${</span><span class="nv">MAINPID</span><span class="si">}</span>
+<span class="c1"># We want systemd to give httpd some time to finish gracefully, but still want</span>
+<span class="c1"># it to kill httpd after TimeoutStopSec if something went wrong during the</span>
+<span class="c1"># graceful stop. Normally, Systemd sends SIGTERM signal right after the</span>
+<span class="c1"># ExecStop, which would kill httpd. We are sending useless SIGCONT here to give</span>
+<span class="c1"># httpd time to finish.</span>
+<span class="nv">KillSignal</span><span class="o">=</span>SIGCONT
+<span class="nv">PrivateTmp</span><span class="o">=</span><span class="nb">true</span>
+
+<span class="o">[</span>Install<span class="o">]</span>
+<span class="nv">WantedBy</span><span class="o">=</span>multi-user.target
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="2-systemctl-命令使用">2. systemctl 命令使用</h2>
+<h3 id="21-管理系统服务-service-unit">2.1 管理系统服务 (service unit)</h3>
+<p><code>systemctl  [OPTIONS...]  COMMAND  [NAME...]</code></p>
+<ul>
+<li>OPTIONS:
+<ul>
+<li><code>-t, --type=</code>: 指定查看的 unit 类型</li>
+<li><code>-a, --all</code>：查看所由服务</li>
+</ul>
+</li>
+</ul>
+<h4 id="服务启动与关闭">服务启动与关闭</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">启动</td>
+<td style="text-align:left">service  NAME  start</td>
+<td style="text-align:left">systemctl  start  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">停止</td>
+<td style="text-align:left">service  NAME  stop</td>
+<td style="text-align:left">systemctl  stop  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">重启</td>
+<td style="text-align:left">service  NAME  restart</td>
+<td style="text-align:left">systemctl  restart  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">状态</td>
+<td style="text-align:left">service  NAME  status</td>
+<td style="text-align:left">systemctl  status  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">条件式重启</td>
+<td style="text-align:left">service  NAME  condrestart</td>
+<td style="text-align:left">systemctl  try-restart  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">重载或重启服务</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  reload-or-restart  NAME.servcie</td>
+</tr>
+<tr>
+<td style="text-align:left">重载或条件式重启服务</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  reload-or-try-restart  NAME.service</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">[root@hp system]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since 二 2018-08-07 09:14:30 CST; 1s ago
+     Docs: man:httpd(8)
+           man:apachectl(8)
+ Main PID: 6170 (httpd)
+   Status: &#34;Processing requests...&#34;
+   CGroup: /system.slice/httpd.service
+           ├─6170 /usr/sbin/httpd -DFOREGROUND
+           ├─6174 /usr/sbin/httpd -DFOREGROUND
+           ├─6176 /usr/sbin/httpd -DFOREGROUND
+           ├─6177 /usr/sbin/httpd -DFOREGROUND
+           ├─6178 /usr/sbin/httpd -DFOREGROUND
+           ├─6180 /usr/sbin/httpd -DFOREGROUND
+           └─6181 /usr/sbin/httpd -DFOREGROUND
+
+8月 07 09:14:28 hp.tao systemd[1]: Starting The Apache HTTP Server...
+8月 07 09:14:30 hp.tao systemd[1]: Started The Apache HTTP Server.
+</code></pre></td></tr></table>
+</div>
+</div><p>输出:</p>
+<ul>
+<li>Loaded行：配置文件的位置，是否设为开机启动</li>
+<li>Active行：表示正在运行</li>
+<li>Main PID行：主进程ID</li>
+<li>Status行：由应用本身（这里是 httpd ）提供的软件当前状态</li>
+<li>CGroup块：应用的所有子进程</li>
+<li>日志块：应用的日志</li>
+</ul>
+<h4 id="服务状态查看">服务状态查看</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">查看某服务当前激活与否的状态</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  is-active  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有已激活的服务</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-units  &ndash;type  service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有服务（已激活及未激活)</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-units  -t  service  &ndash;all</td>
+</tr>
+</tbody>
+</table>
+<h4 id="开机自启">开机自启</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">设置服务开机自启</td>
+<td style="text-align:left">chkconfig  NAME  on</td>
+<td style="text-align:left">systemctl  enable  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">禁止服务开机自启</td>
+<td style="text-align:left">chkconfig  NAME  off</td>
+<td style="text-align:left">systemctl  disable  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看某服务是否能开机自启</td>
+<td style="text-align:left">chkconfig  &ndash;list  NAME</td>
+<td style="text-align:left">systemctl  is-enabled  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有服务的开机自启状态</td>
+<td style="text-align:left">chkconfig  &ndash;list</td>
+<td style="text-align:left">systemctl  list-unit-files &ndash;type service</td>
+</tr>
+<tr>
+<td style="text-align:left">禁止某服务设定为开机自启</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  mask  NAME.service</td>
+</tr>
+<tr>
+<td style="text-align:left">取消此禁止</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  unmask  NAME.servcie</td>
+</tr>
+</tbody>
+</table>
+<h4 id="依赖关系">依赖关系</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">查看服务的依赖关系</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-dependencies  NAME.service</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-管理-target-units">2.2 管理 target units</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">init</th>
+<th style="text-align:left">systemctl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">runlevel0.target,  poweroff.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">1</td>
+<td style="text-align:left">runlevel1.target,  rescue.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">2</td>
+<td style="text-align:left">runlevel2.tartet,  multi-user.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">3</td>
+<td style="text-align:left">runlevel3.tartet,  multi-user.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">4</td>
+<td style="text-align:left">runlevel4.tartet,  multi-user.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">5</td>
+<td style="text-align:left">runlevel5.target,  graphical.target</td>
+</tr>
+<tr>
+<td style="text-align:left">运行级别</td>
+<td style="text-align:left">6</td>
+<td style="text-align:left">runlevel6.target,  reboot.target</td>
+</tr>
+<tr>
+<td style="text-align:left">级别切换</td>
+<td style="text-align:left">init  N</td>
+<td style="text-align:left">systemctl  isolate  NAME.target</td>
+</tr>
+<tr>
+<td style="text-align:left">查看级别</td>
+<td style="text-align:left">runlevel</td>
+<td style="text-align:left">systemctl  list-units  &ndash;type  target</td>
+</tr>
+<tr>
+<td style="text-align:left">查看所有级别</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  list-units  -t  target  -a</td>
+</tr>
+<tr>
+<td style="text-align:left">获取默认运行级别</td>
+<td style="text-align:left">/etc/inittab</td>
+<td style="text-align:left">systemctl  get-default</td>
+</tr>
+<tr>
+<td style="text-align:left">修改默认运行级别</td>
+<td style="text-align:left">/etc/inittab</td>
+<td style="text-align:left">systemctl  set-default   NAME.target</td>
+</tr>
+<tr>
+<td style="text-align:left">切换至紧急救援模式</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  rescue</td>
+</tr>
+<tr>
+<td style="text-align:left">切换至emergency模式</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">systemctl  emergency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-其它常用快捷命令">2.3 其它常用快捷命令</h3>
+<ul>
+<li>关机： <code>systemctl  halt</code>,  <code>systemctl  poweroff</code></li>
+<li>重启： <code>systemctl  reboot</code></li>
+<li>挂起： <code>systemctl  suspend</code></li>
+<li>快照： <code>systemctl  hibernate</code></li>
+<li>快照并挂起： <code>systemctl  hybrid-sleep</code></li>
+</ul>
+<h2 id="3-service-unit-file-配置">3. service unit file 配置</h2>
+<h3 id="31-unit-file-组成">3.1 unit file 组成</h3>
+<p>unit file 通常由如下 三个部分组成:</p>
+<ol>
+<li>[Unit]：
+<ul>
+<li>定义与Unit类型无关的通用选项；</li>
+<li>用于提供 unit 的描述信息、unit 行为及依赖关系等；</li>
+</ul>
+</li>
+<li>[Service]：
+<ul>
+<li>与特定类型相关的专用选项；此处为 Service 类型；</li>
+</ul>
+</li>
+<li>[Install]：
+<ul>
+<li>定义由<code>systemctl  enable</code>以及<code>systemctl  disable</code>命令在实现服务启用或禁用时用到的一些选项；</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># systemctl cat sshd</span>
+<span class="c1"># /usr/lib/systemd/system/sshd.service</span>
+<span class="o">[</span>Unit<span class="o">]</span>
+<span class="nv">Description</span><span class="o">=</span>OpenSSH server daemon
+<span class="nv">Documentation</span><span class="o">=</span>man:sshd<span class="o">(</span>8<span class="o">)</span> man:sshd_config<span class="o">(</span>5<span class="o">)</span>
+<span class="nv">After</span><span class="o">=</span>network.target sshd-keygen.service
+<span class="nv">Wants</span><span class="o">=</span>sshd-keygen.service
+
+<span class="o">[</span>Service<span class="o">]</span>
+<span class="nv">Type</span><span class="o">=</span>notify
+<span class="nv">EnvironmentFile</span><span class="o">=</span>/etc/sysconfig/sshd
+<span class="nv">ExecStart</span><span class="o">=</span>/usr/sbin/sshd -D <span class="nv">$OPTIONS</span>
+<span class="nv">ExecReload</span><span class="o">=</span>/bin/kill -HUP <span class="nv">$MAINPID</span>
+<span class="nv">KillMode</span><span class="o">=</span>process
+<span class="nv">Restart</span><span class="o">=</span>on-failure
+<span class="nv">RestartSec</span><span class="o">=</span>42s
+
+<span class="o">[</span>Install<span class="o">]</span>
+<span class="nv">WantedBy</span><span class="o">=</span>multi-user.target
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="unit段">Unit段</h4>
+<ul>
+<li><code>Description</code>：当前服务的简单描述</li>
+<li><code>After</code>：定义unit的启动次序；表示当前unit应该晚于哪些unit启动；其功能与Before相反；</li>
+<li><code>Before</code>：定义sshd.service应该在哪些服务之前启动</li>
+<li><code>Requies</code>：依赖到的其它units；强依赖，被依赖的units无法激活或异常退出时，当前unit即无法激活；</li>
+<li><code>Wants</code>：依赖到的其它units；弱依赖，被依赖的units无法激活时，不影响当 unit 的启动；</li>
+<li><code>Conflicts</code>：定义units间的冲突关系；</li>
+<li>附注：
+<ul>
+<li>After和Before字段只涉及启动顺序，不涉及依赖关系</li>
+<li>Wants字段与Requires字段只涉及依赖关系，与启动顺序无关，默认情况下是同时启动的</li>
+</ul>
+</li>
+</ul>
+<h4 id="service段">Service段</h4>
+<ul>
+<li><code>Type</code>：用于定义影响ExecStart及相关参数的功能的unit进程启动类型；
+<ul>
+<li><code>simple</code>（默认值）：ExecStart字段启动的进程为主进程</li>
+<li><code>forking</code>：ExecStart字段将以fork()方式启动，此时父进程将会退出，子进程将成为主进程</li>
+<li><code>oneshot</code>：类似于simple，但只执行一次，Systemd 会等它执行完，才启动其他服务</li>
+<li><code>dbus</code>：类似于simple，但会等待 D-Bus 信号后启动</li>
+<li><code>notify</code>：类似于simple，启动结束后会发出通知信号，然后 Systemd 再启动其他服务</li>
+<li><code>idle</code>：类似于simple，但是要等到其他任务都执行完，才会启动该服务。一种使用场合是为让该服务的输出，不与其他服务的输出相混合</li>
+</ul>
+</li>
+<li><code>EnvironmentFile</code>：指定当前服务的环境参数文件</li>
+<li><code>ExecStart</code>：指明启动unit要运行命令或脚本；其中的变量$OPTIONS就来自EnvironmentFile字段指定的环境参数文件</li>
+<li><code>ExecReload</code>：重启服务时执行的命令</li>
+<li><code>ExecStop</code>：停止服务时执行的命令</li>
+<li><code>ExecStartPre</code>：启动服务之前执行的命令</li>
+<li><code>ExecStartPost</code>：启动服务之后执行的命令</li>
+<li><code>ExecStopPost</code>：停止服务之后执行的命令</li>
+<li><code>Restart</code>：定义了服务退出后，Systemd 的重启方式
+<ul>
+<li><code>no</code>（默认值）：退出后不会重启</li>
+<li><code>on-success</code>：只有正常退出时（退出状态码为0），才会重启</li>
+<li><code>on-failure</code>：非正常退出时（退出状态码非0），包括被信号终止和超时，才会重启</li>
+<li><code>on-abnormal</code>：只有被信号终止和超时，才会重启</li>
+<li><code>on-abort</code>：只有在收到没有捕捉到的信号终止时，才会重启</li>
+<li><code>on-watchdog</code>：超时退出，才会重启</li>
+<li><code>always</code>：不管是什么退出原因，总是重启</li>
+<li>附注: 对于守护进程，推荐设为on-failure。对于那些允许发生错误退出的服务，可以设为on-abnormal</li>
+</ul>
+</li>
+<li><code>KillMode</code>:定义 Systemd 如何停止服务
+<ul>
+<li><code>control-group</code>（默认值）：当前控制组里面的所有子进程，都会被杀掉</li>
+<li><code>process</code>：只杀主进程</li>
+<li><code>mixed</code>：主进程将收到 SIGTERM 信号，子进程收到 SIGKILL 信号</li>
+<li><code>none</code>：没有进程会被杀掉，只是执行服务的 stop 命令。</li>
+</ul>
+</li>
+<li><code>RestartSec</code>：表示 Systemd 重启服务之前，需要等待的秒数</li>
+</ul>
+<p>对于 sshd 服务而言将KillMode设为process，表示只停止主进程，不停止任何sshd 子进程，即子进程打开的 SSH session 仍然保持连接。这个设置不太常见，但对 sshd 很重要，否则你停止服务的时候，会连自己打开的 SSH session 一起杀掉。Restart设为on-failure，表示任何意外的失败，就将重启sshd。如果 sshd 正常停止（比如执行systemctl stop命令），它就不会重启。</p>
+<p>所有的启动设置之前，都可以加上一个连词号（-），表示&quot;抑制错误&quot;，即发生错误的时候，不影响其他命令的执行。比如，<code>EnvironmentFile=-/etc/sysconfig/sshd</code>（注意等号后面的那个连词号），就表示即使/etc/sysconfig/sshd文件不存在，也不会抛出错误</p>
+<h4 id="install段">Install段</h4>
+<ul>
+<li><code>Alias</code>：</li>
+<li><code>RequiredBy</code>：被哪些units所依赖；</li>
+<li><code>WantedBy</code>：表示该服务所在的 Target</li>
+</ul>
+<h3 id="32-修改配置文件后重启">3.2 修改配置文件后重启</h3>
+<p>对于新创建的unit文件或修改了的unit文件，要通知systemd重载此配置文件 <code>systemctl  daemon-reload</code></p>
+<h2 id="4target-的配置文件">4.Target 的配置文件</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="o">[</span>root@hp system<span class="o">]</span>$ systemctl cat multi-user.target
+<span class="c1"># /usr/lib/systemd/system/multi-user.target</span>
+<span class="c1">#  This file is part of systemd.</span>
+<span class="c1">#</span>
+<span class="c1">#  systemd is free software; you can redistribute it and/or modify it</span>
+<span class="c1">#  under the terms of the GNU Lesser General Public License as published by</span>
+<span class="c1">#  the Free Software Foundation; either version 2.1 of the License, or</span>
+<span class="c1">#  (at your option) any later version.</span>
+
+<span class="o">[</span>Unit<span class="o">]</span>
+<span class="nv">Description</span><span class="o">=</span>Multi-User System
+<span class="nv">Documentation</span><span class="o">=</span>man:systemd.special<span class="o">(</span>7<span class="o">)</span>
+<span class="nv">Requires</span><span class="o">=</span>basic.target
+<span class="nv">Conflicts</span><span class="o">=</span>rescue.service rescue.target
+<span class="nv">After</span><span class="o">=</span>basic.target rescue.service rescue.target
+<span class="nv">AllowIsolate</span><span class="o">=</span>yes
+</code></pre></td></tr></table>
+</div>
+</div><p>Target 配置文件里面没有启动命令</p>
+<ul>
+<li><code>Requires</code>：要求basic.target一起运行。</li>
+<li><code>Conflicts</code>：冲突字段。如果rescue.service或rescue.target正在运行，multi-user.target就不能运行，反之亦然。</li>
+<li><code>After</code>：表示multi-user.target在basic.target 、 rescue.service、 rescue.target之后启动，如果它们有启动的话。</li>
+<li><code>AllowIsolate</code>：允许使用systemctl isolate命令切换到multi-user.target</li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-02-21</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.3 Centos7 Systemd 启动流程" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.3 Centos7 Systemd 启动流程"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.3 Centos7 Systemd 启动流程"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.3 Centos7 Systemd 启动流程" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" class="prev" rel="prev" title="13.2 Centos5 init 启动流程"><i class="fas fa-angle-left fa-fw"></i>13.2 Centos5 init 启动流程</a>
+            <a href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/grub%E7%B3%BB%E7%BB%9F%E9%85%8D%E7%BD%AE%E4%B8%8E%E4%BD%BF%E7%94%A8/" class="next" rel="next" title="13.4 grub配置与使用">13.4 grub配置与使用<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-02-21T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"13.3 Centos7 Systemd 启动流程"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

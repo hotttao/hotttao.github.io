@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>13.1 CentOS系统启动流程介绍 - LoveIt</title><meta name="Description" content="13.1 CentOS系统启动流程介绍"><meta property="og:title" content="13.1 CentOS系统启动流程介绍" />
+<meta property="og:description" content="13.1 CentOS系统启动流程介绍" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-02-19T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-02-19T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="13.1 CentOS系统启动流程介绍"/>
+<meta name="twitter:description" content="13.1 CentOS系统启动流程介绍"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "13.1 CentOS系统启动流程介绍",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86\/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  3839 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86\/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D\/","datePublished": "2018-02-19T22:10:00+08:00","dateModified": "2018-02-19T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "13.1 CentOS系统启动流程介绍"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">13.1 CentOS系统启动流程介绍</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-02-19">2018-02-19</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3839 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-linux-系统特性">1. Linux 系统特性</a></li>
+    <li><a href="#1-linux-系统启动流程">1. Linux 系统启动流程</a>
+      <ul>
+        <li><a href="#11-linux-系统的组成">1.1 Linux 系统的组成</a></li>
+        <li><a href="#12-mbr-与-bootsector">1.2 MBR 与 BootSector</a></li>
+        <li><a href="#12-centos-系统的启动流程mbr-架构">1.2 Centos 系统的启动流程(MBR 架构)</a></li>
+        <li><a href="#13-总结系统初始化流程内核级别">1.3 总结:系统初始化流程（内核级别）</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>CentOS系统启动流程介绍</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_mt.jpg"
+        data-srcset="/images/linux_mt/linux_mt.jpg, /images/linux_mt/linux_mt.jpg 1.5x, /images/linux_mt/linux_mt.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_mt.jpg"
+        title="linux-mt" /></p>
+<!-- more -->
+<p>本章我们将学习 Linux 启动流程和内核模块管理相关的内容。通过本章我们将学习如下内容:</p>
+<ol>
+<li>Linux 系统的组成及特点</li>
+<li>CentOS 系统的启动流程</li>
+<li>开机启动成 grub 的配置和使用</li>
+<li>内核功能与内核模块的加载与使用</li>
+</ol>
+<p>在学习本章内容之前，需要对之前学习的操作系统知识做一个简单梳理总结，目的是了解 Linux 系统在启动时面临了哪些问题，怎么去解决这些问题。这样我们才能知道为什么启动流程是&quot;这样&quot;。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">--------------
+|  库调用接口   |
+---------------
+|   系统调用接口 |
+-------------------------------
+|    操   作  系   统           |
+-------------------------------
+|    底   层  硬   件           |
+-------------------------------
+</code></pre></td></tr></table>
+</div>
+</div><p>在一个已经开机的计算机上，操作系统位于底层硬件之上，通过加载硬件的驱动程序从而能够管理各种硬件设备。操作系统通过系统调用，将管理底层硬件的接口暴露给各应用程序。应用程序在需要时发起系统调用即可完成对底层硬件的驱动。系统调用接口比较简陋，不便于程序员进行编程，因此在系统调用基础上有各种库，方便程序员进行编程。</p>
+<p>操作系统=内核+根文件系统，Linux 中一切皆文件，Linux 的所有设备都表现为根文件系统上的某个文件。因此内核必需首先要加载底层磁盘设备的驱动程序，然后加载该磁盘设备上特定的文件系统，最后挂载根文件系统。</p>
+<p>但是在系统启动之前，操作系统和各种驱动程序都是存放在硬盘上的。这样就会出现以下问题:</p>
+<ol>
+<li>为加载内核需要读取磁盘中的内核源码，而读取磁盘文件需要先挂载根文件系统，此时操作系统还没有更不可能挂在根文件系统了</li>
+<li>挂载根文件系统时，首先需要加载磁盘和文件系统的驱动程序。而文件系统还没有挂载，根本没法读取到位于根文件系统中的驱动程序</li>
+</ol>
+<p>因此开机启动，必需要解决上述两个问题。</p>
+<p>本节，我们开始学习 Centos 系统的启动流程，本章开篇我们了解到，开机过程中存在两个问题:</p>
+<ol>
+<li>为加载内核需要读取磁盘中的内核源码，而读取磁盘文件需要先挂载根文件系统，此时操作系统还没有更不可能挂在根文件系统了</li>
+<li>挂载根文件系统时，首先需要加载磁盘和文件系统的驱动程序。而文件系统还没有挂载，根本没法读取到位于根文件系统中的驱动程序</li>
+</ol>
+<p>本节核心就是讲解如何解决上述两个问题，并在此基础上介绍 Linux 系统的启动。本节将包括以下内容:</p>
+<ol>
+<li>Linux 系统特性，包括Linux 系统的功能及设计思路</li>
+<li>Linux 开机启动流程，包括:
+<ul>
+<li>Linux 系统组成，Linux 为开机启动准备的额外文件</li>
+<li>Linux 系统详细启动过程</li>
+</ul>
+</li>
+</ol>
+<h2 id="1-linux-系统特性">1. Linux 系统特性</h2>
+<p>Linux 主要由内核+根文件系统组成，一个运行中的Linux，可以看作是运行在内核之上，由内核负责完成底层硬件管理，从而将硬件接口抽象为系统接口以后，让根文件系统工作为文件系统的一个底层虚拟机。运行中的OS可以分为内核空间和用户空间两个部分，应用程序运行在用户空间，通常表现为一个进程或线程；而内核空间主要运行内核代码，执行特权操作，通过系统调用向用户空间输出接口。用户空间通过发起系统调用执行特权操作。</p>
+<p>Linux 需要实现的功能包括:</p>
+<ol>
+<li>进程管理，进程创建，调度，销毁</li>
+<li>内存管理，将内存抽象为虚拟的线性地址格式，为每个进程提供一份，就好像每个进程单独运行在操作系统之上一样</li>
+<li>IPC 机制:
+<ul>
+<li>消息队列</li>
+<li>semerphor 信号量</li>
+<li>share memory 共享内存</li>
+</ul>
+</li>
+<li>网络协议栈</li>
+<li>文件系统</li>
+<li>驱动程序 《Linux 设备驱动》</li>
+<li>安全功能</li>
+</ol>
+<p>内核设计有两种流派</p>
+<ol>
+<li>单内核设计：把所有功能集成于同一个程序，典型代表为 Linux</li>
+<li>微内核设计：每种功能使用一个单独的子系统实现，典型代表为 Windows, Solaris</li>
+</ol>
+<p>Linux 虽然为单内核设计但是充分吸收了微内核的特点，支持模块化(.ko (kernel object))，支持模块运行时动态装载或卸载。</p>
+<h2 id="1-linux-系统启动流程">1. Linux 系统启动流程</h2>
+<h3 id="11-linux-系统的组成">1.1 Linux 系统的组成</h3>
+<p>首先我们来解决开机启动的第二个问题。
+内核加载根文件系统需要加载驱动程序，而驱动程序就在根之上。因此我们不能依赖根文件系统上的驱动程序，内核必须自带驱动程序。</p>
+<p>一种方法是将设备的驱动程序编译进内核，对于个人用户自编译的系统没有有问题，因为只需要将其特定的驱动程序编译进内核即可，然后对于操作系统发行商而然，它面对的是各种用户的不同驱动设备，如果都将这些驱动程序编译进内核，内核将庞大无比，而每个用户又只会用到其中一个。</p>
+<p>另一种方法是借助于中间临时根文件系统，中间临时根文件系统包含了加载根文件系统所在设备的驱动程序，而中间根文件系统放置在一个基于内存的磁盘设备中，内核无须加载其他驱动程序即可访问该设备。内核启动后，先访问基本设备挂载中间的临时根文件系统，并从中装载设备驱动程序，在真正的根文件系统准备完成之后，从临时根切换到真正的根。</p>
+<p>用于系统初始化的基于内存的磁盘设备通常称为 ramdisk，内核在启动过程中需要将 ranmdisk 装载进内存 ，并将其识别为一个根文件系统。ramdisk 并不是发行商预先生成，而是在系统安装过程中针对当前设备临时生成了，因此其仅需包含当前设备的驱动程序即可。</p>
+<p>因此从编译完成后的视角，Linux 系统由如下部分组成:</p>
+<ol>
+<li>核心文件：/boot/vmlinuz-VERSION-release</li>
+<li>ramdisk：
+<ul>
+<li>CentOS 5：<code>/boot/initrd-VERSION-release.img</code>   # 基于 ram 的磁盘</li>
+<li>CentOS 6,7：<code>/boot/initramfs-VERSION-release.img</code>  # 基于 ram 的文件系统</li>
+</ul>
+</li>
+<li>模块文件：
+<ul>
+<li><code>/lib/modules/VERSION-release</code></li>
+<li>如果内核提供了多个版本，将会有多个内核目录</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">&gt; uname -r # 内核版本
+4.9.86-30.el7.x86_64
+
+&gt; ls /boot/|grep vm
+vmlinuz-4.9.86-30.el7.x86_64
+
+&gt; ls /lib/modules/$(uname -r)/kernel
+arch  crypto  drivers  fs  lib  mm  net  sound  virt
+
+&gt; tree  -L 2 /lib/modules/$(uname -r)
+/lib/modules/4.9.86-30.el7.x86_64
+├── build -&gt; ../../../usr/src/kernels/4.9.86-30.el7.x86_64
+├── extra
+├── kernel
+│   ├── arch
+│   ├── crypto
+│   ├── drivers
+│   ├── fs
+│   ├── lib
+│   ├── mm
+│   ├── net
+│   ├── sound
+│   └── virt
+├── modules.alias
+├── modules.alias.bin
+├── modules.block
+├── modules.builtin
+├── modules.builtin.bin
+├── modules.dep
+├── modules.dep.bin
+├── modules.devname
+├── modules.drm
+├── modules.modesetting
+├── modules.networking
+├── modules.order
+├── modules.softdep
+├── modules.symbols
+├── modules.symbols.bin
+├── source -&gt; build
+├── updates
+├── vdso
+│   ├── vdso32.so
+│   └── vdso64.so
+└── weak-updates
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="12-mbr-与-bootsector">1.2 MBR 与 BootSector</h3>
+<p>接下来我们来解决第一个问题，在没有根文件系统的前提下将内核加载进内存。
+可引导设备的第一个分区叫MBR，MBR 中包含了开机引导程序 BootLoader。开机启动时会先加载 MBR内的BootLoader，由BootLoader 将内核加载到内存。有人可能会问，开机时是如何读取到MBR的，BootLoader又是如何读取到内核文件的。BIOS 通过硬件的 INT 13 中断功能来读取 MBR，也就是说，只要 BIOS 能够侦测的到你的磁盘 （不论磁盘是 SATA 还是 SAS ），那他就有办法通过 INT 13 这条信道来读取该磁盘的第一个扇区内的 MBR 软件，这样 boot loader 也就能够被执行。boot loader 能够识别操作系统的文件格式，也就能加载核心文件。其他分区的第一个扇区叫做 boot sector，也可以安装BootLoader，这样可以实现多系统安装。</p>
+<p>有了上述阐述，我们就可以开始讲解开机启动流程了。</p>
+<h3 id="12-centos-系统的启动流程mbr-架构">1.2 Centos 系统的启动流程(MBR 架构)</h3>
+<p>启动流程:</p>
+<ol>
+<li>POST: 加电自检。
+<ul>
+<li>x86 架构的计算机被设计成，只要通电就会去执行，主板上有个 ROM 芯片内的BOIS程序</li>
+<li>通过 BIOS 程序去载入 CMOS 的信息，并且借由 CMOS 内的设置值取得主机的各项硬件参数及设置，例如硬盘的大小与类型</li>
+<li>在获取硬件信息后，BIOS 会进行开机自我测试 (Power-on Self Test, POST) ，然后开始执行硬件侦测的初始化，并设置 PnP 设 备，之后再定义出可开机的设备顺序，接下来就会开始进行开机设备的数据读取</li>
+</ul>
+</li>
+<li>Boot Sequence:开机启动次序
+<ul>
+<li>家电自检完成后，计算机就会按次序查找各引导设备，第一个有引导程序的设备即为本次启动用到的设备。</li>
+<li>引导程序称为 BootLoader，又称引导加载器。</li>
+<li>如果是通过U盘安装操作系统，就需要进入 BIOS 设置系统的开机启动次序</li>
+</ul>
+</li>
+<li>bootloader：引导加载器，程序，位于MBR中；
+<ul>
+<li>功能：
+<ul>
+<li>提供一个菜单，允许用户选择要启动的系统或不同的内核版本；</li>
+<li>把用户选定的内核装载到RAM中的特定空间中，解压、展开，而后把系统控制权移交给内核</li>
+</ul>
+</li>
+<li>Windows：ntloader</li>
+<li>Linux：
+<ul>
+<li>LILO：LIinux  LOader</li>
+<li>GRUB：Grand Uniform Bootloader
+<ul>
+<li>GRUB 0.X：Grub Legacy</li>
+<li>GRUB 1.X：Grub2</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>MBR/GRUB:
+<ul>
+<li>MBR：Master Boot Record，512bytes：
+<ul>
+<li>446bytes：bootloader</li>
+<li>64bytes：fat, 磁盘分区表</li>
+<li>2bytes：55AA</li>
+</ul>
+</li>
+<li>GRUB：两阶段加载
+<ul>
+<li>bootloader：1st stage</li>
+<li>Partition：filesystem driver, 1.5 stage</li>
+<li>Partition：/boot/grub, 2nd stage</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Kernel:
+<ul>
+<li>自身初始化：
+<ul>
+<li>探测可识别到的所有硬件设备；</li>
+<li>加载硬件驱动程序；（有可能会借助于ramdisk加载驱动）</li>
+<li>以只读方式挂载根文件系统；</li>
+<li>运行用户空间的第一个应用程序：<code>/sbin/init</code></li>
+</ul>
+</li>
+<li>执行 init 程序：
+<ul>
+<li>CentOS 5：SysV init
+<ul>
+<li>配置文件：<code>/etc/inittab</code></li>
+</ul>
+</li>
+<li>CentOS 6：Upstart
+<ul>
+<li>init 的升级版，可以并行启动</li>
+<li>配置文件:
+<ul>
+<li><code>/etc/inittab</code>: 为向前兼容，基本没哟使用</li>
+<li><code>/etc/init/\*.conf</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>CentOS 7：Systemd
+<ul>
+<li>配置文件：
+<ul>
+<li><code>/usr/lib/systemd/system/</code></li>
+<li><code>/etc/systemd/system/</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ramdisk：
+<ul>
+<li>Linux内核的特性之一：使用缓冲和缓存来加速对磁盘上的文件访问；</li>
+<li>升级: ramdisk &ndash;&gt; ramfs</li>
+<li>生成工具:
+<ul>
+<li>CentOS 5: initrd  &ndash; <code>mkinitrd</code></li>
+<li>CentOS 6,7: initramfs &ndash; <code>dracut, mkinitrd</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="13-总结系统初始化流程内核级别">1.3 总结:系统初始化流程（内核级别）</h3>
+<ol>
+<li>POST自检，</li>
+<li>按照BootSequence(BIOS)查找能开机启动的设备</li>
+<li>在设备的 MBR上加载 BootLoader，BootLoader 去磁盘分区上读取内核。</li>
+<li>Kernel可能会借助于 ramdisk 加载真正根文件系统所在设备的驱动程序</li>
+<li>内核装载 rootfs（readonly，并执行开机启动程序 <code>/sbin/init</code></li>
+</ol>
+<p>需要说明的是无论是下述的 ramdisk 还是 BootLoader 都是在安装操作系统时针对当前硬件生成的。所以 BootLoader 是能够识别当前主机的硬盘设备的。但是需要注意的是BootLoader 是需要和磁盘分区打交道的，而BootLoader 本身一般是无法驱动那些软设备，逻辑设备(LVM),也无法驱动RAID这些复杂的逻辑结构，因此内核只能放在基本的磁盘分区上。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-02-19</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" data-title="13.1 CentOS系统启动流程介绍" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" data-title="13.1 CentOS系统启动流程介绍"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" data-title="13.1 CentOS系统启动流程介绍"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" data-title="13.1 CentOS系统启动流程介绍" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/" class="prev" rel="prev" title="12.5 作业管理"><i class="fas fa-angle-left fa-fw"></i>12.5 作业管理</a>
+            <a href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" class="next" rel="next" title="13.2 Centos5 init 启动流程">13.2 Centos5 init 启动流程<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-02-19T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"13.1 CentOS系统启动流程介绍"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>27.1 web架构缓存优化 - LoveIt</title><meta name="Description" content="27.1 web架构缓存优化"><meta property="og:title" content="27.1 web架构缓存优化" />
+<meta property="og:description" content="27.1 web架构缓存优化" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-10-16T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-10-16T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="27.1 web架构缓存优化"/>
+<meta name="twitter:description" content="27.1 web架构缓存优化"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/29-keepalived/keepalived%E9%85%8D%E7%BD%AE%E7%A4%BA%E4%BE%8B/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/varnish%E6%9E%B6%E6%9E%84%E5%8F%8A%E5%AE%89%E8%A3%85/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "27.1 web架构缓存优化",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/30-varnish\/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  2638 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/30-varnish\/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96\/","datePublished": "2018-10-16T22:10:00+08:00","dateModified": "2018-10-16T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "27.1 web架构缓存优化"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">27.1 web架构缓存优化</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-10-16">2018-10-16</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2638 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-cache">1. Cache</a>
+      <ul>
+        <li><a href="#11-缓存基础">1.1 缓存基础</a></li>
+        <li><a href="#12-缓存的分级结构">1.2 缓存的分级结构</a></li>
+        <li><a href="#13-缓存模式">1.3 缓存模式</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-web-架构缓存优化">2. web 架构缓存优化</a></li>
+    <li><a href="#3-http-缓存控制">3. HTTP 缓存控制</a>
+      <ul>
+        <li><a href="#31-响应报文的缓存控制">3.1 响应报文的缓存控制</a></li>
+        <li><a href="#32-条件式请求首部">3.2 条件式请求首部</a></li>
+        <li><a href="#33-缓存过程">3.3 缓存过程</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-http-cache-control-首部值">4. http Cache-Control 首部值</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>web架构缓存优化</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_cache.jpg"
+        data-srcset="/images/linux_mt/linux_cache.jpg, /images/linux_mt/linux_cache.jpg 1.5x, /images/linux_mt/linux_cache.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_cache.jpg"
+        title="HA" /></p>
+<!-- more -->
+<p>上一章我们学习了如何使用 keepalived 实现一个高可用集群，接下来我们来继续完善我们的 web 站点架构，本章我们来讲解另一个重要内容，web 站点的缓存系统。</p>
+<p>计算机组件衔接中非常常见而且重要策略就是:</p>
+<ol>
+<li>两个环节连接起来不是很流畅，加中间层</li>
+<li>两个环节连接起来在性能上不匹配，加缓存</li>
+</ol>
+<p>缓存之所以有效是因为我们的程序运行具有局部性特征：</p>
+<ol>
+<li>时间局部性：一个数据被访问过之后，可能很快会被再次访问到；</li>
+<li>空间局部性：一个数据被访问时，其周边的数据也有可能被访问到</li>
+</ol>
+<p>局部性导致我们的站点存在&quot;热区&quot;，即一小部分内容在一段时间内会被多个用户多次访问，因此我们可以将这些热区数据缓存下来，从而能减少中间的处理过程和传输过程，提高响应用户的速度。</p>
+<p>本章我们就来讲解 web 缓存中一种常见实现 varnish，内容包括:</p>
+<ol>
+<li>web 站点架构演变</li>
+<li>varnish 架构与安装配置</li>
+<li>varnish 缓存策略配置</li>
+<li>varnish 优化与进阶</li>
+</ol>
+<h2 id="1-cache">1. Cache</h2>
+<p>&ldquo;Cache is Key&rdquo;，缓存是 web 架构中一个非常重要的组件，因此在学习 varnish 之前，我们必需先了解一下缓存，以及缓存如何影响着我们 web 架构的演变。本节内容包括:</p>
+<ol>
+<li>缓存的基本知识</li>
+<li>web 架构缓存优化</li>
+<li>http 协议的缓存机制</li>
+</ol>
+<h3 id="11-缓存基础">1.1 缓存基础</h3>
+<p>缓存之所以有效是因为我们的程序运行具有局部性特征：</p>
+<ol>
+<li>时间局部性：一个数据被访问过之后，可能很快会被再次访问到；</li>
+<li>空间局部性：一个数据被访问时，其周边的数据也有可能被访问到</li>
+</ol>
+<p>局部性导致我们的站点存在&quot;热区&quot;，即一小部分内容在一段时间内会被多个用户多次访问，因此我们可以将这些热区数据缓存下来，从而能减少中间的处理过程和传输过程，提高响应用户的速度。</p>
+<p>因此对于缓存有一些基础的必需理解的概念</p>
+<ol>
+<li>首先我们缓存的是热区数据而不是所有数据，所以缓存存在空间限制，当缓存空间耗尽时，会基于 LRU(最近最少使用) 算法来更新缓存</li>
+<li>缓存存在时效性，需要定期对过期缓存进行清理，因此通常只会对那些读多写少的内容进行缓存</li>
+<li>缓存的有效性使用<strong>缓存命中率</strong> hit/(hit+miss) 进行衡量，有两个衡量的指标</li>
+</ol>
+<ul>
+<li>页面命中率：基于页面数量进行衡量</li>
+<li>字节命中率：基于页面的体积进行衡量</li>
+</ul>
+<h3 id="12-缓存的分级结构">1.2 缓存的分级结构</h3>
+<p>缓存存在多级结构，不同缓存级别下，有些缓存是公共的，有些缓存是私有的，公共缓存只能缓存多个用户之间可以共享的公共数据，因此我们需要在服务器指明数据是否可以被公共缓存缓存。通常</p>
+<ol>
+<li>私有数据：只能被私有缓存缓存(private，private cache)</li>
+<li>公共数据：可同时被公共和私有缓存进行缓存(public, public or private cache)</li>
+</ol>
+<p>对于公共缓存，我们在设置缓存键时，应该尽量排除用户的私有信息，以提高缓存的命中率。因此非常有必要组织好缓存键，减少用户私有数据的参与。</p>
+<h3 id="13-缓存模式">1.3 缓存模式</h3>
+<p>缓存的实现分为两种模式</p>
+<ol>
+<li>代理缓存: 缓存服务器如果未能命中，缓存服务器自己需要去找后端服务器请求资源并反回给客户端，所以又称为递归缓存</li>
+<li>旁挂缓存: 缓存服务器未命中，需要客户端自己发送请求获取结果</li>
+</ol>
+<p>memcached 就是典型的旁挂缓存，所有的 http 协议的缓存都是代理。web 缓存的两个重要开源实现是 squid, varnish，它们类似于 web 服务器的 httpd 和 nginx。</p>
+<h2 id="2-web-架构缓存优化">2. web 架构缓存优化</h2>
+<p>多看几次视频(34-1:17)</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/web_frame.jpg"
+        data-srcset="/images/linux_mt/web_frame.jpg, /images/linux_mt/web_frame.jpg 1.5x, /images/linux_mt/web_frame.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/web_frame.jpg"
+        title="web_frame.jpg" /></p>
+<h2 id="3-http-缓存控制">3. HTTP 缓存控制</h2>
+<p>HTTP 协议在 1.1 增强了缓存控制机制，在 HTTP 协议的缓存控制中，服务器会会在响应报文中为资源&quot;打标&quot;，客户端则会根据&quot;标记&quot;来决定是否使用本地缓存以及如何请求。</p>
+<h3 id="31-响应报文的缓存控制">3.1 响应报文的缓存控制</h3>
+<p>响应报文中有两种缓存控制机制</p>
+<ol>
+<li>过期时间机制</li>
+</ol>
+<ul>
+<li><code>Expires</code>:
+<ul>
+<li>作用: HTTP/1.0 使用，表示缓存的过期的绝对时间，在缓存未到期之前客户端会直接使用本地缓存不会发起请求</li>
+<li>缺陷: 可能由于时区或系统时间问题而提前失效</li>
+</ul>
+</li>
+<li><code>Cache-Control: maxage=</code>:
+<ul>
+<li>作用: HTTP/1.1 可用表示缓存有效时长</li>
+<li>说明: <code>Cache-Control</code> 是缓存控制的专用首部，<code>maxage</code> 只是其使用方式之一</li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li>条件式请求机制</li>
+</ol>
+<ul>
+<li><code>Last-Modified</code>:
+<ul>
+<li>作用: 文件的最近一次修改时间戳，请求报文使用 <code>If-Modified-Since</code> 首部配合使用</li>
+<li>局限: <code>Last-Modified</code> 记录的最小单位是秒，如果响应的内容在 1s 内更新了好几次，此首部是无法反映的</li>
+</ul>
+</li>
+<li><code>Etag</code>:
+<ul>
+<li>作用: 基于文件的校验码来判别，请求报文使用 <code>If-None-Match</code> 首部配合使用</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"># 响应报文中的缓存控制首部信息示例
+Expires:Thu, 13 Aug 2026 02:05:12 GMT        # 有效的绝对时间
+Cache-Control:max-age=315360000              # 有效时长
+ETag:&#34;1ec5-502264e2ae4c0&#34;                    # 内容校验码
+Last-Modified:Wed, 03 Sep 2014 10:00:27 GMT  # 文件最近一次修改时间
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="32-条件式请求首部">3.2 条件式请求首部</h3>
+<p>对于时间控制机制，客户端会自动根据 <code>Expires</code> 和 <code>Cache-Control</code> 来判断缓存是否过期，只有缓存过期时客户端才会发起新的请求。</p>
+<p>对于条件式请求机制，用户会根据 <code>Last-Modified</code> 或 <code>Etag</code> 发起条件式请求</p>
+<ol>
+<li><code>Last-Modified</code> 对应的条件式请求首部包括:</li>
+</ol>
+<ul>
+<li><code>If-Modified-Since</code>：从指定时间开始，内容是否发生变更</li>
+<li><code>If-Unmodified-Since</code></li>
+</ul>
+<ol start="2">
+<li><code>Etag</code> 对应的条件式请求首部:</li>
+</ol>
+<ul>
+<li><code>If-Match</code>: 当前缓存资源的 <code>Etag</code> 是否与服务器资源的 <code>Etag</code> 相同</li>
+<li><code>If-None-Match</code>:</li>
+</ul>
+<p>以 Etag 为例，条件式请求的整个过程如下:</p>
+<ol>
+<li>第一次客户端请求时，服务器会在响应报文的附加 <code>Etag</code> 首部，其值是响应内容的哈希值</li>
+<li>客户端需要再次获取同一资源时，将发起条件式请求，请求中 <code>If-Match</code> 首部字段的值就是第一响应的 <code>Etag</code> 首部字段的值</li>
+<li>服务器会将请求报文中的 <code>Etag</code> 值与当前资源进行比较</li>
+<li>如果原始内容未改变，则仅响应首部（不附带body部分），响应码304 （Not Modified）</li>
+<li>如果原始内容发生改变，则正常响应，响应码200；</li>
+<li>如果原始内容消失，则响应404，此时缓存中的cache object也应该被删除；</li>
+</ol>
+<h3 id="33-缓存过程">3.3 缓存过程</h3>
+<p>通常情况下，http 的缓存的过期时间和条件式请求会结合使用，客户端接收到响应之后，在过期时间到期之前都会是使用本地缓存，缓存到期之后才会发送条件式请求。这样过期时间机制减少了发送请求的次数，条件式请求减少了传输内容。可以最大程度上提升传输速率。</p>
+<h2 id="4-http-cache-control-首部值">4. http Cache-Control 首部值</h2>
+<p>http 头中的 Cache-Control 首部有特殊作用</p>
+<ol>
+<li>请求报文中用于通知缓存服务如何使用缓存响应请求
+<ul>
+<li><code>no-cache</code>:（不要缓存的实体，要求现在从WEB服务器去取）</li>
+<li><code>max-age</code>：（只接受 Age 值小于 max-age 值，并且没有过期的对象）</li>
+<li><code>max-stale</code>：（可以接受过去的对象，但是过期时间必须小于 max-stale 值）</li>
+<li><code>min-fresh</code>：（接受其新鲜生命期大于其当前 Age 跟 min-fresh 值之和的缓存对象）</li>
+</ul>
+</li>
+<li>响应报文中用于通知缓存服务器如何存储上级服务器响应的内容
+<ul>
+<li><code>public</code>: (可以用 Cached 内容回应任何用户)</li>
+<li><code>private</code>:（只能用缓存内容回应先前请求该内容的那个用户）</li>
+<li><code>no-cache</code>: 可缓存，但响应给客户端之前需要revalidation，即必须发出条件式请求进行缓存有效性验正</li>
+<li><code>max-age</code>：（本响应包含的对象的过期时间）</li>
+<li><code>no-store</code>: 不允许存储响应内容于缓存中</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">
+# http 协议缓存控制指令
+Cache-Control  = &#34;Cache-Control&#34; &#34;:&#34; 1#cache-directive
+    cache-directive = cache-request-directive
+        | cache-response-directive
+    cache-request-directive =
+          &#34;no-cache&#34;                          
+        | &#34;no-store&#34; (backup)                          
+        | &#34;max-age&#34; &#34;=&#34; delta-seconds        
+        | &#34;max-stale&#34; [ &#34;=&#34; delta-seconds ]  
+        | &#34;min-fresh&#34; &#34;=&#34; delta-seconds      
+        | &#34;no-transform&#34;                      
+        | &#34;only-if-cached&#34;                  
+        | cache-extension                  
+    cache-response-directive =
+          &#34;public&#34;                              
+        | &#34;private&#34; [ &#34;=&#34; &lt;&#34;&gt; 1#field-name &lt;&#34;&gt; ]
+        | &#34;no-cache&#34; [ &#34;=&#34; &lt;&#34;&gt; 1#field-name &lt;&#34;&gt; ]
+        | &#34;no-store&#34;                            
+        | &#34;no-transform&#34;                        
+        | &#34;must-revalidate&#34;                    
+        | &#34;proxy-revalidate&#34;                    
+        | &#34;max-age&#34; &#34;=&#34; delta-seconds            
+        | &#34;s-maxage&#34; &#34;=&#34; delta-seconds          
+        | cache-extension
+</code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-10-16</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" data-title="27.1 web架构缓存优化" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" data-title="27.1 web架构缓存优化"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" data-title="27.1 web架构缓存优化"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/30-varnish/web%E6%9E%B6%E6%9E%84%E7%BC%93%E5%AD%98%E4%BC%98%E5%8C%96/" data-title="27.1 web架构缓存优化" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/29-keepalived/keepalived%E9%85%8D%E7%BD%AE%E7%A4%BA%E4%BE%8B/" class="prev" rel="prev" title="26.3 keepalived 配置示例"><i class="fas fa-angle-left fa-fw"></i>26.3 keepalived 配置示例</a>
+            <a href="/posts/linux/linux_mt/30-varnish/varnish%E6%9E%B6%E6%9E%84%E5%8F%8A%E5%AE%89%E8%A3%85/" class="next" rel="next" title="27.2 varnish 架构及安装">27.2 varnish 架构及安装<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-10-16T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"27.1 web架构缓存优化"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

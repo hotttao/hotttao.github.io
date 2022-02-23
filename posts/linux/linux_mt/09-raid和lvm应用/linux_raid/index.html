@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>8.3 Linux RAID - LoveIt</title><meta name="Description" content="8.3 Linux RAID"><meta property="og:title" content="8.3 Linux RAID" />
+<meta property="og:description" content="8.3 Linux RAID" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-01-29T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-01-29T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="8.3 Linux RAID"/>
+<meta name="twitter:description" content="8.3 Linux RAID"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/08-linux%E7%A3%81%E7%9B%98%E5%8F%8A%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%AE%A1%E7%90%86/%E7%A3%81%E7%9B%98%E4%B8%8E%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%9A%84%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/lvm%E9%80%BB%E8%BE%91%E5%8D%B7%E4%B8%8E%E5%BF%AB%E7%85%A7/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "8.3 Linux RAID",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8\/linux_raid\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  2697 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8\/linux_raid\/","datePublished": "2018-01-29T22:10:00+08:00","dateModified": "2018-01-29T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "8.3 Linux RAID"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">8.3 Linux RAID</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-01-29">2018-01-29</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2697 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-raid-概述">1. RAID 概述</a></li>
+    <li><a href="#2-raid-等级">2. RAID 等级</a>
+      <ul>
+        <li><a href="#21-raid0">2.1 RAID0</a></li>
+        <li><a href="#22-raid1">2.2 RAID1</a></li>
+        <li><a href="#23-raid10">2.3 RAID10</a></li>
+        <li><a href="#24-raid4">2.4 RAID4</a></li>
+        <li><a href="#25-raid5">2.5 RAID5</a></li>
+        <li><a href="#26-raid6">2.6 RAID6</a></li>
+        <li><a href="#27-jbod">2.7 JBOD</a></li>
+        <li><a href="#28-各个-raid-等级性能比较">2.8 各个 RAID 等级性能比较</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-软件raid的实现">3. 软件RAID的实现</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#mdadm">mdadm</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#练习">练习</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Linux RAID</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_mt.jpg"
+        data-srcset="/images/linux_mt/linux_mt.jpg, /images/linux_mt/linux_mt.jpg 1.5x, /images/linux_mt/linux_mt.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_mt.jpg"
+        title="linux-mt" /></p>
+<!-- more -->
+<p>本章，我们来了解一些更复杂的磁盘使用方式，算是前一章的进阶。本章将包含以下内容:</p>
+<ol>
+<li>RAID 磁盘阵列</li>
+<li>LVM 逻辑卷</li>
+<li>btrfs 文件系统</li>
+</ol>
+<p>RAID 全称叫廉价冗余磁盘阵列（Redundant Array of Inexpensive Disks)，后因磁盘不再廉价， RAID 咨询委员会将其改名为独立磁盘冗余阵列(Redundant Array of Independent Disks)。其设计初衷是为了将多个容量较小、相对廉价的磁盘进行有机组合，从而以较低的成本获得与昂贵大容量磁盘相当的容量、性能、可靠性。RAID 主要利用<strong>数据条带、镜像和数据校验技术</strong>来获取高性能、可靠性、容错能力和扩展性。根据运用或组合运用这三种技术的策略和架构，可以把 RAID 分为不同的等级，以满足不同数据应用的需求。本节我们学习的核心就是来了解 RAID 各个等级，包括如下内容</p>
+<ol>
+<li>RAID 概述</li>
+<li>RAID 各等级的组织结构和特性</li>
+<li>软件RAID的实现</li>
+</ol>
+<h2 id="1-raid-概述">1. RAID 概述</h2>
+<p>从实现角度看， RAID 主要分为软 RAID、硬 RAID 以及软硬混合 RAID 三种。软 RAID 所有功能均有操作系统和 CPU 来完成。，没有独立的 RAID 控制 / 处理芯片和 I/O 处理芯片，效率自然最低。硬 RAID 配备了专门的 RAID 控制 / 处理芯片和 I/O 处理芯片以及阵列缓冲，不占用 CPU 资源，但成本很高。生长环境中则主要以硬 RAID为主。</p>
+<p>RAID 中主要有三个关键概念和技术：镜像（ Mirroring ）、数据条带（ Data Stripping ）和数据校验（ Data parity ）。</p>
+<p>镜像，将数据复制到多个磁盘，一方面可以提高可靠性，另一方面可并发从两个或多个副本读取数据来提高读性能。显而易见，镜像的写性能要稍低， 确保数据正确地写到多个磁盘需要更多的时间消耗。</p>
+<p>数据条带，将数据分片保存在多个不同的磁盘，多个数据分片共同组成一个完整数据副本，这与镜像的多个副本是不同的，它通常用于性能考虑。数据条带具有更高的并发粒度，当访问数据时，可以同时对位于不同磁盘上数据进行读写操作， 从而获得非常可观的 I/O 性能提升 。</p>
+<p>数据校验，利用冗余数据进行数据错误检测和修复，冗余数据通常采用海明码、异或操作等算法来计算获得。利用校验功能，可以很大程度上提高磁盘阵列的可靠性、鲁棒性和容错能力。不过，数据校验需要从多处读取数据并进行计算和对比，会影响系统性能。</p>
+<p>不同等级的 RAID 采用一个或多个以上的三种技术，来获得不同的数据可靠性、可用性和 I/O 性能。至于设计何种 RAID （甚至新的等级或类型）或采用何种模式的 RAID ，需要在深入理解系统需求的前提下进行合理选择，综合评估可靠性、性能和成本来进行折中的选择。</p>
+<h2 id="2-raid-等级">2. RAID 等级</h2>
+<p>在实际应用领域中使用最多的 RAID 等级是 RAID0 、 RAID1 、 RAID4 、 RAID5 、RAID10 、JBOD。接下来将逐一介绍这几个 RAID 等级</p>
+<h3 id="21-raid0">2.1 RAID0</h3>
+<p>RAID0 又称条带，将数据分片保存在多个不同的磁盘，以获取读写性能的提升。其组织结构如下图所示，我们以竖向排列的磁盘表示条带。</p>
+<!-- ![RAID0](/images/linux_mt/RAID0.png) -->
+<p>
+<img src="/images/linux_mt/RAID0.png" alt="RAID0" width="212" hegiht="348" align=left />
+</p>
+<h3 id="22-raid1">2.2 RAID1</h3>
+<p>RAID0 又称镜像，多个磁盘保存了数据的相同副本，通过冗余提供高的容错能力。其组织结构如下图所示，我们以横向排列的磁盘表示镜像，以与条带显示区分，介绍 RAID10 时更容易理解。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/RAID1.png"
+        data-srcset="/images/linux_mt/RAID1.png, /images/linux_mt/RAID1.png 1.5x, /images/linux_mt/RAID1.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/RAID1.png"
+        title="RAID1" /></p>
+<h3 id="23-raid10">2.3 RAID10</h3>
+<p>RAID10 指的是，先将磁盘两两分组组成 RAID1,然后将 RAID1 组织成RAID0。其组织结构如下图所示，数据先分片，在冗余保存。</p>
+<!-- ![RAID10](/images/linux_mt/RAID10.png =229*348) -->
+<p>
+<img src="/images/linux_mt/RAID10.png" alt="RAID10" width="229" hegiht="348" align=left />
+</p>
+<h3 id="24-raid4">2.4 RAID4</h3>
+<p>RAID4 指的是有一块专门作为校验的磁盘，剩余磁盘组织成 RAID0，由校验盘提供冗余容错能力。其组织结构如下图所示，Ap,Bp等 表示校验数据块。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/RAID4.png"
+        data-srcset="/images/linux_mt/RAID4.png, /images/linux_mt/RAID4.png 1.5x, /images/linux_mt/RAID4.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/RAID4.png"
+        title="RAID4" /></p>
+<h3 id="25-raid5">2.5 RAID5</h3>
+<p>RAID4 有个明显的问题是，专门的校验盘负载过重。所以RAID5 将校验功能分散到了所有磁盘上。其组织结构如下图所示，校验数据块 Ap,Bp等分散在各个磁盘中。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/RAID5.png"
+        data-srcset="/images/linux_mt/RAID5.png, /images/linux_mt/RAID5.png 1.5x, /images/linux_mt/RAID5.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/RAID5.png"
+        title="RAID5" /></p>
+<h3 id="26-raid6">2.6 RAID6</h3>
+<p>RAID6 与 RAID5 类似，只不过有两个校验盘，能允许两块盘出现故障</p>
+<h3 id="27-jbod">2.7 JBOD</h3>
+<p>JBOD 是将多个物理磁盘串联起来，提供一个巨大的逻辑磁盘，一个存满了就存下一个。它只是简单提供一种扩展存储空间的机制，不提升存储性能，也没有提供冗余容错能力。其组织结构如下图所示。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/JBOD.png"
+        data-srcset="/images/linux_mt/JBOD.png, /images/linux_mt/JBOD.png 1.5x, /images/linux_mt/JBOD.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/JBOD.png"
+        title="JBOD" /></p>
+<h3 id="28-各个-raid-等级性能比较">2.8 各个 RAID 等级性能比较</h3>
+<p>|级别|读性能|写性能|容错性|最少磁盘数|可用空间
+|:&mdash;|:&mdash;|:&mdash;|:&mdash;|:&mdash;|
+|RAID-0|提升|提升|降低|&gt;=2|N<em>min(S1,S2,..)|
+|RAID-1|提升|略有下降|有|&gt;=2|1</em>min(S1,S2..)|
+|RAID-4/5|提升|提升|允许坏1块磁盘|&gt;=3|(N-1)*min(S1,S2,&hellip;)|
+|RAID-6|提升|提升|允许坏2块磁盘|&gt;=4|(N-2)<em>min(S1,S2,&hellip;)|
+|RAID-10|提升|提升|&gt;=4|每组镜像最多只能坏一块|N</em>min(S1,S2,&hellip;)/2|
+|JBOD|不变|不变|降低|&gt;=2|sum(S1,S2,&hellip;)|</p>
+<h2 id="3-软件raid的实现">3. 软件RAID的实现</h2>
+<p>CentOS 上软RAID的实现由 md(multi devices)模块，及其提供 mdadm 命令组成</p>
+<ul>
+<li>md 模块: multidisks, 一个内核模块，用于支持将任何块设备组织成RAID</li>
+<li>mdadm 命令: 操作 md 模块的模式化工具</li>
+</ul>
+<h4 id="mdadm">mdadm</h4>
+<p><code>mdadm  [mode] raiddevice [options] component-devices</code></p>
+<ul>
+<li>mode: 管理模式
+<ul>
+<li>-A: 装配模式，重新识别此前实现的RAID</li>
+<li>-C：创建模式，创建RAID</li>
+<li>-F：监控模式</li>
+<li>管理模式：-f, -r, -a</li>
+</ul>
+</li>
+<li>raiddevice: RAID设备的设备文件,通常为<code>/dev/md#</code>，<code>#</code>表示一个数字</li>
+<li>component-devices:成员设备</li>
+<li>支持的RAID级别: JBOD, RAID0, RAID1, RAID4, RAID5, RAID10</li>
+</ul>
+<p>options:</p>
+<ol>
+<li>C: 创建模式中专用选项
+<ul>
+<li><code>-n #</code>: 用于创建RAID设备的磁盘个数；</li>
+<li><code>-l #</code>: 级别</li>
+<li><code>-a {yes|no}</code>: 自动为创建的RAID生成设备文件;</li>
+<li><code>-c Chunk_Size</code>: 指明块大小</li>
+<li><code>-x #</code>: 指明空闲盘的个数</li>
+</ul>
+</li>
+<li>管理模式
+<ul>
+<li><code>mdadm /dev/md# -f /dev/some_device</code>：将<code>/dev/md#</code>中的<code>/dev/some_device</code>手动设置为损坏</li>
+<li><code>mdadm /dev/md# -r /dev/some_device</code>：将<code>/dev/md#</code>中的损坏状态的<code>/dev/some_device</code>移除</li>
+<li><code>mdadm /dev/md# -a /dev/new_device</code>: 新增设备</li>
+</ul>
+</li>
+<li>装配模式
+<ul>
+<li>停止软件RAID：<code>mdadm -S /dev/md#</code></li>
+<li>重新启用RAID：
+<ul>
+<li><code>mdadm -A /dev/md# /dev/DEVICE...</code></li>
+<li>mdadm的配置文件/etc/mdadm.conf</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>RAID 设备查看
+<ul>
+<li><code>cat /proc/mdstat</code>: 当前系统上所有已启用的软件RAID设备及其相关信息</li>
+<li><code>mdadm -D /dev/md#</code>：显示指定的软RAID的详细信息</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"># 创建一个10G空间的RAID0
+&gt; mdadm -C /dev/md0 -a yes -n 2 -l 0 /dev/sdb{1,2}
+
+# 创建大小为10G空间的RAID5 -- 3*5G，6*2G  (n-1)*2G
+&gt; mdadm -C /dev/md1 -a yes -n 3 -l 5 /dev/sda{3,5} /dev/sdb3
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="练习">练习</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"># centos7 GPT 分区格式
+练习1：创建一个可用空间为10G的RAID1设备，要求其chunk大小为128k，文件系统为ext4，有一个空闲盘，开机可自动挂载至/backup目录；
+&gt; fdisk /dev/nvme0n1 # 创建3个大小为 50M 的类型为 13 磁盘分区
+&gt; mdadm -C /dev/md0 -n 2 -l 1 -c 128K -x 1 /dev/nvme0n1p{12,13,14}
+&gt; mdadm -D /dev/md0
+&gt; mke2fs -t ext4 /dev/md0
+&gt; blkid /dev/md0
+/dev/md0: UUID=&#34;8d46d667-d3e2-4f5e-b918-4e6d9a576445&#34; TYPE=&#34;ext4&#34;
+&gt; vim /etc/fstab
+UUID=&#34;8d46d667-d3e2-4f5e-b918-4e6d9a576445&#34; /backup ext4 defaults,acl 0 0
+&gt; mount -a
+
+# 拆除 RAID
+&gt; umount /dev/md0
+&gt; mdadm -S /dev/md0
+
+
+练习2：创建一个可用空间为10G的RAID10设备，要求其chunk大小为256k，文件系统为ext4，开机可自动挂载至/mydata目录；
+&gt; fdisk /dev/nvme0n1 # 创建4个大小为 50M 的类型为 13 磁盘分区
+&gt; mdadm -C /dev/md0 -n 4 -l 10 -c 256K /dev/nvme0n1p{12,13,14,15}
+&gt; mkfs -t ext4 /dev/md0
+&gt; blkid /dev/md0
+/dev/md0: UUID=&#34;779bf9e4-846c-443d-970e-6a9b12a235c8&#34; TYPE=&#34;ext4&#34;
+&gt; vim /etc/fstab
+UUID=&#34;779bf9e4-846c-443d-970e-6a9b12a235c8&#34; /mydata ext4 defaults 0 0
+&gt; mount -a
+</code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-01-29</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" data-title="8.3 Linux RAID" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" data-title="8.3 Linux RAID"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" data-title="8.3 Linux RAID"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/linux_raid/" data-title="8.3 Linux RAID" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/08-linux%E7%A3%81%E7%9B%98%E5%8F%8A%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%AE%A1%E7%90%86/%E7%A3%81%E7%9B%98%E4%B8%8E%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%9A%84%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4/" class="prev" rel="prev" title="8.2 磁盘与文件系统的管理命令"><i class="fas fa-angle-left fa-fw"></i>8.2 磁盘与文件系统的管理命令</a>
+            <a href="/posts/linux/linux_mt/09-raid%E5%92%8Clvm%E5%BA%94%E7%94%A8/lvm%E9%80%BB%E8%BE%91%E5%8D%B7%E4%B8%8E%E5%BF%AB%E7%85%A7/" class="next" rel="next" title="8.4 Linux中实现LVM逻辑卷与快照">8.4 Linux中实现LVM逻辑卷与快照<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-01-29T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"8.3 Linux RAID"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>12.1 Linux进程原理 - LoveIt</title><meta name="Description" content="12.1 Linux进程原理"><meta property="og:title" content="12.1 Linux进程原理" />
+<meta property="og:description" content="12.1 Linux进程原理" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-02-14T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-02-14T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="12.1 Linux进程原理"/>
+<meta name="twitter:description" content="12.1 Linux进程原理"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/12-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E5%8F%8Alinux%E7%BD%91%E7%BB%9C%E9%85%8D%E7%BD%AE/%E7%BD%91%E7%BB%9C%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%B7%A5%E5%85%B7/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/%E8%BF%9B%E7%A8%8B%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "12.1 Linux进程原理",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86\/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  2391 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86\/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86\/","datePublished": "2018-02-14T22:10:00+08:00","dateModified": "2018-02-14T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "12.1 Linux进程原理"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">12.1 Linux进程原理</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-02-14">2018-02-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2391 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-进程和内存的抽象">1. 进程和内存的抽象</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#进程">进程</a></li>
+            <li><a href="#虚拟内存">虚拟内存</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-运行中进程">2. 运行中进程</a></li>
+    <li><a href="#3-用户空间与内核空间">3. 用户空间与内核空间</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Linux进程原理</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_mt.jpg"
+        data-srcset="/images/linux_mt/linux_mt.jpg, /images/linux_mt/linux_mt.jpg 1.5x, /images/linux_mt/linux_mt.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_mt.jpg"
+        title="linux-mt" /></p>
+<!-- more -->
+<p>本章我们来学习 Linux 中的进程管理，这是运维的基本内容，我们需要借此查看 Linux 服务的负载，分析和删除系统上的异常进程等等。首先我们会简单介绍操作系统原理中有关进程，虚拟内存相关的基础知识，这是原理部分；如果对进程一无所知对很多命令的输出结果我们很难明白其含义。然后我们会介绍 Linux 上常用的进程查看和管理工具，这些都是我们分析和管理系统的重要工具，最后我们会说一说 Linux 中的作业管理。本章内容总结如下:</p>
+<ol>
+<li>操作系统的基本原理之进程</li>
+<li>常用的进程查看和管理工具</li>
+</ol>
+<ul>
+<li>进程查看命令: <code>pstree, ps, pidof, pgrep</code></li>
+<li>进程管理命令: <code>kill, pkill, killall，nice, renice</code></li>
+</ul>
+<ol start="2">
+<li>实时动态命令的使用，<code>top, glances, htop</code></li>
+<li>系统状态查看,<code>vmstat, pmap, dstat</code></li>
+<li>作业管理</li>
+</ol>
+<p>有关 Linux 的实现有两本书推荐大家观阅读</p>
+<ul>
+<li><a href="https://book.douban.com/subject/6097773/" target="_blank" rel="noopener noreffer">Linux内核设计与实现</a>: 入门级</li>
+<li><a href="https://book.douban.com/subject/2287506/" target="_blank" rel="noopener noreffer">深入理解Linux内核</a>: 进阶级</li>
+</ul>
+<p>当然没那么容易说清楚进程是什么。无论是什么程序员，操作系统，编译原理永远都是谜一样的话题，但是人总是要慢慢进步的，随着我们不断成长，对其的认识也会慢慢深入。好吧，我们开始吧。</p>
+<p>现代操作系统都是多任务系统，目前常用的服务器也就 64 个核心，通常要运行的任务一定比操作系统的核心多，那么就存在几个问题。一是我们应该如何给不同任务分配运行时间？二是多个任务如何共享使用我们的存储设备，特别是内存？这就涉及到进程和虚拟内存的概念了。</p>
+<h2 id="1-进程和内存的抽象">1. 进程和内存的抽象</h2>
+<h4 id="进程">进程</h4>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/task_structure.gif"
+        data-srcset="/images/linux_mt/task_structure.gif, /images/linux_mt/task_structure.gif 1.5x, /images/linux_mt/task_structure.gif 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/task_structure.gif"
+        title="task structure" /></p>
+<p>进程是操作系统对一个独立的运行程序的抽象，是操作系统调度的基本单元(操作系统调度的基本单元应该是线程，但是通常一个进程只有一个线程，可以先这么理解)。每个进程都有一个叫作 task structure 的结构，其包含了该进程能正常运行的所有上下文。什么是程序运行的上下文呢？那我们要从计算机的存储系统说起。</p>
+<p>我们都知道我们的计算机有硬盘，内存，缓存。为什么回有这么多存储设备呢？主要是因为不同的存储介质工作频率不相同，工作频率高的造价高。如果我存储介质跟不上 CPU 的频率就会造成 CPU 性能的浪费。因此基于最近被访问的数据很有可能在接下来再次被访问这样一个原理，计算机的存储系统被构建成了如下的层次结构</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/device_save.jpg"
+        data-srcset="/images/linux_mt/device_save.jpg, /images/linux_mt/device_save.jpg 1.5x, /images/linux_mt/device_save.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/device_save.jpg"
+        title="task structure" /></p>
+<p>典型的 CPU 里面有寄存器，它的工作频率几乎和CPU 一致，但是容量很小，仅仅保存了当前指令的操作数和下一次要执行的指令。当发生进程切换时，寄存器就会被新进程的数据所覆盖。所以这些寄存器中的数据都应该被保存起来，以便下此进程再次执行时就好像从没有中断过一样能继续执行。包括 CPU 中寄存器的值，程序打开的文件描述符等等在内的维持程序能正常执行的所有数据就是进程的上下文。</p>
+<h4 id="虚拟内存">虚拟内存</h4>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/mmap.jpg"
+        data-srcset="/images/linux_mt/mmap.jpg, /images/linux_mt/mmap.jpg 1.5x, /images/linux_mt/mmap.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/mmap.jpg"
+        title="task structure" /></p>
+<p>操作系统的任务是变化的，但是运行中的内存是不变。那么应该如何分配每个进程占用的空间，占用的内存位置，以避免它们相互影响呢？</p>
+<p>操作系统将内存抽象为虚拟内存，所有进程启动时，所见的内存空间均为虚拟内存，进程可以假设为当前系统上只有内核和自己。虚拟内存对于所用程序都是统一的，因此程序无需考虑实际内存的分配问题，直接向虚拟内存空间申请和释放内存即可。虚拟内存和物理内存被划分为一个个页框，当进程需要内存时，其向虚拟内存空间申请内存，然后由操作系统将空闲的物理页框与进程申请到的虚拟页框建立关联关系。进程访问数据时必需将虚拟地址转换实际的内存地址才能访问到数据。计算机上有一个专门的单元 MMU 用于完成虚拟地址的转换。上图 task_structure 中的 mm_struct 保存就是虚拟页框与物理页框的映射关系。</p>
+<h2 id="2-运行中进程">2. 运行中进程</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/process_stack.jpg"
+        data-srcset="/images/linux_mt/process_stack.jpg, /images/linux_mt/process_stack.jpg 1.5x, /images/linux_mt/process_stack.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/process_stack.jpg"
+        title="task structure" /></p>
+<p>进程的内存空间结构如上图左边所示，包括代码段，数据段，堆栈等。创建进程时，父进程调用 fork() 系统调用创建子进程，此时子进程共享父进程的所有环境，然后子进程调用 exec() 系统调用将自己的代码装载入代码段；最后父子进程各自运行。Linux 使用写时复制，当子进程需要修改父进程的内存空间时，它首先将当前内存中的内容复制到新的空闲空间中，然后在修改。因此父子进程不会相互影响。</p>
+<p>进程都是有父进程创建和销毁。Centos 中的第一个进程叫 init ，它是所有进程父进程。Centos567 的 init 程序并不相同。我们会在后面的系统开机启动中详细讲解。</p>
+<p>运行中的进程存在优先级的概念，优先级用于控制进程的执行次序
+Linux 中进程优先级别为0-139：</p>
+<ul>
+<li>1-99：实时优先级；</li>
+<li>100-139：静态优先级； 数字越小，优先级越高，Nice值(-20,19) 用于调整静态优先级。
+需要注意的是，优先级越靠近 99，优先级越高。可以通过调整 Nice 值调整程序优先级。普通用户只能调高优先级(即降低程序优先级)，不能调高优先级。root 可以调高或调低。</li>
+</ul>
+<p>进程之间可能需要通信，进程间通信叫作 IPC，IPC 有如下方式。</p>
+<p>IPC: Inter Process Communication</p>
+<ol>
+<li>同一主机上：
+<ul>
+<li>signal: 信号</li>
+<li>shm: shared memory: 共享内存</li>
+<li>semerphor: 信号量</li>
+</ul>
+</li>
+<li>不同主机上：
+<ul>
+<li>rpc: remote procecure call 远程系统调用</li>
+<li>socket: 套接子</li>
+</ul>
+</li>
+</ol>
+<p>进程最终必需由父进程收回，如果父进程意外终止而没有收回进程，进程就会成为孤儿进程，在进程执行完成后将称为僵尸进程。</p>
+<h2 id="3-用户空间与内核空间">3. 用户空间与内核空间</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/space.jpg"
+        data-srcset="/images/linux_mt/space.jpg, /images/linux_mt/space.jpg 1.5x, /images/linux_mt/space.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/space.jpg"
+        title="space" /></p>
+<p>为了避免用户空间的程序破坏内核，Linux 将操作系统的指令分成了4个不同级别，这些级别的指令被分别放在操作系统抽象的环上。最内存的内核和系统调用属于特权指令，被称为内核空间，外层的指令属于普通指令，被称为用户空间。</p>
+<p>当进程需要调用特权指令时，进程需要发出软中断，陷入内核，由内核执行所需的特权执行，并将执行结果交给用户进程。进程获取到结果后继续运行。进程等待系统调用结果而不能执行时，我们称进程处于不可中断睡眠状态。运行中的进程有如下几种状态</p>
+<ul>
+<li>运行态：running，正在被CPU 执行</li>
+<li>就绪态：ready，程序准备完成，等待内核调度执行</li>
+<li>睡眠态：
+<ul>
+<li>可中断：interruptable，进程的执行时间耗尽而被换出CPU</li>
+<li>不可中断：uninterruptable</li>
+</ul>
+</li>
+<li>停止态：暂停于内存中，但不会被调度，除非手动启动之；stopped</li>
+<li>僵死态：zombie</li>
+</ul>
+<p>最后Linux 中进程可以分为两类</p>
+<ul>
+<li>守护进程: 在系统引导过程中启动的进程，跟终端无关的进程；</li>
+<li>前台进程：跟终端相关，通过终端启动的进程，也可把在前台启动的进程送往后台，以守护模式运行；</li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-02-14</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" data-title="12.1 Linux进程原理" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" data-title="12.1 Linux进程原理"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" data-title="12.1 Linux进程原理"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/linux%E8%BF%9B%E7%A8%8B%E5%8E%9F%E7%90%86/" data-title="12.1 Linux进程原理" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/12-%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E5%8F%8Alinux%E7%BD%91%E7%BB%9C%E9%85%8D%E7%BD%AE/%E7%BD%91%E7%BB%9C%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%B7%A5%E5%85%B7/" class="prev" rel="prev" title="11.7 网络客户端工具"><i class="fas fa-angle-left fa-fw"></i>11.7 网络客户端工具</a>
+            <a href="/posts/linux/linux_mt/13-%E8%BF%9B%E7%A8%8B%E5%8F%8A%E4%BD%9C%E4%B8%9A%E7%AE%A1%E7%90%86/%E8%BF%9B%E7%A8%8B%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4/" class="next" rel="next" title="12.2 进程管理命令">12.2 进程管理命令<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-02-14T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"12.1 Linux进程原理"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

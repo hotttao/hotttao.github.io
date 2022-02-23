@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>23.1 IO模型 - LoveIt</title><meta name="Description" content="23.1 IO模型"><meta property="og:title" content="23.1 IO模型" />
+<meta property="og:description" content="23.1 IO模型" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-09-21T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-09-21T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="23.1 IO模型"/>
+<meta name="twitter:description" content="23.1 IO模型"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/25-linux%E6%97%A5%E5%BF%97-%E6%97%B6%E9%92%9F%E6%9C%8D%E5%8A%A1-sudo/sudo/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/nginx%E5%9F%BA%E7%A1%80%E5%85%A5%E9%97%A8/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "23.1 IO模型",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/26-nginx\/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  932 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/26-nginx\/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B\/","datePublished": "2018-09-21T22:10:00+08:00","dateModified": "2018-09-21T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "23.1 IO模型"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">23.1 IO模型</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-09-21">2018-09-21</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 932 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-io-系统调用">1. IO 系统调用</a>
+      <ul>
+        <li><a href="#11-io-过程">1.1 IO 过程</a></li>
+        <li><a href="#11-同步异步">1.1 同步/异步</a></li>
+        <li><a href="#12-阻塞非阻塞">1.2 阻塞/非阻塞</a></li>
+        <li><a href="#13-io-模型类别">1.3 IO 模型类别</a></li>
+        <li><a href="#2-httpd-的io-模型">2. httpd 的IO 模型</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>IO模型</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_mt1.jpg"
+        data-srcset="/images/linux_mt/linux_mt1.jpg, /images/linux_mt/linux_mt1.jpg 1.5x, /images/linux_mt/linux_mt1.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_mt1.jpg"
+        title="linux-mt" /></p>
+<!-- more -->
+<p>nginx 是一个 web 服务器，同时还能作为 http 协议的反向代理服务器。相比于 http，nginx 使用了更先进的 IO 模型，异步通信以及进程间通信的技术，能支持更多的并发请求，具有更高的性能和稳定性。本章我们首先来学习如何使用 nginx 配置一个 web serve，nginx 的反向代理功能我们留在 28 章再来介绍。本章内容包括</p>
+<ol>
+<li>IO 事件模型</li>
+<li>nginx 框架与配置</li>
+<li>nginx web 服务配置</li>
+</ol>
+<p>有关 web 的基础概念和 http 协议的内容将不再此累述，大家可以回看以下几个章节:</p>
+<ul>
+<li><a href="20-web-apache/web%e5%9f%ba%e7%a1%80%e6%a6%82%e5%bf%b5.md" rel="">20.1 web基础概念</a></li>
+<li><a href="20-web-apache/http%e5%8d%8f%e8%ae%ae%e5%9f%ba%e7%a1%80.md" rel="">20.2 http协议基础</a></li>
+<li><a href="20-web-apache/http%e5%8d%8f%e8%ae%ae%e8%bf%9b%e9%98%b6.md" rel="">20.3 http协议进阶</a></li>
+</ul>
+<p>想要讲清楚 IO 模型并不容易，对于没有编程经验的来说这是一个很抽象的概念。想理解这个概念可以从以下几点入手:</p>
+<ol>
+<li>我们的 web 需要同时响应多个用户请求，但是我们的程序通常是顺序执行的，一次只能响应一个用户请求</li>
+<li>响应的内容通常位于磁盘上，而读取磁盘文件，利用网卡发送数据包都是内核提供的功能，应用程序需要发起系统调用</li>
+<li>在系统调用返回结果之前，发起调用的应用程序通常只能等待</li>
+</ol>
+<p>总结起来就是，web 程序需要同时处理多个用户请求，但是程序通常是顺序执行的，且经常经常阻塞在磁盘和网络 IO 之上。为能够为多个用户同时提供响应我们需要新的技术，这些技术目的是提高程序的 IO 效率称为 IO 模型。要想明白 IO 模型，我们首先要明白系统调用的过程。</p>
+<h2 id="1-io-系统调用">1. IO 系统调用</h2>
+<h3 id="11-io-过程">1.1 IO 过程</h3>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/sync_block.png"
+        data-srcset="/images/linux_mt/sync_block.png, /images/linux_mt/sync_block.png 1.5x, /images/linux_mt/sync_block.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/sync_block.png"
+        title="io" /></p>
+<p>我们以读取磁盘文件为例:</p>
+<ol>
+<li>当我们需要读取文件时，首先发起 read 系统调用</li>
+<li>此时会陷入内核，执行内核代码，将数据从磁盘读取到内核缓冲区中</li>
+<li>将内核缓冲区中的数据从内核拷贝到应用程序内存空间</li>
+</ol>
+<h3 id="11-同步异步">1.1 同步/异步</h3>
+<p>同步/异步关注的是</p>
+<ol>
+<li>被调用者，如何通知调用者，即被调用者与调用者之间消息通知的机制</li>
+<li>在 IO 上就是应用程序与操作系统的交互方式</li>
+</ol>
+<h3 id="12-阻塞非阻塞">1.2 阻塞/非阻塞</h3>
+<p>阻塞/非阻塞关注的是</p>
+<ol>
+<li>调用者如何等待结果，即调用程序的执行模式</li>
+</ol>
+<h3 id="13-io-模型类别">1.3 IO 模型类别</h3>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/io.jpg"
+        data-srcset="/images/linux_mt/io.jpg, /images/linux_mt/io.jpg 1.5x, /images/linux_mt/io.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/io.jpg"
+        title="io" /></p>
+<ol>
+<li>同步阻塞</li>
+<li>同步非阻塞</li>
+<li>IO复用(事件驱动IO)：select, poll，epoll:</li>
+<li>信号驱动I/O</li>
+<li>异步IO</li>
+</ol>
+<p>参考连接:</p>
+<ul>
+<li><a href="https://songlee24.github.io/2016/07/19/explanation-of-5-IO-models/" target="_blank" rel="noopener noreffer">https://songlee24.github.io/2016/07/19/explanation-of-5-IO-models/</a></li>
+<li><a href="https://blog.csdn.net/wuzhengfei1112/article/details/78242004" target="_blank" rel="noopener noreffer">https://blog.csdn.net/wuzhengfei1112/article/details/78242004</a></li>
+<li><a href="https://blog.csdn.net/lijinqi1987/article/details/71214974" target="_blank" rel="noopener noreffer">https://blog.csdn.net/lijinqi1987/article/details/71214974</a></li>
+</ul>
+<h3 id="2-httpd-的io-模型">2. httpd 的IO 模型</h3>
+<ol>
+<li>多进程模型：prefork, 一个进程响应一个用户请求，并发使用多个进程实现；</li>
+<li>多线程模型：worker, 一个进程生成多个线程，一个线程响应一个用户请求；并发使用多个线程实现；n进程，n*m个线程；</li>
+<li>事件模型：event, 一个线程响应多个用户请求，基于事件驱动机制来维持多个用户请求；</li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-09-21</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" data-title="23.1 IO模型" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" data-title="23.1 IO模型"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" data-title="23.1 IO模型"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/26-nginx/io%E4%BA%8B%E4%BB%B6%E6%A8%A1%E5%9E%8B/" data-title="23.1 IO模型" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/25-linux%E6%97%A5%E5%BF%97-%E6%97%B6%E9%92%9F%E6%9C%8D%E5%8A%A1-sudo/sudo/" class="prev" rel="prev" title="22.3 sudo"><i class="fas fa-angle-left fa-fw"></i>22.3 sudo</a>
+            <a href="/posts/linux/linux_mt/26-nginx/nginx%E5%9F%BA%E7%A1%80%E5%85%A5%E9%97%A8/" class="next" rel="next" title="23.2 nginx基础入门">23.2 nginx基础入门<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-09-21T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"23.1 IO模型"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

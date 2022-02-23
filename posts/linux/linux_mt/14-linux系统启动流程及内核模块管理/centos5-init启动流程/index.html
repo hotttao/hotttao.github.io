@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>13.2 Centos5 init 启动流程 - LoveIt</title><meta name="Description" content="13.2 Centos5 init 启动流程"><meta property="og:title" content="13.2 Centos5 init 启动流程" />
+<meta property="og:description" content="13.2 Centos5 init 启动流程" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-02-20T22:10:00+08:00" />
+<meta property="article:modified_time" content="2018-02-20T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="13.2 Centos5 init 启动流程"/>
+<meta name="twitter:description" content="13.2 Centos5 init 启动流程"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "13.2 Centos5 init 启动流程",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86\/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "马哥 Linux","wordcount":  2077 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_mt\/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86\/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B\/","datePublished": "2018-02-20T22:10:00+08:00","dateModified": "2018-02-20T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "13.2 Centos5 init 启动流程"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">13.2 Centos5 init 启动流程</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-02-20">2018-02-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2077 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#11-centos-5-sysv-init">1.1 CentOS 5： SysV init</a>
+      <ul>
+        <li><a href="#11-运行级别">1.1 运行级别</a></li>
+        <li><a href="#12-配置文件etcinittab">1.2 配置文件：/etc/inittab</a></li>
+        <li><a href="#12-服务启动">1.2 服务启动</a></li>
+        <li><a href="#13-配置服务开机启动">1.3 配置服务开机启动</a></li>
+        <li><a href="#15-总结用户空间的启动流程">1.5 总结（用户空间的启动流程）：</a></li>
+        <li><a href="#2-centos-6">2. CentOS 6：</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Centos5 init 启动流程</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_mt/linux_mt.jpg"
+        data-srcset="/images/linux_mt/linux_mt.jpg, /images/linux_mt/linux_mt.jpg 1.5x, /images/linux_mt/linux_mt.jpg 2x"
+        data-sizes="auto"
+        alt="/images/linux_mt/linux_mt.jpg"
+        title="linux-mt" /></p>
+<!-- more -->
+<p>在上一节我们详细讲解了开机启动流程中内核级部分，接下来我们讲学习内核加载并完成根文件系统之后 init 程序的启动过程。因为内容过多，而且不同Centos 版本并不相同，因此我们将分成两个节，本节将讲解一下内容:</p>
+<ol>
+<li>CentOS5 SysV init 的启动流程
+<ul>
+<li><code>/etc/inittab</code> 的格式和内容</li>
+<li>Centos5 的服务启动方式</li>
+<li>chkconfig 设置服务开机启动</li>
+<li><code>/sbin/init</code> 程序执行的操作</li>
+</ul>
+</li>
+<li>CentOS6 Upstart 的启动流程</li>
+</ol>
+<h2 id="11-centos-5-sysv-init">1.1 CentOS 5： SysV init</h2>
+<h3 id="11-运行级别">1.1 运行级别</h3>
+<ul>
+<li>运行级别：为了系统的运行或维护等目的而设定的机制；
+<ul>
+<li>0-6：7个级别；</li>
+<li>0: 关机, shutdown</li>
+<li>1: 单用户模式(single user)，root用户，无须认证；维护模式；</li>
+<li>2: 多用户模式(multi user)，会启动网络功能，但不会启动NFS；维护模式；</li>
+<li>3: 多用户模式(mutli user)，完全功能模式；文本界面；</li>
+<li>4: 预留级别：目前无特别使用目的，但习惯以同3级别功能使用；</li>
+<li>5: 多用户模式(multi user)， 完全功能模式，图形界面；</li>
+<li>6: 重启，reboot</li>
+</ul>
+</li>
+<li>默认级别：3, 5</li>
+<li>级别切换：<code>init level</code></li>
+<li>级别查看：
+<ul>
+<li><code>who -r</code></li>
+<li><code>runlevel</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="12-配置文件etcinittab">1.2 配置文件：/etc/inittab</h3>
+<p><code>/etc/inittab</code></p>
+<ul>
+<li>作用: 每行定义一种 action 以及与之对应的 process</li>
+<li>格式: <code>id:runlevels:action:process</code>
+<ul>
+<li><code>id</code>：一个任务的标识符；</li>
+<li><code>runlevels</code>：在哪些级别启动此任务，格式如下:
+<ul>
+<li>n: 单个数字例如 2，表示仅在第二级别</li>
+<li>nnn: 多个数字例如 234，表示在第二三四级别</li>
+<li>也可以为空，表示所有级别；</li>
+</ul>
+</li>
+<li><code>action</code>：在什么条件下启动此任务；</li>
+<li><code>process</code>：任务；</li>
+</ul>
+</li>
+</ul>
+<p><strong>action</strong>：</p>
+<ul>
+<li>wait：等待切换至此任务所在的级别时执行一次；</li>
+<li>respawn：一旦此任务终止，就自动重新启动之；</li>
+<li>initdefault：设定默认运行级别；此时，process省略；</li>
+<li>sysinit：设定系统初始化方式，此处一般为指定<code>/etc/rc.d/rc.sysinit</code>脚本；</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">id:3:initdefault:        -- 设置系统默认启动级别
+si::sysinit:/etc/rc.d/rc.sysinit  -- 系统初始化脚本
+
+l0:0:wait:/etc/rc.d/rc  0  -- rc 脚本框架，启动对应级别下的服务
+l1:1:wait:/etc/rc.d/rc  1
+…………
+l6:6:wait:/etc/rc.d/rc  6
+
+tty1:2345:respawn:/usr/sbin/mingetty tty1  ---  虚拟终端启动
+... ...
+tty6:2345:respawn:/usr/sbin/mingetty tty6    
+# mingetty会调用login程序；
+# 打开虚拟终端的程序除了mingetty之外，还有诸如getty等；
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>rc 脚本框架：</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">for  srv  in  /etc/rc.d/rc#.d/K*; do
+    $srv  stop
+done
+
+for  srv  in  /etc/rc.d/rc#.d/S*; do
+    $srv  start
+done
+</code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>rc脚本：接受一个运行级别数字为参数；</li>
+<li>rc 3: 意味着去启动或关闭/etc/rc.d/rc3.d/目录下的服务脚本所控制服务；</li>
+<li>K*：要停止的服务；K##*，优先级，数字越小，越是优先关闭；依赖的服务先关闭，而后关闭被依赖的；</li>
+<li>S*：要启动的服务；S##*，优先级，数字越小，越是优先启动；被依赖的服务先启动，而依赖的服务后启动；</li>
+<li>rc#.d/ 目录下所有文件都是链接文件，连接到 /etc/rc.d/init.d/</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">&gt; ls /etc/rd.d/
+init.d rc rc0.d  rc1.d  rc2.d  rc3.d rc4.d rc5.d  rc6.d  rc.local  rc.sysinit    
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="12-服务启动">1.2 服务启动</h3>
+<p><code>/etc/init.d/* (/etc/rc.d/init.d/*)</code>脚本执行方式：</p>
+<ul>
+<li><code>/etc/init.d/SRV_SCRIPT  {start|stop|restart|status}</code></li>
+<li><code>service     SRV_SCRIPT  {start|stop|restart|status}</code></li>
+</ul>
+<h3 id="13-配置服务开机启动">1.3 配置服务开机启动</h3>
+<p>chkconfig命令：</p>
+<ul>
+<li>作用: 管控/etc/init.d/每个服务脚本在各级别下的启动或关闭状态；</li>
+<li>添加：<code>chkconfig  --add  name</code>
+<ul>
+<li>作用: 将 name 脚本添加到service 命令的控制中，并按照脚本中 chkconfig 的配置在对应级别下设置开机启动，其他级别下设置开机关闭</li>
+</ul>
+</li>
+<li>启动/关闭指定级别服务：
+<ul>
+<li><code>chkconfig  [--level  LEVELS]  name  on|off|reset</code></li>
+<li><code>--level LEVELS</code>：指定要控制的级别；默认为2345；</li>
+</ul>
+</li>
+<li>查看：<code>chkconfig  --list  [name]</code></li>
+<li>删除：<code>chkconfig  --del  name</code>
+<ul>
+<li>作用: 将服务从 service 管理的范围内删除，并从各个级别的开机启动中删除</li>
+</ul>
+</li>
+<li>注意：正常级别下，最后启动的一个服务S99local 没有链接至/etc/init.d下的某脚本，而是链接至了/etc/rc.d/rc.local （/etc/rc.local）脚本；因此，不便或不需写为服务脚本的程序期望能开机自动运行时，直接放置于此脚本文件中即可</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">&gt; vim /etc/init.d/testsrv
+
+<span class="c1">#!/bin/bash</span>
+<span class="c1"># testsrv  serviec testing script</span>
+<span class="c1">#</span>
+<span class="c1"># chkconfig: 234  50 60</span>
+<span class="c1"># description:  testing service</span>
+
+
+<span class="c1"># 注解: 必须要有 chkconfig:</span>
+<span class="c1"># chkconfig: LLL  NN NN  -- 被添加到的级别，启动优先级，关闭优先级</span>
+<span class="c1"># chkconfig: - 50 60     -- 表示没有级别</span>
+
+<span class="nv">$prog</span><span class="o">=</span><span class="k">$(</span>basename <span class="nv">$0</span><span class="k">)</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$#</span> -lt <span class="m">1</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">echo</span> <span class="s2">&#34;Usage: </span><span class="si">${</span><span class="nv">prog</span><span class="si">}</span><span class="s2"> {start|stop|status|restart}&#34;</span>
+	<span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$1</span><span class="s2">&#34;</span> <span class="o">==</span> <span class="s2">&#34;start&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">echo</span> <span class="s2">&#34;start </span><span class="nv">$prog</span><span class="s2"> success&#34;</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$1</span><span class="s2">&#34;</span> <span class="o">==</span> <span class="s2">&#34;stop&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">echo</span> <span class="s2">&#34;stop </span><span class="nv">$prog</span><span class="s2"> success&#34;</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$1</span><span class="s2">&#34;</span> <span class="o">==</span> <span class="s2">&#34;status&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="k">if</span> pidof <span class="nv">$prog</span> <span class="p">&amp;</span>&gt; /dev/null<span class="p">;</span> <span class="k">then</span>
+		<span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$prog</span><span class="s2"> is running&#34;</span>
+	<span class="k">else</span>
+		<span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$prog</span><span class="s2"> is stopped&#34;</span>
+	<span class="k">fi</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&#34;</span><span class="nv">$1</span><span class="s2">&#34;</span> <span class="o">==</span> <span class="s2">&#34;restart&#34;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+	<span class="nb">echo</span> <span class="s2">&#34;restart </span><span class="nv">$prog</span><span class="s2"> success&#34;</span>
+<span class="k">else</span>
+	<span class="nb">echo</span> <span class="s2">&#34;Usage: </span><span class="si">${</span><span class="nv">prog</span><span class="si">}</span><span class="s2"> {start|stop|status|restart}&#34;</span>
+	<span class="nb">exit</span> <span class="m">2</span>
+<span class="k">fi</span>
+
+
+
+&gt; chkconfig --add testsrv
+&gt; ls /etc/rc.d/rc3.d/ <span class="p">|</span>grep testsrv
+
+&gt; chkconfig --list testsrv
+&gt; chkconfig --level <span class="m">23</span> testsrv off
+&gt; chkconfig --del testsrv
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="15-总结用户空间的启动流程">1.5 总结（用户空间的启动流程）：</h3>
+<p><code>/sbin/init (/etc/inittab)</code></p>
+<ol>
+<li>设置默认运行级别</li>
+<li>运行系统初始化脚本(<code>/etc/rc.d/rc.sysinit</code>)，完成系统初始化
+<ul>
+<li>设置主机名</li>
+<li>设置欢迎信息</li>
+<li>激活udev和selinux</li>
+<li><strong>挂载/etc/fstab文件中定义的所有文件系统</strong></li>
+<li><strong>检测根文件系统，并以读写方式重新挂载根文件系统</strong></li>
+<li>设置系统时钟；</li>
+<li><strong>根据/etc/sysctl.conf文件来设置内核参数</strong></li>
+<li>激活lvm及软raid设备</li>
+<li>激活swap设备</li>
+<li>加载额外设备的驱动程序</li>
+<li>清理操作</li>
+</ul>
+</li>
+<li>关闭对应级别下需要停止的服务，启动对应级别下需要开启的服务</li>
+<li>设置登录终端</li>
+<li>[&ndash;&gt; 启动图形终端]</li>
+</ol>
+<h3 id="2-centos-6">2. CentOS 6：</h3>
+<p>Centos 6 中init程序为 upstart，但依然为/sbin/init 配置文件包括如下:</p>
+<ul>
+<li>/etc/init/*.conf</li>
+<li>/etc/inittab（仅用于定义默认运行级别）</li>
+<li>注意：*.conf为upstart风格的配置文件，需遵循其配置语法；
+<ul>
+<li>rcS.conf</li>
+<li>rc.conf</li>
+<li>start-ttys.conf</li>
+</ul>
+</li>
+</ul>
+<p>CentOS 6启动流程：</p>
+<ul>
+<li>POST &ndash;&gt; Boot Sequence(BIOS) &ndash;&gt; Boot Loader (MBR) &ndash;&gt; Kernel(ramdisk) &ndash;&gt; rootfs &ndash;&gt; switchroot &ndash;&gt; /sbin/init &ndash;&gt;(/etc/inittab, /etc/init/*.conf) &ndash;&gt; 设定默认运行级别 &ndash;&gt; 系统初始化脚本 &ndash;&gt; 关闭或启动对应级别下的服务 &ndash;&gt; 启动终端</li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2018-02-20</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.2 Centos5 init 启动流程" data-hashtags="马哥 Linux"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-hashtag="马哥 Linux"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.2 Centos5 init 启动流程"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.2 Centos5 init 启动流程"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos5-init%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" data-title="13.2 Centos5 init 启动流程" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E9%A9%AC%E5%93%A5-linux/">马哥 Linux</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%BB%8B%E7%BB%8D/" class="prev" rel="prev" title="13.1 CentOS系统启动流程介绍"><i class="fas fa-angle-left fa-fw"></i>13.1 CentOS系统启动流程介绍</a>
+            <a href="/posts/linux/linux_mt/14-linux%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%AE%A1%E7%90%86/centos7-systemd%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" class="next" rel="next" title="13.3 Centos7 Systemd 启动流程">13.3 Centos7 Systemd 启动流程<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-02-20T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"13.2 Centos5 init 启动流程"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
