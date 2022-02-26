@@ -1,7 +1,6 @@
-# 12 Atomic 原子操作
+# Atomic 原子操作
 
-Atomic 原子操作
-<!-- more -->
+
 
 ## 1. Atomic 概述
 ### 1.1 原子操作
