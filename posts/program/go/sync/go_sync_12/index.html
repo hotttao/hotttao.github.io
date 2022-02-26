@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>12 Atomic 原子操作 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="12 Atomic 原子操作" />
+<meta property="og:description" content="Atomic 原子操作 1. Atomic 概述 1.1 原子操作 Package sync/atomic 实现了同步算法底层的原子的内存操作原语。之所以叫原子操作，是因为一个原子在执行的时候，其它线程不会看到执行一" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2019-02-12T00:00:00+00:00" />
+<meta property="article:modified_time" content="2022-02-26T12:28:03+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="12 Atomic 原子操作"/>
+<meta name="twitter:description" content="Atomic 原子操作 1. Atomic 概述 1.1 原子操作 Package sync/atomic 实现了同步算法底层的原子的内存操作原语。之所以叫原子操作，是因为一个原子在执行的时候，其它线程不会看到执行一"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" /><link rel="next" href="https://hotttao.github.io/posts/hugo/loveit_emoji/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "12 Atomic 原子操作",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_12\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go并发编程","wordcount":  3341 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_12\/","datePublished": "2019-02-12T00:00:00+00:00","dateModified": "2022-02-26T12:28:03+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">12 Atomic 原子操作</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2019-02-12">2019-02-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3341 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-atomic-概述">1. Atomic 概述</a>
+      <ul>
+        <li><a href="#11-原子操作">1.1 原子操作</a></li>
+        <li><a href="#12-原子操作应用场景">1.2 原子操作应用场景</a></li>
+        <li><a href="#13-atomic-的使用">1.3 atomic 的使用</a>
+          <ul>
+            <li><a href="#add">Add</a></li>
+            <li><a href="#csacompareandswap">CSA(CompareAndSwap)</a></li>
+            <li><a href="#swap">Swap</a></li>
+            <li><a href="#load">Load</a></li>
+            <li><a href="#store">Store</a></li>
+            <li><a href="#value-类型">Value 类型</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-atomic-的扩展">2. Atomic 的扩展</a>
+      <ul>
+        <li><a href="#3-使用-atomic-实现-lock-free-queue">3. 使用 atomic 实现 Lock-Free queue</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-对一个地址的赋值是原子操作吗">4. 对一个地址的赋值是原子操作吗？</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>Atomic 原子操作</p>
+<!-- more -->
+<h2 id="1-atomic-概述">1. Atomic 概述</h2>
+<h3 id="11-原子操作">1.1 原子操作</h3>
+<p>Package sync/atomic 实现了同步算法底层的<strong>原子的内存操作</strong>原语。之所以叫原子操作，是因为一个原子在执行的时候，其它线程不会看到执行一半的操作结果。在其它线程看来，原子操作要么执行完了，要么还没有执行，就像一个最小的粒子 - 原子一样，不可分割。</p>
+<p>CPU 提供了基础的原子操作，不过，不同架构的系统的原子操作是不一样的:</p>
+<ol>
+<li>对于单处理器单核系统:
+<ul>
+<li>如果一个操作是由一个 CPU 指令来实现的，那么它就是原子操作</li>
+<li>如果操作是基于多条指令来实现的，那么，执行的过程中可能会被中断，并执行上下文切换，这样的话，原子性的保证就会被打破</li>
+</ul>
+</li>
+<li>在多处理器多核系统中:
+<ul>
+<li>由于 cache 的存在，单个核上的单个指令进行原子操作的时候，要确保其它处理器或者核不访问此原子操作的地址，或者是确保其它处理器或者核总是访问原子操作之后的最新的值</li>
+<li>不同的 CPU 架构提供了不同的 CPU 指令来完成原子操作</li>
+<li>因为不同的 CPU 架构甚至不同的版本提供的原子操作的指令是不同的，所以，要用一种编程语言实现支持不同架构的原子操作是相当有难度的，Go 语言为我们做好了这一切</li>
+</ul>
+</li>
+</ol>
+<p>Go 提供了一个通用的原子操作的 API，将更底层的不同的架构下的实现封装成 atomic 包，提供了<strong>修改类型的原子操作</strong>（atomic <strong>read-modify-write</strong>，RMW）和<strong>加载存储类型的原子操作</strong>（<strong>Load 和 Store</strong>）的 API</p>
+<h3 id="12-原子操作应用场景">1.2 原子操作应用场景</h3>
+<p>原子操作适用以下场景:</p>
+<ol>
+<li>首先 atomic 原子操作适用于&quot;不涉及到对资源复杂的竞争逻辑&quot;，比如</li>
+</ol>
+<ul>
+<li>并发地读写某个标志变量 - 对应 read-modify-write API</li>
+<li>配置对象的更新和加载 - 对应 Load and Store API</li>
+</ul>
+<ol start="2">
+<li>基于 atomic 可以实现自定义的基本并发原语，原子操作是解决并发问题的根本</li>
+<li>atomic 原子操作还是实现 lock-free 数据结构的基石，lock-freeze 数据结构的实现可以参考这篇文章<a href="https://docs.microsoft.com/zh-cn/windows/win32/dxtecharts/lockless-programming" target="_blank" rel="noopener noreffer">Lockless Programming Considerations for Xbox 360 and Microsoft Windows</a></li>
+</ol>
+<h3 id="13-atomic-的使用">1.3 atomic 的使用</h3>
+<p>目前的 Go 的泛型的特性还没有发布，多个类型会实现很多类似的方法，尤其是 atomic 包。</p>
+<p>atomic 为了支持 int32、int64、uint32、uint64、uintptr、Pointer（Add 方法不支持）类型，分别提供了 AddXXX、CompareAndSwapXXX、SwapXXX、LoadXXX、StoreXXX 等方法。</p>
+<p>atomic 操作的对象是一个地址，你需要把<strong>可寻址的变量的地址</strong>作为参数传递给方法，而不是把变量的值传递给方法。下面我们就来看看 atomic 提供的方法。</p>
+<h4 id="add">Add</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">AddInt32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int32</span><span class="p">,</span> <span class="nx">delta</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">(</span><span class="nx">new</span> <span class="kt">int32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">AddInt64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int64</span><span class="p">,</span> <span class="nx">delta</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">(</span><span class="nx">new</span> <span class="kt">int64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">AddUint32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">,</span> <span class="nx">delta</span> <span class="kt">uint32</span><span class="p">)</span> <span class="p">(</span><span class="nx">new</span> <span class="kt">uint32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">AddUint64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">delta</span> <span class="kt">uint64</span><span class="p">)</span> <span class="p">(</span><span class="nx">new</span> <span class="kt">uint64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">AddUintptr</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uintptr</span><span class="p">,</span> <span class="nx">delta</span> <span class="kt">uintptr</span><span class="p">)</span> <span class="p">(</span><span class="nx">new</span> <span class="kt">uintptr</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Add 方法:</p>
+<ol>
+<li>Add 方法就是给第一个参数地址中的值增加一个 delta 值</li>
+<li>对于有符号的整数来说，delta 可以是一个负数，相当于减去一个值</li>
+<li>对于无符号的整数和 uinptr 类型来，减去一个值需要利用计算机补码规则，吧减法编程加法</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 以 uint32/unit64 类型为例，实现减 c 操作
+</span><span class="c1"></span><span class="nf">AddUint32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">x</span><span class="p">,</span> <span class="p">^</span><span class="nb">uint32</span><span class="p">(</span><span class="nx">c</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="nf">AddUint32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">x</span><span class="p">,</span> <span class="p">^</span><span class="nb">uint32</span><span class="p">(</span><span class="nx">c</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="csacompareandswap">CSA(CompareAndSwap)</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">CompareAndSwapInt32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int32</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">CompareAndSwapInt64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int64</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">CompareAndSwapUint32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">uint32</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">CompareAndSwapUint64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">uint64</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">CompareAndSwapUintptr</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uintptr</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">uintptr</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>CSA 方法:</p>
+<ol>
+<li>这个方法会比较当前 addr 地址里的值是不是 old，如果不等于 old，就返回 false；如果等于 old，就把此地址的值替换成 new 值，返回 true</li>
+</ol>
+<h4 id="swap">Swap</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">SwapInt32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int32</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="kt">int32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">SwapInt64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int64</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="kt">int64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">SwapPointer</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">,</span> <span class="nx">new</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">SwapUint32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">uint32</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="kt">uint32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">SwapUint64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">uint64</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="kt">uint64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">SwapUintptr</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uintptr</span><span class="p">,</span> <span class="nx">new</span> <span class="kt">uintptr</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="kt">uintptr</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Swap 方法:</p>
+<ol>
+<li>不需要比较旧值，直接将 addr 地址内的值替换为 new，并返回旧值</li>
+</ol>
+<h4 id="load">Load</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">LoadInt32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int32</span><span class="p">)</span> <span class="p">(</span><span class="nx">val</span> <span class="kt">int32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">LoadInt64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int64</span><span class="p">)</span> <span class="p">(</span><span class="nx">val</span> <span class="kt">int64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span> <span class="p">(</span><span class="nx">val</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">LoadUint32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">)</span> <span class="p">(</span><span class="nx">val</span> <span class="kt">uint32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">LoadUint64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">)</span> <span class="p">(</span><span class="nx">val</span> <span class="kt">uint64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">LoadUintptr</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uintptr</span><span class="p">)</span> <span class="p">(</span><span class="nx">val</span> <span class="kt">uintptr</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Load 方法:</p>
+<ol>
+<li>取出 addr 地址中的值，即使在多处理器、多核、有 CPU cache 的情况下，这个操作也能保证 Load 是一个原子操作</li>
+<li>LoadPointer 保证的是原子的读取 Pointer 指针的值，而不是保证原子的读取 Pointer 指向的对象</li>
+</ol>
+<h4 id="store">Store</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">StoreInt32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int32</span><span class="p">,</span> <span class="nx">val</span> <span class="kt">int32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">StoreInt64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">int64</span><span class="p">,</span> <span class="nx">val</span> <span class="kt">int64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">StorePointer</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">,</span> <span class="nx">val</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">StoreUint32</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">,</span> <span class="nx">val</span> <span class="kt">uint32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">StoreUint64</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">val</span> <span class="kt">uint64</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">StoreUintptr</span><span class="p">(</span><span class="nx">addr</span> <span class="o">*</span><span class="kt">uintptr</span><span class="p">,</span> <span class="nx">val</span> <span class="kt">uintptr</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Store 方法:</p>
+<ol>
+<li>把一个值存入到指定的 addr 地址中，即使在多处理器、多核、有 CPU cache 的情况下，这个操作也能保证 Store 是一个原子操作。</li>
+<li>别的 goroutine 通过 Load 读取出来，不会看到存取了一半的值。</li>
+</ol>
+<h4 id="value-类型">Value 类型</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Value</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Load</span><span class="p">()</span> <span class="p">(</span><span class="nx">x</span> <span class="kd">interface</span><span class="p">{})</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Store</span><span class="p">(</span><span class="nx">x</span> <span class="kd">interface</span><span class="p">{})</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Value 类型:</p>
+<ol>
+<li>可以<strong>原子地存取对象类型</strong>，但也只能存取，不能 CAS 和 Swap，<strong>常常用在配置变更等场景中</strong></li>
+</ol>
+<p>接下来，我们以一个配置变更的例子，来演示 Value 类型的使用。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">type</span> <span class="nx">Config</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">NodeName</span> <span class="kt">string</span>
+    <span class="nx">Addr</span>     <span class="kt">string</span>
+    <span class="nx">Count</span>    <span class="kt">int32</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">loadNewConfig</span><span class="p">()</span> <span class="nx">Config</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">Config</span><span class="p">{</span>
+        <span class="nx">NodeName</span><span class="p">:</span> <span class="s">&#34;北京&#34;</span><span class="p">,</span>
+        <span class="nx">Addr</span><span class="p">:</span>     <span class="s">&#34;10.77.95.27&#34;</span><span class="p">,</span>
+        <span class="nx">Count</span><span class="p">:</span>    <span class="nx">rand</span><span class="p">.</span><span class="nf">Int31</span><span class="p">(),</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">config</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">Value</span>
+    <span class="nx">config</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nf">loadNewConfig</span><span class="p">())</span>
+    <span class="kd">var</span> <span class="nx">cond</span> <span class="p">=</span> <span class="nx">sync</span><span class="p">.</span><span class="nf">NewCond</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">{})</span>
+
+    <span class="c1">// 设置新的config
+</span><span class="c1"></span>    <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">{</span>
+            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="mi">5</span><span class="o">+</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Int63n</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+            <span class="nx">config</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nf">loadNewConfig</span><span class="p">())</span>
+            <span class="nx">cond</span><span class="p">.</span><span class="nf">Broadcast</span><span class="p">()</span> <span class="c1">// 通知等待着配置已变更
+</span><span class="c1"></span>        <span class="p">}</span>
+    <span class="p">}()</span>
+
+    <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">{</span>
+            <span class="nx">cond</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+            <span class="nx">cond</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>                 <span class="c1">// 等待变更信号
+</span><span class="c1"></span>            <span class="nx">c</span> <span class="o">:=</span> <span class="nx">config</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">Config</span><span class="p">)</span> <span class="c1">// 读取新的配置
+</span><span class="c1"></span>            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;new config: %+v\n&#34;</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+            <span class="nx">cond</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+        <span class="p">}</span>
+    <span class="p">}()</span>
+
+    <span class="k">select</span> <span class="p">{}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="2-atomic-的扩展">2. Atomic 的扩展</h2>
+<p>atomic 的 API 已经算是很简单的了，它提供了包一级的函数，可以对几种类型的数据执行原子操作。有些人就对这些函数做了进一步的包装，跟 atomic 中的 Value 类型类似，这些类型也提供了面向对象的使用方式，比如关注度比较高的<a href="https://github.com/uber-go/atomic" target="_blank" rel="noopener noreffer">uber-go/atomic</a>。</p>
+<p>uber-go/atomic 定义和封装了几种与常见类型相对应的原子操作类型，这些类型提供了原子操作的方法。这些类型包括 Bool、Duration、Error、Float64、Int32、Int64、String、Uint32、Uint64 等。s</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">running</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">Bool</span>
+<span class="nx">running</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+<span class="nx">running</span><span class="p">.</span><span class="nf">Toggle</span><span class="p">()</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">running</span><span class="p">.</span><span class="nf">Load</span><span class="p">())</span> <span class="c1">// false
+</span></code></pre></td></tr></table>
+</div>
+</div><p>atomic.Value 只有 Load/Store 方法，可以参考<a href="https://github.com/golang/go/issues/39351" target="_blank" rel="noopener noreffer">这篇文章</a>为其增加 Swap 和 CompareAndSwap 方法。</p>
+<h3 id="3-使用-atomic-实现-lock-free-queue">3. 使用 atomic 实现 Lock-Free queue</h3>
+<p>atomic 常常用来实现 Lock-Free 的数据结构，这里我们实现一个  Lock-Free queue。(sync.Pool 的实现中就包含了一个 lock-free queue 的实现 poolDequeue)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">queue</span>
+<span class="kn">import</span> <span class="p">(</span>
+  <span class="s">&#34;sync/atomic&#34;</span>
+  <span class="s">&#34;unsafe&#34;</span>
+<span class="p">)</span>
+<span class="c1">// lock-free的queue
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">LKQueue</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="nx">head</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span>
+  <span class="nx">tail</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span>
+<span class="p">}</span>
+<span class="c1">// 通过链表实现，这个数据结构代表链表中的节点
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">node</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="nx">value</span> <span class="kd">interface</span><span class="p">{}</span>
+  <span class="nx">next</span>  <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="nf">NewLKQueue</span><span class="p">()</span> <span class="o">*</span><span class="nx">LKQueue</span> <span class="p">{</span>
+  <span class="nx">n</span> <span class="o">:=</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">node</span><span class="p">{})</span>
+  <span class="k">return</span> <span class="o">&amp;</span><span class="nx">LKQueue</span><span class="p">{</span><span class="nx">head</span><span class="p">:</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">tail</span><span class="p">:</span> <span class="nx">n</span><span class="p">}</span>
+<span class="p">}</span>
+<span class="c1">// 入队
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">LKQueue</span><span class="p">)</span> <span class="nf">Enqueue</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+  <span class="nx">n</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">node</span><span class="p">{</span><span class="nx">value</span><span class="p">:</span> <span class="nx">v</span><span class="p">}</span>
+  <span class="k">for</span> <span class="p">{</span>
+    <span class="nx">tail</span> <span class="o">:=</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">tail</span><span class="p">)</span>
+    <span class="nx">next</span> <span class="o">:=</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tail</span><span class="p">.</span><span class="nx">next</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">tail</span> <span class="o">==</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">tail</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 尾还是尾
+</span><span class="c1"></span>      <span class="k">if</span> <span class="nx">next</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span> <span class="c1">// 还没有新数据入队
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nf">cas</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tail</span><span class="p">.</span><span class="nx">next</span><span class="p">,</span> <span class="nx">next</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span> <span class="p">{</span> <span class="c1">//增加到队尾
+</span><span class="c1"></span>          <span class="nf">cas</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">tail</span><span class="p">,</span> <span class="nx">tail</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span> <span class="c1">//入队成功，移动尾巴指针
+</span><span class="c1"></span>          <span class="k">return</span>
+        <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="c1">// 已有新数据加到队列后面，需要移动尾指针
+</span><span class="c1"></span>        <span class="nf">cas</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">tail</span><span class="p">,</span> <span class="nx">tail</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="c1">// 出队，没有元素则返回nil
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">LKQueue</span><span class="p">)</span> <span class="nf">Dequeue</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">{</span>
+    <span class="nx">head</span> <span class="o">:=</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">head</span><span class="p">)</span>
+    <span class="nx">tail</span> <span class="o">:=</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">tail</span><span class="p">)</span>
+    <span class="nx">next</span> <span class="o">:=</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">head</span><span class="p">.</span><span class="nx">next</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">head</span> <span class="o">==</span> <span class="nf">load</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">head</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// head还是那个head
+</span><span class="c1"></span>      <span class="k">if</span> <span class="nx">head</span> <span class="o">==</span> <span class="nx">tail</span> <span class="p">{</span> <span class="c1">// head和tail一样
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">next</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span> <span class="c1">// 说明是空队列
+</span><span class="c1"></span>          <span class="k">return</span> <span class="kc">nil</span>
+        <span class="p">}</span>
+        <span class="c1">// 只是尾指针还没有调整，尝试调整它指向下一个
+</span><span class="c1"></span>        <span class="nf">cas</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">tail</span><span class="p">,</span> <span class="nx">tail</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// 读取出队的数据
+</span><span class="c1"></span>        <span class="nx">v</span> <span class="o">:=</span> <span class="nx">next</span><span class="p">.</span><span class="nx">value</span>
+                <span class="c1">// 既然要出队了，头指针移动到下一个
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nf">cas</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">q</span><span class="p">.</span><span class="nx">head</span><span class="p">,</span> <span class="nx">head</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">return</span> <span class="nx">v</span> <span class="c1">// Dequeue is done.  return
+</span><span class="c1"></span>        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 将unsafe.Pointer原子加载转换成node
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">load</span><span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span> <span class="p">(</span><span class="nx">n</span> <span class="o">*</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="nx">node</span><span class="p">)(</span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="nx">p</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="c1">// 封装CAS,避免直接将*node转换成unsafe.Pointer
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">cas</span><span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">,</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="o">*</span><span class="nx">node</span><span class="p">)</span> <span class="p">(</span><span class="nx">ok</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span>
+    <span class="nx">p</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">old</span><span class="p">),</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">new</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="4-对一个地址的赋值是原子操作吗">4. 对一个地址的赋值是原子操作吗？</h2>
+<p>对一个地址的赋值是原子操作吗？这是一个很有趣的问题，如果是原子操作，还要 atomic 包干什么(Value 类型的 Store Load 方法)？如何理解 atomic 和直接内存操作的区别？(参见<a href="https://dave.cheney.net/2018/01/06/if-aligned-memory-writes-are-atomic-why-do-we-need-the-sync-atomic-package" target="_blank" rel="noopener noreffer">Dave Cheney</a>)</p>
+<ol>
+<li>在现在的系统中，write 的地址基本上都是对齐的（aligned），对齐地址的写，不会导致其他人看到只写了一半的数据，因为它通过一个指令就可以实现对地址的操作</li>
+<li>如果地址不是对齐的话，那么，处理器就需要分成两个指令去处理，如果执行了一个指令，其它人就会看到更新了一半的错误的数据，这被称做撕裂写（torn write）</li>
+<li>所以，你可以认为赋值操作是一个原子操作，这个“原子操作”可以认为是保证数据的完整性。</li>
+<li>对于现代的多处理多核的系统来说，由于 cache、指令重排，可见性等问题，我们对原子操作的意义有了更多的追求。在多核系统中，一个核对地址的值的更改，在更新到主内存中之前，是在多级缓存中存放的。这时，多个核看到的数据可能是不一样的，其它的核可能还没有看到更新的数据，还在使用旧的数据。</li>
+<li>多处理器多核心系统为了处理这类问题，使用了一种叫做**内存屏障（memory fence 或 memory barrier）**的方式。一个写内存屏障会告诉处理器，必须要等到它管道中的未完成的操作（特别是写操作）都被刷新到内存中，再进行操作。此操作还会让相关的处理器的 CPU 缓存失效，以便让它们从主存中拉取最新的值。</li>
+<li>atomic 包提供的方法会提供内存屏障的功能，所以，<strong>atomic 不仅仅可以保证赋值的数据完整性，还能保证数据的可见性</strong>，一旦一个核更新了该地址的值，其它处理器总是能读取到它的最新值。但是，需要注意的是，因为需要处理器之间保证数据的一致性，atomic 的操作也是会降低性能的。</li>
+</ol>
+<h2 id="参考">参考</h2>
+<p>本文内容摘录自:</p>
+<ol>
+<li><a href="https://time.geekbang.org/column/intro/100061801?tab=catalog" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-02-26&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/a3e4684c27416b1b6f5d32218d41f926cec48ba6" target="_blank" title="commit by WardSong(1556824234@qq.com) a3e4684c27416b1b6f5d32218d41f926cec48ba6: sync atomic">
+                                    <i class="fas fa-hashtag fa-fw"></i>a3e4684</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/sync/go_sync_12/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" data-title="12 Atomic 原子操作" data-hashtags="go并发编程"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" data-hashtag="go并发编程"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" data-title="12 Atomic 原子操作"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" data-title="12 Atomic 原子操作"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" data-title="12 Atomic 原子操作" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/">go并发编程</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav">
+            <a href="/posts/hugo/loveit_emoji/" class="next" rel="next" title="Loveit Emoji 支持">Loveit Emoji 支持<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2019-02-12T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"12 Atomic 原子操作"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
