@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>go 信号量 - LoveIt</title><meta name="Description" content="go 信号量"><meta property="og:title" content="go 信号量" />
+<meta property="og:description" content="go 信号量" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-05-15T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-02-27T10:44:20+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="go 信号量"/>
+<meta name="twitter:description" content="go 信号量"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/sync/go_sync_15/" /><link rel="next" href="https://hotttao.github.io/posts/program/go/modules/10_io/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "go 信号量",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_16\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  3174 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_16\/","datePublished": "2021-05-15T22:00:00+08:00","dateModified": "2022-02-27T10:44:20+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "go 信号量"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">go 信号量</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-15">2021-05-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3174 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-信号量概述">1. 信号量概述</a>
+      <ul>
+        <li><a href="#11-pv-操作">1.1 P/V 操作</a></li>
+        <li><a href="#12-信号量和互斥锁">1.2 信号量和互斥锁</a></li>
+        <li><a href="#13-go-运行时实现">1.3 Go 运行时实现</a></li>
+        <li><a href="#14-weighted">1.4 Weighted</a></li>
+        <li><a href="#15-常见错误">1.5 常见错误</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-semaphoreweighted-实现">2. semaphore/Weighted 实现</a>
+      <ul>
+        <li><a href="#21-weighted-数据结构">2.1 Weighted 数据结构</a></li>
+        <li><a href="#22-acquire-方法">2.2 Acquire 方法</a></li>
+        <li><a href="#23-release">2.3 Release</a>
+          <ul>
+            <li><a href="#24-总结">2.4 总结</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#3-channel-实现的信号量">3. Channel 实现的信号量</a></li>
+    <li><a href="#4-其他实现">4. 其他实现</a></li>
+    <li><a href="#5-信号量">5. 信号量</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-信号量概述">1. 信号量概述</h2>
+<p>信号量（Semaphore）是用来控制多个 goroutine 同时访问多个资源的并发原语。最简单的信号量就是<strong>一个变量加一些并发控制的能力</strong>，更复杂的信号量类型，就是使用<strong>抽象数据类型代替变量，用来代表复杂的资源类型</strong>。实际上，大部分的信号量都使用一个整型变量来表示一组资源，并没有实现太复杂的抽象数据类型。</p>
+<p>信号量这个并发原语在多资源共享的并发控制的场景中被广泛使用，有时候也会被 Channel 类型所取代，因为一个 buffered chan 也可以代表 n 个资源。</p>
+<h3 id="11-pv-操作">1.1 P/V 操作</h3>
+<p>信号量包含两个操作 P 和 V:</p>
+<ol>
+<li>P 操作（descrease、wait、acquire）是减少信号量的计数值</li>
+<li>V 操作（increase、signal、release）是增加信号量的计数值</li>
+</ol>
+<p>初始化信号量 S 有一个指定数量（n）的资源，它就像是一个有 n 个资源的池子。P 操作相当于请求资源，如果资源可用，就立即返回；如果没有资源或者不够，那么，它可以不断尝试或者阻塞等待。V 操作会释放自己持有的资源，把资源返还给信号量。信号量的值除了初始化的操作以外，只能由 P/V 操作改变。</p>
+<p>所以信号量的实现包括：</p>
+<ol>
+<li>初始化信号量：设定初始的资源的数量。</li>
+<li>P 操作：将信号量的计数值减去 1，如果新值已经为负，那么调用者会被阻塞并加入到等待队列中，否则获取一个资源继续执行</li>
+<li>V 操作：将信号量的计数值加 1，如果先前的计数值为负，就说明有等待的 P 操作的调用者。它会从等待队列中取出一个等待的调用者，唤醒它，让它继续执行。</li>
+</ol>
+<h3 id="12-信号量和互斥锁">1.2 信号量和互斥锁</h3>
+<p>信号量可以分为计数信号量（counting semaphre）和二进位信号量（binary semaphore）。在特殊的情况下，如果计数值只能是 0 或者 1，那么，这个信号量就是二进位信号量，提供了互斥的功能（要么是 0，要么是 1），所以，有时候互斥锁也会使用二进位信号量来实现。我们一般用信号量保护一组资源，如果信号量蜕变成二进位信号量，那么，它的 P/V 就和互斥锁的 Lock/Unlock 一样了。</p>
+<h3 id="13-go-运行时实现">1.3 Go 运行时实现</h3>
+<p>在运行时，Go 内部使用信号量来控制 goroutine 的阻塞和唤醒，在 Mutex 的实现上就使用了信号量</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">state</span> <span class="kt">int32</span>
+    <span class="nx">sema</span>  <span class="kt">uint32</span>
+<span class="p">}</span>
+
+<span class="c1">// 信号量的 P/V 操作
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">runtime_Semacquire</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">runtime_SemacquireMutex</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">,</span> <span class="nx">lifo</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">skipframes</span> <span class="kt">int</span><span class="p">)</span>
+<span class="kd">func</span> <span class="nf">runtime_Semrelease</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">,</span> <span class="nx">handoff</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">skipframes</span> <span class="kt">int</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>遗憾的是，它是 Go 运行时内部使用的，并没有封装暴露成一个对外的信号量并发原语，原则上我们没有办法使用。Go 在它的扩展包中提供了信号量semaphore，不过这个信号量的类型名并不叫 Semaphore，而是叫 <a href="https://godoc.org/golang.org/x/sync/semaphore" target="_blank" rel="noopener noreffer">Weighted</a>。</p>
+<h3 id="14-weighted">1.4 Weighted</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Weighted</span>
+    <span class="kd">func</span> <span class="nf">NewWeighted</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="o">*</span><span class="nx">Weighted</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Weighted</span><span class="p">)</span> <span class="nf">Acquire</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="kt">error</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Weighted</span><span class="p">)</span> <span class="nf">Release</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Weighted</span><span class="p">)</span> <span class="nf">TryAcquire</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="kt">bool</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>Acquire 方法：
+<ul>
+<li>相当于 P 操作，你可以一次获取多个资源，如果没有足够多的资源，调用者就会被阻塞</li>
+<li>第一个参数是 Context，可以通过 Context 增加超时或者 cancel 的机制。如果是正常获取了资源，就返回 nil；否则，就返回 ctx.Err()，信号量不改变。</li>
+</ul>
+</li>
+<li>Release 方法：相当于 V 操作，可以将 n 个资源释放，返还给信号量。</li>
+<li>TryAcquire 方法：尝试获取 n 个资源，但是它不会阻塞，要么成功获取 n 个资源，返回 true，要么一个也不获取，返回 false</li>
+</ol>
+<p>下面是 Weighted 使用示例，我们创建和 CPU 核数一样多的 Worker，让它们去处理一个 4 倍数量的整数 slice。每个 Worker 一次只能处理一个整数，处理完之后，才能处理下一个。当然，这个问题的解决方案有很多种，这一次我们使用信号量，代码如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;golang.org/x/sync/semaphore&#34;</span>
+<span class="kd">var</span> <span class="p">(</span>
+    <span class="nx">maxWorkers</span> <span class="p">=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">GOMAXPROCS</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>                    <span class="c1">// worker数量
+</span><span class="c1"></span>    <span class="nx">sema</span>       <span class="p">=</span> <span class="nx">semaphore</span><span class="p">.</span><span class="nf">NewWeighted</span><span class="p">(</span><span class="nb">int64</span><span class="p">(</span><span class="nx">maxWorkers</span><span class="p">))</span> <span class="c1">//信号量
+</span><span class="c1"></span>    <span class="nx">task</span>       <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">maxWorkers</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span>                <span class="c1">// 任务数，是worker的四倍
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">task</span> <span class="p">{</span>
+        <span class="c1">// 如果没有worker可用，会阻塞在这里，直到某个worker被释放
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sema</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">break</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 启动worker goroutine
+</span><span class="c1"></span>        <span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">i</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">defer</span> <span class="nx">sema</span><span class="p">.</span><span class="nf">Release</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span> <span class="c1">// 模拟一个耗时操作
+</span><span class="c1"></span>            <span class="nx">task</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 请求所有的worker,这样能确保前面的worker都执行完
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sema</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">maxWorkers</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;获取所有的worker失败: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">task</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>在这个例子中，还有一个值得我们学习的知识点，就是最后的那一段处理（第 25 行）。如果在实际应用中，你想等所有的 Worker 都执行完，就可以获取最大计数值的信号量。</p>
+<h3 id="15-常见错误">1.5 常见错误</h3>
+<p>在使用信号量时，最常见的几个错误如下：</p>
+<ol>
+<li>请求了资源，但是忘记释放它；</li>
+<li>释放了从未请求的资源；</li>
+<li>长时间持有一个资源，即使不需要它；</li>
+<li>不持有一个资源，却直接使用它。</li>
+</ol>
+<p>不过，即使你规避了这些坑，在同时使用多种资源，不同的信号量控制不同的资源的时候，也可能会出现死锁现象，比如哲学家就餐问题。</p>
+<p>就 Go 扩展库实现的信号量来说，在调用 Release 方法的时候，你可以传递任意的整数。但是，如果你传递一个比请求到的数量大的错误的数值，程序就会 panic。如果传递一个负数，会导致资源永久被持有。如果你请求的资源数比最大的资源数还大，那么，调用者可能永远被阻塞。</p>
+<p>所以，使用信号量遵循的原则就是请求多少资源，就释放多少资源。</p>
+<h2 id="2-semaphoreweighted-实现">2. semaphore/Weighted 实现</h2>
+<p>Go 扩展库中的信号量是使用互斥锁 +List 实现的。互斥锁实现其它字段的保护，而 List 实现了一个等待队列，等待者的通知是通过 Channel 的通知机制实现的。</p>
+<h3 id="21-weighted-数据结构">2.1 Weighted 数据结构</h3>
+<p>我们来看一下信号量 Weighted 的数据结构：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Weighted</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">size</span>    <span class="kt">int64</span>         <span class="c1">// 最大资源数
+</span><span class="c1"></span>    <span class="nx">cur</span>     <span class="kt">int64</span>         <span class="c1">// 当前已被使用的资源
+</span><span class="c1"></span>    <span class="nx">mu</span>      <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>    <span class="c1">// 互斥锁，对字段的保护
+</span><span class="c1"></span>    <span class="nx">waiters</span> <span class="nx">list</span><span class="p">.</span><span class="nx">List</span>     <span class="c1">// 等待队列
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="22-acquire-方法">2.2 Acquire 方法</h3>
+<p>在信号量的几个实现方法里，Acquire 是代码最复杂的一个方法，它不仅仅要监控资源是否可用，而且还要检测 Context 的 Done 是否已关闭。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Weighted</span><span class="p">)</span> <span class="nf">Acquire</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+        <span class="c1">// fast path, 如果有足够的资源，都不考虑ctx.Done的状态，将cur加上n就返回
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">size</span><span class="o">-</span><span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="o">&gt;=</span> <span class="nx">n</span> <span class="o">&amp;&amp;</span> <span class="nx">s</span><span class="p">.</span><span class="nx">waiters</span><span class="p">.</span><span class="nf">Len</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="o">+=</span> <span class="nx">n</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+      <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+  
+        <span class="c1">// 如果是不可能完成的任务，请求的资源数大于能提供的最大的资源数
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">n</span> <span class="p">&gt;</span> <span class="nx">s</span><span class="p">.</span><span class="nx">size</span> <span class="p">{</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+            <span class="c1">// 依赖ctx的状态返回，否则一直等待
+</span><span class="c1"></span>      <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+      <span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+    <span class="p">}</span>
+  
+        <span class="c1">// 否则就需要把调用者加入到等待队列中
+</span><span class="c1"></span>        <span class="c1">// 创建了一个ready chan,以便被通知唤醒
+</span><span class="c1"></span>    <span class="nx">ready</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+    <span class="nx">w</span> <span class="o">:=</span> <span class="nx">waiter</span><span class="p">{</span><span class="nx">n</span><span class="p">:</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">ready</span><span class="p">:</span> <span class="nx">ready</span><span class="p">}</span>
+    <span class="nx">elem</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">waiters</span><span class="p">.</span><span class="nf">PushBack</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+  
+
+        <span class="c1">// 等待
+</span><span class="c1"></span>    <span class="k">select</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span> <span class="c1">// context的Done被关闭
+</span><span class="c1"></span>      <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+      <span class="k">select</span> <span class="p">{</span>
+      <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ready</span><span class="p">:</span> <span class="c1">// 如果被唤醒了，忽略ctx的状态
+</span><span class="c1"></span>        <span class="nx">err</span> <span class="p">=</span> <span class="kc">nil</span>
+      <span class="k">default</span><span class="p">:</span> <span class="nx">通知waiter</span>
+        <span class="nx">isFront</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">waiters</span><span class="p">.</span><span class="nf">Front</span><span class="p">()</span> <span class="o">==</span> <span class="nx">elem</span>
+        <span class="nx">s</span><span class="p">.</span><span class="nx">waiters</span><span class="p">.</span><span class="nf">Remove</span><span class="p">(</span><span class="nx">elem</span><span class="p">)</span>
+        <span class="c1">// 通知其它的waiters,检查是否有足够的资源
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">isFront</span> <span class="o">&amp;&amp;</span> <span class="nx">s</span><span class="p">.</span><span class="nx">size</span> <span class="p">&gt;</span> <span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="p">{</span>
+          <span class="nx">s</span><span class="p">.</span><span class="nf">notifyWaiters</span><span class="p">()</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+      <span class="k">return</span> <span class="nx">err</span>
+    <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ready</span><span class="p">:</span> <span class="c1">// 被唤醒了
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="23-release">2.3 Release</h3>
+<p>Release 方法将当前计数值减去释放的资源数 n，并唤醒等待队列中的调用者，看是否有足够的资源被获取。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Weighted</span><span class="p">)</span> <span class="nf">Release</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="o">-=</span> <span class="nx">n</span>
+    <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+      <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;semaphore: released more than held&#34;</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nf">notifyWaiters</span><span class="p">()</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>notifyWaiters 方法就是逐个检查等待的调用者，如果资源不够，或者是没有等待者了，就返回：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Weighted</span><span class="p">)</span> <span class="nf">notifyWaiters</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">{</span>
+      <span class="nx">next</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">waiters</span><span class="p">.</span><span class="nf">Front</span><span class="p">()</span>
+      <span class="k">if</span> <span class="nx">next</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">break</span> <span class="c1">// No more waiters blocked.
+</span><span class="c1"></span>      <span class="p">}</span>
+  
+
+      <span class="nx">w</span> <span class="o">:=</span> <span class="nx">next</span><span class="p">.</span><span class="nx">Value</span><span class="p">.(</span><span class="nx">waiter</span><span class="p">)</span>
+      <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">size</span><span class="o">-</span><span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="p">&lt;</span> <span class="nx">w</span><span class="p">.</span><span class="nx">n</span> <span class="p">{</span>
+        <span class="c1">//避免饥饿，这里还是按照先入先出的方式处理
+</span><span class="c1"></span>        <span class="k">break</span>
+      <span class="p">}</span>
+
+      <span class="nx">s</span><span class="p">.</span><span class="nx">cur</span> <span class="o">+=</span> <span class="nx">w</span><span class="p">.</span><span class="nx">n</span>
+      <span class="nx">s</span><span class="p">.</span><span class="nx">waiters</span><span class="p">.</span><span class="nf">Remove</span><span class="p">(</span><span class="nx">next</span><span class="p">)</span>
+      <span class="nb">close</span><span class="p">(</span><span class="nx">w</span><span class="p">.</span><span class="nx">ready</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>notifyWaiters 方法是按照先入先出的方式唤醒调用者。这样做的目的是避免饥饿，否则的话，资源可能总是被那些请求资源数小的调用者获取，这样一来，请求资源数巨大的调用者，就没有机会获得资源了。</p>
+<h4 id="24-总结">2.4 总结</h4>
+<p><strong>官方扩展的信号量最大的优势是可以一次获取多个资源</strong>。在批量获取资源的场景中，建议使用此官方扩展的信号量。</p>
+<h2 id="3-channel-实现的信号量">3. Channel 实现的信号量</h2>
+<p>除了官方扩展库的实现，还有很多方法实现信号量，比较典型的就是使用 Channel 来实现。使用一个 buffer 为 n 的 Channel 很容易实现信号量:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="c1">// Semaphore 数据结构，并且还实现了Locker接口
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">semaphore</span> <span class="kd">struct</span> <span class="p">{</span>
+<span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
+<span class="nx">ch</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+<span class="p">}</span>
+
+<span class="c1">// 创建一个新的信号量
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewSemaphore</span><span class="p">(</span><span class="nx">capacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span> <span class="p">{</span>
+<span class="k">if</span> <span class="nx">capacity</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">{</span>
+    <span class="nx">capacity</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 容量为1就变成了一个互斥锁
+</span><span class="c1"></span><span class="p">}</span>
+<span class="k">return</span> <span class="o">&amp;</span><span class="nx">semaphore</span><span class="p">{</span><span class="nx">ch</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{},</span> <span class="nx">capacity</span><span class="p">)}</span>
+<span class="p">}</span>
+
+<span class="c1">// 请求一个资源
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">semaphore</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">s</span><span class="p">.</span><span class="nx">ch</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
+<span class="p">}</span>
+
+<span class="c1">// 释放资源
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">semaphore</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{</span>
+  <span class="o">&lt;-</span><span class="nx">s</span><span class="p">.</span><span class="nx">ch</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>官方的实现方式有这样一个功能：它可以一次请求多个资源，这是通过 Channel 实现的信号量所不具备的。</p>
+<h2 id="4-其他实现">4. 其他实现</h2>
+<p>除了 Channel，<a href="https://github.com/marusama/semaphore" target="_blank" rel="noopener noreffer">marusama/semaphore</a>也实现了一个可以动态更改资源容量的信号量，也是一个非常有特色的实现。如果你的资源数量并不是固定的，而是动态变化的，可以考虑使用这个库。</p>
+<h2 id="5-信号量">5. 信号量</h2>
+<h2 id="参考">参考</h2>
+<p>本文内容摘录自:</p>
+<ol>
+<li><a href="https://time.geekbang.org/column/intro/100061801?tab=catalog" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-02-27&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/3fa29f0a61ff5fcfa6f4b0b88066ff5c71764842" target="_blank" title="commit by WardSong(1556824234@qq.com) 3fa29f0a61ff5fcfa6f4b0b88066ff5c71764842: go 信号量实现">
+                                    <i class="fas fa-hashtag fa-fw"></i>3fa29f0</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/sync/go_sync_16/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" data-title="go 信号量" data-hashtags="go 并发"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" data-hashtag="go 并发"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" data-title="go 信号量"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" data-title="go 信号量"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_16/" data-title="go 信号量" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">go 并发</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/sync/go_sync_15/" class="prev" rel="prev" title="go 内存模型"><i class="fas fa-angle-left fa-fw"></i>go 内存模型</a>
+            <a href="/posts/program/go/modules/10_io/" class="next" rel="next" title="go 的文件 IO">go 的文件 IO<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2021-05-15T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"go 信号量"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
