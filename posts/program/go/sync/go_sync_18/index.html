@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>go CyclicBarrier 循环栅栏 - LoveIt</title><meta name="Description" content="go CyclicBarrier 循环栅栏"><meta property="og:title" content="go CyclicBarrier 循环栅栏" />
+<meta property="og:description" content="go CyclicBarrier 循环栅栏" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-05-17T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-02-27T12:29:54+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="go CyclicBarrier 循环栅栏"/>
+<meta name="twitter:description" content="go CyclicBarrier 循环栅栏"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/sync/go_sync_17/" /><link rel="next" href="https://hotttao.github.io/posts/program/go/modules/10_io/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "go CyclicBarrier 循环栅栏",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_18\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2303 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_18\/","datePublished": "2021-05-17T22:00:00+08:00","dateModified": "2022-02-27T12:29:54+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "go CyclicBarrier 循环栅栏"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">go CyclicBarrier 循环栅栏</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-17">2021-05-17</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2303 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-cyclicbarrier-概述">1. CyclicBarrier 概述</a>
+      <ul>
+        <li><a href="#11-cyclicbarrier-与-waitgroup">1.1 CyclicBarrier 与 WaitGroup</a></li>
+        <li><a href="#12-cyclicbarrier-使用">1.2 CyclicBarrier 使用</a></li>
+        <li><a href="#13-cyclicbarrier-的实现">1.3 CyclicBarrier 的实现</a>
+          <ul>
+            <li><a href="#cyclicbarrier-的数据结构">CyclicBarrier 的数据结构</a></li>
+            <li><a href="#await">Await</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-cyclicbarrier-概述">1. CyclicBarrier 概述</h2>
+<p><a href="https://github.com/marusama/cyclicbarrier" target="_blank" rel="noopener noreffer">CyclicBarrier</a> 是一个可重用的栅栏并发原语，常常应用于重复进行一组 goroutine 同时执行的场景中。</p>
+<p><strong>CyclicBarrier允许一组 goroutine 彼此等待，到达一个共同的执行点</strong>。同时，因为它可以被重复使用，所以叫循环栅栏。具体的机制是，大家都在栅栏前等待，等全部都到齐了，就抬起栅栏放行。</p>
+<h3 id="11-cyclicbarrier-与-waitgroup">1.1 CyclicBarrier 与 WaitGroup</h3>
+<p>你可能会觉得，CyclicBarrier 和 WaitGroup 的功能有点类似，确实是这样。不过还是有区别的:</p>
+<ol>
+<li>CyclicBarrier 更适合用在“固定数量的 goroutine 等待同一个执行点”的场景中，</li>
+<li>而且在放行 goroutine 之后，CyclicBarrier 可以重复利用，</li>
+<li>不像 WaitGroup 重用的时候，必须小心翼翼避免 panic。</li>
+</ol>
+<p>处理可重用的多 goroutine 等待同一个执行点的场景的时候，CyclicBarrier 和 WaitGroup 方法调用的对应关系如下：</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/go/sync/CyclicBarrier.jpg"
+        data-srcset="/images/go/sync/CyclicBarrier.jpg, /images/go/sync/CyclicBarrier.jpg 1.5x, /images/go/sync/CyclicBarrier.jpg 2x"
+        data-sizes="auto"
+        alt="/images/go/sync/CyclicBarrier.jpg"
+        title="Mutex实现原理" /></p>
+<p>如果使用 WaitGroup 实现的话，调用比较复杂，不像 CyclicBarrier 那么清爽。更重要的是，如果想重用 WaitGroup，你还要保证，将 WaitGroup 的计数值重置到 n 的时候不会出现并发问题。<strong>WaitGroup 更适合用在“一个 goroutine 等待一组 goroutine 到达同一个执行点”的场景中，或者是不需要重用的场景中。</strong></p>
+<h3 id="12-cyclicbarrier-使用">1.2 CyclicBarrier 使用</h3>
+<p>CyclicBarrier 有两个初始化方法：</p>
+<ol>
+<li>第一个是 New 方法，它只需要一个参数，来指定循环栅栏参与者的数量；</li>
+<li>第二个方法是 NewWithAction
+<ul>
+<li>它额外提供一个函数，可以在每一次到达执行点的时候执行一次</li>
+<li>执行具体的时间点是在<strong>最后一个参与者到达之后，但是其它的参与者还未被放行之前</strong>。我们可以利用它，做放行之前的一些共享状态的更新等操作。</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="nf">New</span><span class="p">(</span><span class="nx">parties</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">CyclicBarrier</span>
+<span class="kd">func</span> <span class="nf">NewWithAction</span><span class="p">(</span><span class="nx">parties</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">barrierAction</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="nx">CyclicBarrier</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>CyclicBarrier 是一个接口，定义的方法如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">type</span> <span class="nx">CyclicBarrier</span> <span class="kd">interface</span> <span class="p">{</span>
+    <span class="c1">// 等待所有的参与者到达，如果被ctx.Done()中断，会返回ErrBrokenBarrier
+</span><span class="c1"></span>    <span class="nf">Await</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span>
+
+    <span class="c1">// 重置循环栅栏到初始化状态。如果当前有等待者，那么它们会返回ErrBrokenBarrier
+</span><span class="c1"></span>    <span class="nf">Reset</span><span class="p">()</span>
+
+    <span class="c1">// 返回当前等待者的数量
+</span><span class="c1"></span>    <span class="nf">GetNumberWaiting</span><span class="p">()</span> <span class="kt">int</span>
+
+    <span class="c1">// 参与者的数量
+</span><span class="c1"></span>    <span class="nf">GetParties</span><span class="p">()</span> <span class="kt">int</span>
+
+    <span class="c1">// 循环栅栏是否处于中断状态
+</span><span class="c1"></span>    <span class="nf">IsBroken</span><span class="p">()</span> <span class="kt">bool</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>循环栅栏的使用也很简单。循环栅栏的参与者只需调用 Await 等待，等所有的参与者都到达后，再执行下一步。当执行下一步的时候，循环栅栏的状态又恢复到初始的状态了，可以迎接下一轮同样多的参与者。下面是一个使用示例: 生产水原子，每生产一个水分子，就会打印出 HHO、HOH、OHH 三种形式的其中一种。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">water</span>
+<span class="kn">import</span> <span class="p">(</span>
+  <span class="s">&#34;context&#34;</span>
+  <span class="s">&#34;github.com/marusama/cyclicbarrier&#34;</span>
+  <span class="s">&#34;golang.org/x/sync/semaphore&#34;</span>
+<span class="p">)</span>
+<span class="c1">// 定义水分子合成的辅助数据结构
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">H2O</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="nx">semaH</span> <span class="o">*</span><span class="nx">semaphore</span><span class="p">.</span><span class="nx">Weighted</span> <span class="c1">// 氢原子的信号量
+</span><span class="c1"></span>  <span class="nx">semaO</span> <span class="o">*</span><span class="nx">semaphore</span><span class="p">.</span><span class="nx">Weighted</span> <span class="c1">// 氧原子的信号量
+</span><span class="c1"></span>  <span class="nx">b</span>     <span class="nx">cyclicbarrier</span><span class="p">.</span><span class="nx">CyclicBarrier</span> <span class="c1">// 循环栅栏，用来控制合成
+</span><span class="c1"></span><span class="p">}</span>
+<span class="kd">func</span> <span class="nf">New</span><span class="p">()</span> <span class="o">*</span><span class="nx">H2O</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="o">&amp;</span><span class="nx">H2O</span><span class="p">{</span>
+    <span class="nx">semaH</span><span class="p">:</span> <span class="nx">semaphore</span><span class="p">.</span><span class="nf">NewWeighted</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="c1">//氢原子需要两个
+</span><span class="c1"></span>    <span class="nx">semaO</span><span class="p">:</span> <span class="nx">semaphore</span><span class="p">.</span><span class="nf">NewWeighted</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="c1">// 氧原子需要一个
+</span><span class="c1"></span>    <span class="nx">b</span><span class="p">:</span>     <span class="nx">cyclicbarrier</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>  <span class="c1">// 需要三个原子才能合成
+</span><span class="c1"></span>  <span class="p">}</span>
+<span class="p">}</span>
+
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">h2o</span> <span class="o">*</span><span class="nx">H2O</span><span class="p">)</span> <span class="nf">hydrogen</span><span class="p">(</span><span class="nx">releaseHydrogen</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+  <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaH</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span>
+
+  <span class="nf">releaseHydrogen</span><span class="p">()</span> <span class="c1">// 输出H
+</span><span class="c1"></span>  <span class="nx">h2o</span><span class="p">.</span><span class="nx">b</span><span class="p">.</span><span class="nf">Await</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span> <span class="c1">//等待栅栏放行
+</span><span class="c1"></span>  <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaH</span><span class="p">.</span><span class="nf">Release</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">// 释放氢原子空槽
+</span><span class="c1"></span><span class="p">}</span>
+
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">h2o</span> <span class="o">*</span><span class="nx">H2O</span><span class="p">)</span> <span class="nf">oxygen</span><span class="p">(</span><span class="nx">releaseOxygen</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+  <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaO</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span>
+
+  <span class="nf">releaseOxygen</span><span class="p">()</span> <span class="c1">// 输出O
+</span><span class="c1"></span>  <span class="nx">h2o</span><span class="p">.</span><span class="nx">b</span><span class="p">.</span><span class="nf">Await</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span> <span class="c1">//等待栅栏放行
+</span><span class="c1"></span>  <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaO</span><span class="p">.</span><span class="nf">Release</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">// 释放氢原子空槽
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>下面是对应的单元测试</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">water</span>
+
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;math/rand&#34;</span>
+    <span class="s">&#34;sort&#34;</span>
+    <span class="s">&#34;sync&#34;</span>
+    <span class="s">&#34;testing&#34;</span>
+    <span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+
+<span class="kd">func</span> <span class="nf">TestWaterFactory</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">//用来存放水分子结果的channel
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">ch</span> <span class="kd">chan</span> <span class="kt">string</span>
+    <span class="nx">releaseHydrogen</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">ch</span> <span class="o">&lt;-</span> <span class="s">&#34;H&#34;</span>
+    <span class="p">}</span>
+    <span class="nx">releaseOxygen</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">ch</span> <span class="o">&lt;-</span> <span class="s">&#34;O&#34;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 300个原子，300个goroutine,每个goroutine并发的产生一个原子
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">N</span> <span class="p">=</span> <span class="mi">100</span>
+    <span class="nx">ch</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">N</span><span class="o">*</span><span class="mi">3</span><span class="p">)</span>
+
+
+    <span class="nx">h2o</span> <span class="o">:=</span> <span class="nf">New</span><span class="p">()</span>
+
+    <span class="c1">// 用来等待所有的goroutine完成
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">N</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+   
+    <span class="c1">// 200个氢原子goroutine
+</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="nx">N</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+            <span class="nx">h2o</span><span class="p">.</span><span class="nf">hydrogen</span><span class="p">(</span><span class="nx">releaseHydrogen</span><span class="p">)</span>
+            <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+        <span class="p">}()</span>
+    <span class="p">}</span>
+    <span class="c1">// 100个氧原子goroutine
+</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+            <span class="nx">h2o</span><span class="p">.</span><span class="nf">oxygen</span><span class="p">(</span><span class="nx">releaseOxygen</span><span class="p">)</span>
+            <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+        <span class="p">}()</span>
+    <span class="p">}</span>
+    
+    <span class="c1">//等待所有的goroutine执行完
+</span><span class="c1"></span>    <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+
+    <span class="c1">// 结果中肯定是300个原子
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">N</span><span class="o">*</span><span class="mi">3</span> <span class="p">{</span>
+        <span class="nx">t</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;expect %d atom but got %d&#34;</span><span class="p">,</span> <span class="nx">N</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ch</span><span class="p">))</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 每三个原子一组，分别进行检查。要求这一组原子中必须包含两个氢原子和一个氧原子，这样才能正确组成一个水分子。
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">s</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">string</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">=</span> <span class="o">&lt;-</span><span class="nx">ch</span>
+        <span class="nx">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="o">&lt;-</span><span class="nx">ch</span>
+        <span class="nx">s</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="p">=</span> <span class="o">&lt;-</span><span class="nx">ch</span>
+        <span class="nx">sort</span><span class="p">.</span><span class="nf">Strings</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+
+
+        <span class="nx">water</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="nx">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nx">s</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nx">water</span> <span class="o">!=</span> <span class="s">&#34;HHO&#34;</span> <span class="p">{</span>
+            <span class="nx">t</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;expect a water molecule but got %s&#34;</span><span class="p">,</span> <span class="nx">water</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果你没有学习 CyclicBarrier，你可能只会想到，用 WaitGroup 来实现这个水分子制造工厂的例子。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">type</span> <span class="nx">H2O</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">semaH</span> <span class="o">*</span><span class="nx">semaphore</span><span class="p">.</span><span class="nx">Weighted</span>
+    <span class="nx">semaO</span> <span class="o">*</span><span class="nx">semaphore</span><span class="p">.</span><span class="nx">Weighted</span>
+    <span class="nx">wg</span>    <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span> <span class="c1">//将循环栅栏替换成WaitGroup
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">New</span><span class="p">()</span> <span class="o">*</span><span class="nx">H2O</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">H2O</span><span class="p">{</span>
+        <span class="nx">semaH</span><span class="p">:</span> <span class="nx">semaphore</span><span class="p">.</span><span class="nf">NewWeighted</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+        <span class="nx">semaO</span><span class="p">:</span> <span class="nx">semaphore</span><span class="p">.</span><span class="nf">NewWeighted</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+        <span class="nx">wg</span><span class="p">:</span>    <span class="nx">wg</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">h2o</span> <span class="o">*</span><span class="nx">H2O</span><span class="p">)</span> <span class="nf">hydrogen</span><span class="p">(</span><span class="nx">releaseHydrogen</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+    <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaH</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="nf">releaseHydrogen</span><span class="p">()</span>
+
+    <span class="c1">// 标记自己已达到，等待其它goroutine到达
+</span><span class="c1"></span>    <span class="nx">h2o</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+    <span class="nx">h2o</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+
+    <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaH</span><span class="p">.</span><span class="nf">Release</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">h2o</span> <span class="o">*</span><span class="nx">H2O</span><span class="p">)</span> <span class="nf">oxygen</span><span class="p">(</span><span class="nx">releaseOxygen</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+    <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaO</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="nf">releaseOxygen</span><span class="p">()</span>
+
+    <span class="c1">// 标记自己已达到，等待其它goroutine到达
+</span><span class="c1"></span>    <span class="nx">h2o</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+    <span class="nx">h2o</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+    <span class="c1">//都到达后重置wg 
+</span><span class="c1"></span>    <span class="nx">h2o</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="nx">h2o</span><span class="p">.</span><span class="nx">semaO</span><span class="p">.</span><span class="nf">Release</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>使用 WaitGroup 非常复杂，而且，重用和 Done 方法的调用有并发的问题，程序可能 panic，远远没有使用循环栅栏更加简单直接。</p>
+<h3 id="13-cyclicbarrier-的实现">1.3 CyclicBarrier 的实现</h3>
+<h4 id="cyclicbarrier-的数据结构">CyclicBarrier 的数据结构</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// round
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">round</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">count</span>    <span class="kt">int</span>           <span class="c1">// count of goroutines for this roundtrip
+</span><span class="c1"></span>	<span class="nx">waitCh</span>   <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span> <span class="c1">// wait channel for this roundtrip
+</span><span class="c1"></span>	<span class="nx">brokeCh</span>  <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span> <span class="c1">// channel for isBroken broadcast
+</span><span class="c1"></span>	<span class="nx">isBroken</span> <span class="kt">bool</span>          <span class="c1">// is barrier broken
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="c1">// cyclicBarrier impl CyclicBarrier intf
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">cyclicBarrier</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">parties</span>       <span class="kt">int</span>
+	<span class="nx">barrierAction</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span>
+
+	<span class="nx">lock</span>  <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+	<span class="nx">round</span> <span class="o">*</span><span class="nx">round</span>
+<span class="p">}</span>
+
+<span class="c1">// New initializes a new instance of the CyclicBarrier, specifying the number of parties.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">New</span><span class="p">(</span><span class="nx">parties</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">CyclicBarrier</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">parties</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;parties must be positive number&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">cyclicBarrier</span><span class="p">{</span>
+		<span class="nx">parties</span><span class="p">:</span> <span class="nx">parties</span><span class="p">,</span>
+		<span class="nx">lock</span><span class="p">:</span>    <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span><span class="p">{},</span>
+		<span class="nx">round</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">round</span><span class="p">{</span>
+			<span class="nx">waitCh</span><span class="p">:</span>  <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
+			<span class="nx">brokeCh</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
+		<span class="p">},</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="await">Await</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span><span class="lnt">87
+</span><span class="lnt">88
+</span><span class="lnt">89
+</span><span class="lnt">90
+</span><span class="lnt">91
+</span><span class="lnt">92
+</span><span class="lnt">93
+</span><span class="lnt">94
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">cyclicBarrier</span><span class="p">)</span> <span class="nf">Await</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="p">(</span>
+		<span class="nx">ctxDoneCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+	<span class="p">)</span>
+	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">ctxDoneCh</span> <span class="p">=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+	<span class="p">}</span>
+
+	<span class="c1">// check if context is done
+</span><span class="c1"></span>	<span class="k">select</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctxDoneCh</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+	<span class="k">default</span><span class="p">:</span>
+	<span class="p">}</span>
+
+	<span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+
+	<span class="c1">// check if broken
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">isBroken</span> <span class="p">{</span>
+		<span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+		<span class="k">return</span> <span class="nx">ErrBrokenBarrier</span>
+	<span class="p">}</span>
+
+	<span class="c1">// increment count of waiters
+</span><span class="c1"></span>	<span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">count</span><span class="o">++</span>
+
+	<span class="c1">// saving in local variables to prevent race
+</span><span class="c1"></span>	<span class="nx">waitCh</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">waitCh</span>
+	<span class="nx">brokeCh</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">brokeCh</span>
+	<span class="nx">count</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">count</span>
+
+	<span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+
+	<span class="k">if</span> <span class="nx">count</span> <span class="p">&gt;</span> <span class="nx">b</span><span class="p">.</span><span class="nx">parties</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;CyclicBarrier.Await is called more than count of parties&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+
+	<span class="k">if</span> <span class="nx">count</span> <span class="p">&lt;</span> <span class="nx">b</span><span class="p">.</span><span class="nx">parties</span> <span class="p">{</span>
+		<span class="c1">// wait other parties
+</span><span class="c1"></span>		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">waitCh</span><span class="p">:</span>
+			<span class="k">return</span> <span class="kc">nil</span>
+		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">brokeCh</span><span class="p">:</span>
+			<span class="k">return</span> <span class="nx">ErrBrokenBarrier</span>
+		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctxDoneCh</span><span class="p">:</span>
+			<span class="nx">b</span><span class="p">.</span><span class="nf">breakBarrier</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+			<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+		<span class="p">}</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+		<span class="c1">// we are last, run the barrier action and reset the barrier
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">b</span><span class="p">.</span><span class="nx">barrierAction</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">err</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">barrierAction</span><span class="p">()</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">b</span><span class="p">.</span><span class="nf">breakBarrier</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+				<span class="k">return</span> <span class="nx">err</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="nx">b</span><span class="p">.</span><span class="nf">reset</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">cyclicBarrier</span><span class="p">)</span> <span class="nf">reset</span><span class="p">(</span><span class="nx">safe</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+
+	<span class="k">if</span> <span class="nx">safe</span> <span class="p">{</span>
+		<span class="c1">// broadcast to pass waiting goroutines
+</span><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">waitCh</span><span class="p">)</span>
+
+	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">count</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">b</span><span class="p">.</span><span class="nf">breakBarrier</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+	<span class="p">}</span>
+
+	<span class="c1">// create new round
+</span><span class="c1"></span>	<span class="nx">b</span><span class="p">.</span><span class="nx">round</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">round</span><span class="p">{</span>
+		<span class="nx">waitCh</span><span class="p">:</span>  <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
+		<span class="nx">brokeCh</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">cyclicBarrier</span><span class="p">)</span> <span class="nf">breakBarrier</span><span class="p">(</span><span class="nx">needLock</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">needLock</span> <span class="p">{</span>
+		<span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+		<span class="k">defer</span> <span class="nx">b</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+	<span class="p">}</span>
+
+	<span class="k">if</span> <span class="p">!</span><span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">isBroken</span> <span class="p">{</span>
+		<span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">isBroken</span> <span class="p">=</span> <span class="kc">true</span>
+
+		<span class="c1">// broadcast
+</span><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">b</span><span class="p">.</span><span class="nx">round</span><span class="p">.</span><span class="nx">brokeCh</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="参考">参考</h2>
+<p>本文内容摘录自:</p>
+<ol>
+<li><a href="https://time.geekbang.org/column/intro/100061801?tab=catalog" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-02-27&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/27c7acaa3d28d8cc0293192e87287d609ff65c36" target="_blank" title="commit by WardSong(1556824234@qq.com) 27c7acaa3d28d8cc0293192e87287d609ff65c36: go singleflight 和 cyclebarrier">
+                                    <i class="fas fa-hashtag fa-fw"></i>27c7aca</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/sync/go_sync_18/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" data-title="go CyclicBarrier 循环栅栏" data-hashtags="go 并发"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" data-hashtag="go 并发"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" data-title="go CyclicBarrier 循环栅栏"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" data-title="go CyclicBarrier 循环栅栏"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_18/" data-title="go CyclicBarrier 循环栅栏" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">go 并发</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/sync/go_sync_17/" class="prev" rel="prev" title="go SingleFlight 请求合并"><i class="fas fa-angle-left fa-fw"></i>go SingleFlight 请求合并</a>
+            <a href="/posts/program/go/modules/10_io/" class="next" rel="next" title="go 的文件 IO">go 的文件 IO<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2021-05-17T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"go CyclicBarrier 循环栅栏"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
