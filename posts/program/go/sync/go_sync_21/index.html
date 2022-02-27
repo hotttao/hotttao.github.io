@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>go 分布式并发原语二 - LoveIt</title><meta name="Description" content="基于 etcd 的分布式队列、栅栏和 STM"><meta property="og:title" content="go 分布式并发原语二" />
+<meta property="og:description" content="基于 etcd 的分布式队列、栅栏和 STM" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-05-20T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-02-27T16:02:41+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="go 分布式并发原语二"/>
+<meta name="twitter:description" content="基于 etcd 的分布式队列、栅栏和 STM"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/sync/go_sync_20/" /><link rel="next" href="https://hotttao.github.io/posts/program/go/modules/10_io/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "go 分布式并发原语二",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_21\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2709 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_21\/","datePublished": "2021-05-20T22:00:00+08:00","dateModified": "2022-02-27T16:02:41+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "基于 etcd 的分布式队列、栅栏和 STM"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">go 分布式并发原语二</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-20">2021-05-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2709 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-分布式队列">1. 分布式队列</a>
+      <ul>
+        <li><a href="#11-基础使用">1.1 基础使用</a></li>
+        <li><a href="#12-使用示例">1.2 使用示例</a></li>
+        <li><a href="#13-优先级队列">1.3 优先级队列</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-分布式栅栏">2. 分布式栅栏</a>
+      <ul>
+        <li><a href="#21-barrier">2.1 Barrier</a></li>
+        <li><a href="#22-doublebarrier">2.2 DoubleBarrier</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-stm">3. STM</a>
+      <ul>
+        <li><a href="#31-etcd-事务">3.1 etcd 事务</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-分布式队列">1. 分布式队列</h2>
+<h3 id="11-基础使用">1.1 基础使用</h3>
+<p>etcd 通过 github.com/coreos/etcd/contrib/recipes 包提供了分布式队列这种数据结构。其类型和方法的签名如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 创建队列
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewQueue</span><span class="p">(</span><span class="nx">client</span> <span class="o">*</span><span class="nx">v3</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span> <span class="nx">keyPrefix</span> <span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">Queue</span>
+
+
+<span class="c1">// 入队
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">Queue</span><span class="p">)</span> <span class="nf">Enqueue</span><span class="p">(</span><span class="nx">val</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span>
+<span class="c1">//出队
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">Queue</span><span class="p">)</span> <span class="nf">Dequeue</span><span class="p">()</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>需要注意的是，如果这个分布式队列当前为空，调用 Dequeue 方法的话，会被阻塞，直到有元素可以出队才返回。</p>
+<h3 id="12-使用示例">1.2 使用示例</h3>
+<p>我们可以启动多个下面的程序来模拟分布式的环境，进行测试:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">main</span>
+
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;bufio&#34;</span>
+    <span class="s">&#34;flag&#34;</span>
+    <span class="s">&#34;fmt&#34;</span>
+    <span class="s">&#34;log&#34;</span>
+    <span class="s">&#34;os&#34;</span>
+    <span class="s">&#34;strings&#34;</span>
+
+    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+    <span class="nx">recipe</span> <span class="s">&#34;github.com/coreos/etcd/contrib/recipes&#34;</span>
+<span class="p">)</span>
+
+
+<span class="kd">var</span> <span class="p">(</span>
+    <span class="nx">addr</span>      <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
+    <span class="nx">queueName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-queue&#34;</span><span class="p">,</span> <span class="s">&#34;queue name&#34;</span><span class="p">)</span>
+<span class="p">)</span>
+
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+
+
+    <span class="c1">// 解析etcd地址
+</span><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+
+
+    <span class="c1">// 创建etcd的client
+</span><span class="c1"></span>    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+
+    <span class="c1">// 创建/获取队列
+</span><span class="c1"></span>    <span class="nx">q</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewQueue</span><span class="p">(</span><span class="nx">cli</span><span class="p">,</span> <span class="o">*</span><span class="nx">queueName</span><span class="p">)</span>
+
+
+    <span class="c1">// 从命令行读取命令
+</span><span class="c1"></span>    <span class="nx">consolescanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">action</span> <span class="o">:=</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
+        <span class="nx">items</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">action</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
+        <span class="k">switch</span> <span class="nx">items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="s">&#34;push&#34;</span><span class="p">:</span> <span class="c1">// 加入队列
+</span><span class="c1"></span>            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">items</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span> <span class="p">{</span>
+                <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;must set value to push&#34;</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="p">}</span>
+            <span class="nx">q</span><span class="p">.</span><span class="nf">Enqueue</span><span class="p">(</span><span class="nx">items</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1">// 入队
+</span><span class="c1"></span>        <span class="k">case</span> <span class="s">&#34;pop&#34;</span><span class="p">:</span> <span class="c1">// 从队列弹出
+</span><span class="c1"></span>            <span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nf">Dequeue</span><span class="p">()</span> <span class="c1">// 出队
+</span><span class="c1"></span>            <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span> <span class="c1">// 输出出队的元素
+</span><span class="c1"></span>        <span class="k">case</span> <span class="s">&#34;quit&#34;</span><span class="p">,</span> <span class="s">&#34;exit&#34;</span><span class="p">:</span> <span class="c1">//退出
+</span><span class="c1"></span>            <span class="k">return</span>
+        <span class="k">default</span><span class="p">:</span>
+            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;unknown action&#34;</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="13-优先级队列">1.3 优先级队列</h3>
+<p>etcd 还提供了优先级队列（PriorityQueue）,用法和队列类似，只不过，在入队的时候，我们还需要提供 uint16 类型的一个整数，作为值的优先级，优先级高的元素会优先出队。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">PriorityQueue</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// contains filtered or unexported fields
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewPriorityQueue</span><span class="p">(</span><span class="nx">client</span> <span class="o">*</span><span class="nx">v3</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span> <span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">PriorityQueue</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">PriorityQueue</span><span class="p">)</span> <span class="nf">Dequeue</span><span class="p">()</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">PriorityQueue</span><span class="p">)</span> <span class="nf">Enqueue</span><span class="p">(</span><span class="nx">val</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">pr</span> <span class="kt">uint16</span><span class="p">)</span> <span class="kt">error</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="2-分布式栅栏">2. 分布式栅栏</h2>
+<p>循环栅栏 CyclicBarrie 和 WaitGroup 本质上是同一类并发原语，都是等待同一组 goroutine 同时执行或者等待同一组 goroutine 都完成。分布式环境中，我们也会遇到这样的场景：一组节点协同工作，共同等待一个信号，在信号未出现前，这些节点会被阻塞住，而一旦信号出现，这些阻塞的节点就会同时开始继续执行下一步的任务。</p>
+<p>etcd 也提供了相应的分布式并发原语:</p>
+<ol>
+<li>Barrier：分布式栅栏。如果持有 Barrier 的节点释放了它，所有等待这个 Barrier 的节点就不会被阻塞，而是会继续执行。</li>
+<li>DoubleBarrier：计数型栅栏。在初始化计数型栅栏的时候，我们就必须提供参与节点的数量，当这些数量的节点都 Enter 或者 Leave 的时候，这个栅栏就会放开。所以，我们把它称为计数型栅栏。</li>
+</ol>
+<h3 id="21-barrier">2.1 Barrier</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Barrier</span>
+    <span class="kd">func</span> <span class="nf">NewBarrier</span><span class="p">(</span><span class="nx">client</span> <span class="o">*</span><span class="nx">v3</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span> <span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">Barrier</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">Barrier</span><span class="p">)</span> <span class="nf">Hold</span><span class="p">()</span> <span class="kt">error</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">Barrier</span><span class="p">)</span> <span class="nf">Release</span><span class="p">()</span> <span class="kt">error</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">Barrier</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>Hold 方法是创建一个 Barrier。如果 Barrier 已经创建好了，有节点调用它的 Wait 方法，就会被阻塞。</li>
+<li>Release 方法是释放这个 Barrier，也就是打开栅栏。如果使用了这个方法，所有被阻塞的节点都会被放行，继续执行。</li>
+<li>Wait 方法会阻塞当前的调用者，直到这个 Barrier 被 release。如果这个栅栏不存在，调用者不会被阻塞，而是会继续执行。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">main</span>
+
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;bufio&#34;</span>
+    <span class="s">&#34;flag&#34;</span>
+    <span class="s">&#34;fmt&#34;</span>
+    <span class="s">&#34;log&#34;</span>
+    <span class="s">&#34;os&#34;</span>
+    <span class="s">&#34;strings&#34;</span>
+
+
+    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+    <span class="nx">recipe</span> <span class="s">&#34;github.com/coreos/etcd/contrib/recipes&#34;</span>
+<span class="p">)</span>
+
+
+<span class="kd">var</span> <span class="p">(</span>
+    <span class="nx">addr</span>        <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
+    <span class="nx">barrierName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-queue&#34;</span><span class="p">,</span> <span class="s">&#34;barrier name&#34;</span><span class="p">)</span>
+<span class="p">)</span>
+
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+
+
+    <span class="c1">// 解析etcd地址
+</span><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+
+
+    <span class="c1">// 创建etcd的client
+</span><span class="c1"></span>    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+
+    <span class="c1">// 创建/获取栅栏
+</span><span class="c1"></span>    <span class="nx">b</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewBarrier</span><span class="p">(</span><span class="nx">cli</span><span class="p">,</span> <span class="o">*</span><span class="nx">barrierName</span><span class="p">)</span>
+
+
+    <span class="c1">// 从命令行读取命令
+</span><span class="c1"></span>    <span class="nx">consolescanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">action</span> <span class="o">:=</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
+        <span class="nx">items</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">action</span><span class="p">,</span> <span class="s">&#34; &#34;</span><span class="p">)</span>
+        <span class="k">switch</span> <span class="nx">items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="s">&#34;hold&#34;</span><span class="p">:</span> <span class="c1">// 持有这个barrier
+</span><span class="c1"></span>            <span class="nx">b</span><span class="p">.</span><span class="nf">Hold</span><span class="p">()</span>
+            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;hold&#34;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s">&#34;release&#34;</span><span class="p">:</span> <span class="c1">// 释放这个barrier
+</span><span class="c1"></span>            <span class="nx">b</span><span class="p">.</span><span class="nf">Release</span><span class="p">()</span>
+            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released&#34;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s">&#34;wait&#34;</span><span class="p">:</span> <span class="c1">// 等待barrier被释放
+</span><span class="c1"></span>            <span class="nx">b</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;after wait&#34;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s">&#34;quit&#34;</span><span class="p">,</span> <span class="s">&#34;exit&#34;</span><span class="p">:</span> <span class="c1">//退出
+</span><span class="c1"></span>            <span class="k">return</span>
+        <span class="k">default</span><span class="p">:</span>
+            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;unknown action&#34;</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="22-doublebarrier">2.2 DoubleBarrier</h3>
+<p>DoubleBarrier 在初始化时提供了一个计数的 count</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">DoubleBarrier</span>
+    <span class="kd">func</span> <span class="nf">NewDoubleBarrier</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Session</span><span class="p">,</span> <span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">count</span> <span class="kt">int</span><span class="p">)</span> <span class="o">*</span><span class="nx">DoubleBarrier</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">DoubleBarrier</span><span class="p">)</span> <span class="nf">Enter</span><span class="p">()</span> <span class="kt">error</span>
+    <span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">DoubleBarrier</span><span class="p">)</span> <span class="nf">Leave</span><span class="p">()</span> <span class="kt">error</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>Enter: 当调用者调用 Enter 时，会被阻塞住，直到一共有 count（初始化这个栅栏的时候设定的值）个节点调用了 Enter，这 count 个被阻塞的节点才能继续执行。所以，你可以利用它编排一组节点，让这些节点在同一个时刻开始执行任务。</li>
+<li>Leave: 节点调用 Leave 方法的时候，会被阻塞，直到有 count 个节点，都调用了 Leave 方法，这些节点才能继续执行。</li>
+</ol>
+<h2 id="3-stm">3. STM</h2>
+<h3 id="31-etcd-事务">3.1 etcd 事务</h3>
+<p>etcd 提供了在一个事务中对多个 key 的更新功能，这一组 key 的操作要么全部成功，要么全部失败。etcd 的事务实现方式是基于 CAS 方式实现的，融合了 Get、Put 和 Delete 操作。</p>
+<p>etcd 的事务操作如下，分为条件块、成功块和失败块，条件块用来检测事务是否成功，如果成功，就执行 Then(&hellip;)，如果失败，就执行 Else(&hellip;)：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="nf">Txn</span><span class="p">().</span><span class="nf">If</span><span class="p">(</span><span class="nx">cond1</span><span class="p">,</span> <span class="nx">cond2</span><span class="p">,</span> <span class="o">...</span><span class="p">).</span><span class="nf">Then</span><span class="p">(</span><span class="nx">op1</span><span class="p">,</span> <span class="nx">op2</span><span class="p">,</span> <span class="o">...</span><span class="p">,).</span><span class="nf">Else</span><span class="p">(</span><span class="nx">op1</span><span class="err">’</span><span class="p">,</span> <span class="nx">op2</span><span class="err">’</span><span class="p">,</span> <span class="err">…</span><span class="p">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>下面是利用 etcd 实现转账的例子:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="nf">doTxnXfer</span><span class="p">(</span><span class="nx">etcd</span> <span class="o">*</span><span class="nx">v3</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span> <span class="nx">from</span><span class="p">,</span> <span class="nx">to</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">amount</span> <span class="kt">uint</span><span class="p">)</span> <span class="p">(</span><span class="kt">bool</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// 一个查询事务
+</span><span class="c1"></span>    <span class="nx">getresp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">etcd</span><span class="p">.</span><span class="nf">Txn</span><span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">TODO</span><span class="p">()).</span><span class="nf">Then</span><span class="p">(</span><span class="nf">OpGet</span><span class="p">(</span><span class="nx">from</span><span class="p">),</span> <span class="nf">OpGet</span><span class="p">(</span><span class="nx">to</span><span class="p">)).</span><span class="nf">Commit</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+         <span class="k">return</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">err</span>
+    <span class="p">}</span>
+    <span class="c1">// 获取转账账户的值
+</span><span class="c1"></span>    <span class="nx">fromKV</span> <span class="o">:=</span> <span class="nx">getresp</span><span class="p">.</span><span class="nx">Responses</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nf">GetRangeResponse</span><span class="p">().</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nx">toKV</span> <span class="o">:=</span> <span class="nx">getresp</span><span class="p">.</span><span class="nx">Responses</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="nf">GetRangeResponse</span><span class="p">().</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="nx">fromV</span><span class="p">,</span> <span class="nx">toV</span> <span class="o">:=</span> <span class="nf">toUInt64</span><span class="p">(</span><span class="nx">fromKV</span><span class="p">.</span><span class="nx">Value</span><span class="p">),</span> <span class="nf">toUint64</span><span class="p">(</span><span class="nx">toKV</span><span class="p">.</span><span class="nx">Value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">fromV</span> <span class="p">&lt;</span> <span class="nx">amount</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="err">“</span><span class="nx">insufficient</span> <span class="nx">value</span><span class="err">”</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1">// 转账事务
+</span><span class="c1"></span>    <span class="c1">// 条件块
+</span><span class="c1"></span>    <span class="nx">txn</span> <span class="o">:=</span> <span class="nx">etcd</span><span class="p">.</span><span class="nf">Txn</span><span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">TODO</span><span class="p">()).</span><span class="nf">If</span><span class="p">(</span>
+        <span class="nx">v3</span><span class="p">.</span><span class="nf">Compare</span><span class="p">(</span><span class="nx">v3</span><span class="p">.</span><span class="nf">ModRevision</span><span class="p">(</span><span class="nx">from</span><span class="p">),</span> <span class="err">“</span><span class="p">=</span><span class="err">”</span><span class="p">,</span> <span class="nx">fromKV</span><span class="p">.</span><span class="nx">ModRevision</span><span class="p">),</span>
+        <span class="nx">v3</span><span class="p">.</span><span class="nf">Compare</span><span class="p">(</span><span class="nx">v3</span><span class="p">.</span><span class="nf">ModRevision</span><span class="p">(</span><span class="nx">to</span><span class="p">),</span> <span class="err">“</span><span class="p">=</span><span class="err">”</span><span class="p">,</span> <span class="nx">toKV</span><span class="p">.</span><span class="nx">ModRevision</span><span class="p">))</span>
+    <span class="c1">// 成功块
+</span><span class="c1"></span>    <span class="nx">txn</span> <span class="p">=</span> <span class="nx">txn</span><span class="p">.</span><span class="nf">Then</span><span class="p">(</span>
+        <span class="nf">OpPut</span><span class="p">(</span><span class="nx">from</span><span class="p">,</span> <span class="nf">fromUint64</span><span class="p">(</span><span class="nx">fromV</span> <span class="o">-</span> <span class="nx">amount</span><span class="p">)),</span>
+        <span class="nf">OpPut</span><span class="p">(</span><span class="nx">to</span><span class="p">,</span> <span class="nf">fromUint64</span><span class="p">(</span><span class="nx">toV</span> <span class="o">+</span> <span class="nx">amount</span><span class="p">))</span>
+    <span class="c1">//提交事务 
+</span><span class="c1"></span>    <span class="nx">putresp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">txn</span><span class="p">.</span><span class="nf">Commit</span><span class="p">()</span>
+    <span class="c1">// 检查事务的执行结果
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">err</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">putresp</span><span class="p">.</span><span class="nx">Succeeded</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>虽然可以利用 etcd 实现事务操作，但是逻辑还是比较复杂的。所以 etcd 又在这些基础 API 上进行了封装，新增了一种叫做 STM 的操作，提供了更加便利的方法。要使用 STM，你需要先编写一个 apply 函数，这个函数的执行是在一个事务之中的：<code>apply func(STM) error</code>。这个方法包含一个 STM 类型的参数，它提供了对 key 值的读写操作。</p>
+<p>STM 提供了 4 个方法，分别是 Get、Put、Receive 和 Delete，代码如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">STM</span> <span class="kd">interface</span> <span class="p">{</span>
+  <span class="nf">Get</span><span class="p">(</span><span class="nx">key</span> <span class="o">...</span><span class="kt">string</span><span class="p">)</span> <span class="kt">string</span>
+  <span class="nf">Put</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">val</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">v3</span><span class="p">.</span><span class="nx">OpOption</span><span class="p">)</span>
+  <span class="nf">Rev</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int64</span>
+  <span class="nf">Del</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>我们通过下面这个例子来看看如何使用 STM</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">main</span>
+
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;context&#34;</span>
+    <span class="s">&#34;flag&#34;</span>
+    <span class="s">&#34;fmt&#34;</span>
+    <span class="s">&#34;log&#34;</span>
+    <span class="s">&#34;math/rand&#34;</span>
+    <span class="s">&#34;strings&#34;</span>
+    <span class="s">&#34;sync&#34;</span>
+
+
+    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+    <span class="s">&#34;github.com/coreos/etcd/clientv3/concurrency&#34;</span>
+<span class="p">)</span>
+
+
+<span class="kd">var</span> <span class="p">(</span>
+    <span class="nx">addr</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
+<span class="p">)</span>
+
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+
+
+    <span class="c1">// 解析etcd地址
+</span><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+
+
+    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+
+    <span class="c1">// 设置5个账户，每个账号都有100元，总共500元
+</span><span class="c1"></span>    <span class="nx">totalAccounts</span> <span class="o">:=</span> <span class="mi">5</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">totalAccounts</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">k</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;accts/%d&#34;</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">(),</span> <span class="nx">k</span><span class="p">,</span> <span class="s">&#34;100&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+
+    <span class="c1">// STM的应用函数，主要的事务逻辑
+</span><span class="c1"></span>    <span class="nx">exchange</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">stm</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nx">STM</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+        <span class="c1">// 随机得到两个转账账号
+</span><span class="c1"></span>        <span class="nx">from</span><span class="p">,</span> <span class="nx">to</span> <span class="o">:=</span> <span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="nx">totalAccounts</span><span class="p">),</span> <span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="nx">totalAccounts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">from</span> <span class="o">==</span> <span class="nx">to</span> <span class="p">{</span>
+            <span class="c1">// 自己不和自己转账
+</span><span class="c1"></span>            <span class="k">return</span> <span class="kc">nil</span>
+        <span class="p">}</span>
+        <span class="c1">// 读取账号的值
+</span><span class="c1"></span>        <span class="nx">fromK</span><span class="p">,</span> <span class="nx">toK</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;accts/%d&#34;</span><span class="p">,</span> <span class="nx">from</span><span class="p">),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;accts/%d&#34;</span><span class="p">,</span> <span class="nx">to</span><span class="p">)</span>
+        <span class="nx">fromV</span><span class="p">,</span> <span class="nx">toV</span> <span class="o">:=</span> <span class="nx">stm</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">fromK</span><span class="p">),</span> <span class="nx">stm</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">toK</span><span class="p">)</span>
+        <span class="nx">fromInt</span><span class="p">,</span> <span class="nx">toInt</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nx">fromV</span><span class="p">,</span> <span class="s">&#34;%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">fromInt</span><span class="p">)</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nx">toV</span><span class="p">,</span> <span class="s">&#34;%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">toInt</span><span class="p">)</span>
+
+
+        <span class="c1">// 把源账号一半的钱转账给目标账号
+</span><span class="c1"></span>        <span class="nx">xfer</span> <span class="o">:=</span> <span class="nx">fromInt</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="nx">fromInt</span><span class="p">,</span> <span class="nx">toInt</span> <span class="p">=</span> <span class="nx">fromInt</span><span class="o">-</span><span class="nx">xfer</span><span class="p">,</span> <span class="nx">toInt</span><span class="o">+</span><span class="nx">xfer</span>
+
+
+        <span class="c1">// 把转账后的值写回
+</span><span class="c1"></span>        <span class="nx">stm</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">fromK</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d&#34;</span><span class="p">,</span> <span class="nx">fromInt</span><span class="p">))</span>
+        <span class="nx">stm</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">toK</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d&#34;</span><span class="p">,</span> <span class="nx">toInt</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+
+
+    <span class="c1">// 启动10个goroutine进行转账操作
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+            <span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+            <span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="mi">100</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">serr</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSTM</span><span class="p">(</span><span class="nx">cli</span><span class="p">,</span> <span class="nx">exchange</span><span class="p">);</span> <span class="nx">serr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                    <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">serr</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}()</span>
+    <span class="p">}</span>
+    <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+
+
+    <span class="c1">// 检查账号最后的数目
+</span><span class="c1"></span>    <span class="nx">sum</span> <span class="o">:=</span> <span class="mi">0</span>
+    <span class="nx">accts</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">(),</span> <span class="s">&#34;accts/&#34;</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithPrefix</span><span class="p">())</span> <span class="c1">// 得到所有账号
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">kv</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">accts</span><span class="p">.</span><span class="nx">Kvs</span> <span class="p">{</span> <span class="c1">// 遍历账号的值
+</span><span class="c1"></span>        <span class="nx">v</span> <span class="o">:=</span> <span class="mi">0</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sscanf</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">kv</span><span class="p">.</span><span class="nx">Value</span><span class="p">),</span> <span class="s">&#34;%d&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">v</span><span class="p">)</span>
+        <span class="nx">sum</span> <span class="o">+=</span> <span class="nx">v</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;account %s: %d&#34;</span><span class="p">,</span> <span class="nx">kv</span><span class="p">.</span><span class="nx">Key</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
+    <span class="p">}</span>
+
+
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;account sum is&#34;</span><span class="p">,</span> <span class="nx">sum</span><span class="p">)</span> <span class="c1">// 总数
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>使用 etcd STM 的时候，我们只需要定义一个 apply 方法(上面的 exchange函数)，然后通过 concurrency.NewSTM(cli, exchange)，就可以完成转账事务的执行了。总结一下，当你利用 etcd 做存储时，是可以利用 STM 实现事务操作的，一个事务可以包含多个账号的数据更改操作，事务能够保证这些更改要么全成功，要么全失败。</p>
+<h2 id="参考">参考</h2>
+<p>本文内容摘录自:</p>
+<ol>
+<li><a href="https://time.geekbang.org/column/intro/100061801?tab=catalog" target="_blank" rel="noopener noreffer">极客专栏-鸟叔的 Go 并发编程实战</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-02-27&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/0f8ef225ecb451605366bfc5c823ee52b77b0198" target="_blank" title="commit by WardSong(1556824234@qq.com) 0f8ef225ecb451605366bfc5c823ee52b77b0198: go 基于 etcd 的分布式并发原语">
+                                    <i class="fas fa-hashtag fa-fw"></i>0f8ef22</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/sync/go_sync_21/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" data-title="go 分布式并发原语二" data-hashtags="go 并发"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" data-hashtag="go 并发"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" data-title="go 分布式并发原语二"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" data-title="go 分布式并发原语二"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/sync/go_sync_21/" data-title="go 分布式并发原语二" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">go 并发</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/sync/go_sync_20/" class="prev" rel="prev" title="go 分布式并发原语一"><i class="fas fa-angle-left fa-fw"></i>go 分布式并发原语一</a>
+            <a href="/posts/program/go/modules/10_io/" class="next" rel="next" title="go 的文件 IO">go 的文件 IO<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2021-05-20T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"go 分布式并发原语二"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
