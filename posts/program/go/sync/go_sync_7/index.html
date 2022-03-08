@@ -172,12 +172,12 @@
 </span><span class="lnt">5
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Cond</span>
-  <span class="kd">func</span> <span class="nf">NeWCond</span><span class="p">(</span><span class="nx">l</span> <span class="nx">Locker</span><span class="p">)</span> <span class="o">*</span><span class="nx">Cond</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Broadcast</span><span class="p">()</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Signal</span><span class="p">()</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Cond</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="nf">NeWCond</span><span class="p">(</span><span class="nx">l</span> <span class="nx">Locker</span><span class="p">)</span> <span class="o">*</span><span class="nx">Cond</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Broadcast</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Signal</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><ol>
 <li>首先，Cond 关联的 Locker 实例可以通过 c.L 访问，它内部维护着一个先入先出的等待队列</li>
@@ -242,41 +242,41 @@
 </span><span class="lnt">34
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">c</span> <span class="o">:=</span> <span class="nx">sync</span><span class="p">.</span><span class="nf">NewCond</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">{})</span>
-    <span class="kd">var</span> <span class="nx">ready</span> <span class="kt">int</span>
-
-    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-        <span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">i</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
-            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Int63n</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-
-            <span class="c1">// 加锁更改等待条件
-</span><span class="c1"></span>            <span class="c1">// 注意点一: 条件变量的更改，其实是需要原子操作或者互斥锁保护的
-</span><span class="c1"></span>            <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-            <span class="nx">ready</span><span class="o">++</span>
-            <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-
-            <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;运动员#%d 已准备就绪\n&#34;</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span>
-            <span class="c1">// 广播唤醒所有的等待者
-</span><span class="c1"></span>            <span class="nx">c</span><span class="p">.</span><span class="nf">Broadcast</span><span class="p">()</span>
-        <span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="c1">// 注意点三: Wait() 方法调用前需要先获取锁
-</span><span class="c1"></span>    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-    <span class="c1">// 注意点二: Wait 唤醒后需要检查条件
-</span><span class="c1"></span>    <span class="c1">// 我们一定要记住，waiter goroutine 被唤醒不等于等待条件被满足
-</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">ready</span> <span class="o">!=</span> <span class="mi">10</span> <span class="p">{</span>
-        <span class="nx">c</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;裁判员被唤醒一次&#34;</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-
-    <span class="c1">//所有的运动员是否就绪
-</span><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;所有运动员都准备就绪。比赛开始，3，2，1, ......&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">c</span> <span class="o">:=</span> <span class="nx">sync</span><span class="p">.</span><span class="nf">NewCond</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">ready</span> <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">i</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Int63n</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="c1">// 加锁更改等待条件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// 注意点一: 条件变量的更改，其实是需要原子操作或者互斥锁保护的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">ready</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;运动员#%d 已准备就绪\n&#34;</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// 广播唤醒所有的等待者
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">c</span><span class="p">.</span><span class="nf">Broadcast</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 注意点三: Wait() 方法调用前需要先获取锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 注意点二: Wait 唤醒后需要检查条件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 我们一定要记住，waiter goroutine 被唤醒不等于等待条件被满足
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">for</span> <span class="nx">ready</span> <span class="o">!=</span> <span class="mi">10</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">c</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;裁判员被唤醒一次&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//所有的运动员是否就绪
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;所有运动员都准备就绪。比赛开始，3，2，1, ......&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="2-cond-实现">2. Cond 实现</h2>
 <p>Cond 的实现非常简单，或者说复杂的逻辑已经被 Locker 或者 runtime 的等待队列实现了。</p>
@@ -321,44 +321,44 @@
 </span><span class="lnt">37
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">type</span> <span class="nx">Cond</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">noCopy</span> <span class="nx">noCopy</span>
-
-    <span class="c1">// 当观察或者修改等待条件的时候需要加锁
-</span><span class="c1"></span>    <span class="nx">L</span> <span class="nx">Locker</span>
-
-    <span class="c1">// 等待队列
-</span><span class="c1"></span>    <span class="nx">notify</span>  <span class="nx">notifyList</span>
-    <span class="nx">checker</span> <span class="nx">copyChecker</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">NewCond</span><span class="p">(</span><span class="nx">l</span> <span class="nx">Locker</span><span class="p">)</span> <span class="o">*</span><span class="nx">Cond</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">Cond</span><span class="p">{</span><span class="nx">L</span><span class="p">:</span> <span class="nx">l</span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">c</span><span class="p">.</span><span class="nx">checker</span><span class="p">.</span><span class="nf">check</span><span class="p">()</span>
-    <span class="c1">// 增加到等待队列中
-</span><span class="c1"></span>    <span class="nx">t</span> <span class="o">:=</span> <span class="nf">runtime_notifyListAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="p">)</span>
-    <span class="c1">// 把当前调用者加入到 notify 队列之中后会释放锁
-</span><span class="c1"></span>    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-    <span class="c1">// 阻塞休眠直到被唤醒
-</span><span class="c1"></span>    <span class="c1">// 等调用者被唤醒之后，又会去争抢这把锁
-</span><span class="c1"></span>    <span class="nf">runtime_notifyListWait</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="p">,</span> <span class="nx">t</span><span class="p">)</span>
-    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Signal</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">c</span><span class="p">.</span><span class="nx">checker</span><span class="p">.</span><span class="nf">check</span><span class="p">()</span>
-    <span class="nf">runtime_notifyListNotifyOne</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Broadcast</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">c</span><span class="p">.</span><span class="nx">checker</span><span class="p">.</span><span class="nf">check</span><span class="p">()</span>
-    <span class="nf">runtime_notifyListNotifyAll</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="err">）</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Cond</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">noCopy</span> <span class="nx">noCopy</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 当观察或者修改等待条件的时候需要加锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">L</span> <span class="nx">Locker</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待队列
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">notify</span>  <span class="nx">notifyList</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">checker</span> <span class="nx">copyChecker</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewCond</span><span class="p">(</span><span class="nx">l</span> <span class="nx">Locker</span><span class="p">)</span> <span class="o">*</span><span class="nx">Cond</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">Cond</span><span class="p">{</span><span class="nx">L</span><span class="p">:</span> <span class="nx">l</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">c</span><span class="p">.</span><span class="nx">checker</span><span class="p">.</span><span class="nf">check</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 增加到等待队列中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">t</span> <span class="o">:=</span> <span class="nf">runtime_notifyListAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 把当前调用者加入到 notify 队列之中后会释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 阻塞休眠直到被唤醒
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 等调用者被唤醒之后，又会去争抢这把锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nf">runtime_notifyListWait</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="p">,</span> <span class="nx">t</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">c</span><span class="p">.</span><span class="nx">L</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Signal</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">c</span><span class="p">.</span><span class="nx">checker</span><span class="p">.</span><span class="nf">check</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">runtime_notifyListNotifyOne</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Cond</span><span class="p">)</span> <span class="nf">Broadcast</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">c</span><span class="p">.</span><span class="nx">checker</span><span class="p">.</span><span class="nf">check</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">runtime_notifyListNotifyAll</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">.</span><span class="nx">notify</span><span class="err">）</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>在 Cond 实现中:</p>
 <ol>
@@ -414,7 +414,7 @@
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>

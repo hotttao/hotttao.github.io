@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_19\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  6851 ,
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  6850 ,
         "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_19\/","datePublished": "2021-05-18T22:00:00+08:00","dateModified": "2022-02-27T15:47:43+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
@@ -111,7 +111,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">go 分组操作的并发控制</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-18">2021-05-18</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6851 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-18">2021-05-18</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6850 字&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 14 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
@@ -255,67 +255,67 @@
 </span><span class="lnt">60
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">errgroup</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// A Group is a collection of goroutines working on subtasks that are part of
-</span><span class="c1">// the same overall task.
-</span><span class="c1">//
-</span><span class="c1">// A zero Group is valid and does not cancel on error.
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Group</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">cancel</span> <span class="kd">func</span><span class="p">()</span>
-
-	<span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-
-	<span class="nx">errOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
-	<span class="nx">err</span>     <span class="kt">error</span>
-<span class="p">}</span>
-
-<span class="c1">// WithContext returns a new Group and an associated Context derived from ctx.
-</span><span class="c1">//
-</span><span class="c1">// The derived Context is canceled the first time a function passed to Go
-</span><span class="c1">// returns a non-nil error or the first time Wait returns, whichever occurs
-</span><span class="c1">// first.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">WithContext</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Group</span><span class="p">,</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Group</span><span class="p">{</span><span class="nx">cancel</span><span class="p">:</span> <span class="nx">cancel</span><span class="p">},</span> <span class="nx">ctx</span>
-<span class="p">}</span>
-
-<span class="c1">// Wait blocks until all function calls from the Go method have returned, then
-</span><span class="c1">// returns the first non-nil error (if any) from them.
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-	<span class="k">if</span> <span class="nx">g</span><span class="p">.</span><span class="nx">cancel</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">g</span><span class="p">.</span><span class="nf">cancel</span><span class="p">()</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="nx">g</span><span class="p">.</span><span class="nx">err</span>
-<span class="p">}</span>
-
-<span class="c1">// Go calls the given function in a new goroutine.
-</span><span class="c1">//
-</span><span class="c1">// The first call to return a non-nil error cancels the group; its error will be
-</span><span class="c1">// returned by Wait.
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">f</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">g</span><span class="p">.</span><span class="nx">errOnce</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-				<span class="nx">g</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nx">err</span>
-				<span class="k">if</span> <span class="nx">g</span><span class="p">.</span><span class="nx">cancel</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-					<span class="nx">g</span><span class="p">.</span><span class="nf">cancel</span><span class="p">()</span>
-				<span class="p">}</span>
-			<span class="p">})</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">errgroup</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// A Group is a collection of goroutines working on subtasks that are part of
+</span></span></span><span class="line"><span class="cl"><span class="c1">// the same overall task.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// A zero Group is valid and does not cancel on error.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Group</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cancel</span> <span class="kd">func</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">errOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span>     <span class="kt">error</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// WithContext returns a new Group and an associated Context derived from ctx.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// The derived Context is canceled the first time a function passed to Go
+</span></span></span><span class="line"><span class="cl"><span class="c1">// returns a non-nil error or the first time Wait returns, whichever occurs
+</span></span></span><span class="line"><span class="cl"><span class="c1">// first.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">WithContext</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Group</span><span class="p">,</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Group</span><span class="p">{</span><span class="nx">cancel</span><span class="p">:</span> <span class="nx">cancel</span><span class="p">},</span> <span class="nx">ctx</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Wait blocks until all function calls from the Go method have returned, then
+</span></span></span><span class="line"><span class="cl"><span class="c1">// returns the first non-nil error (if any) from them.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">g</span><span class="p">.</span><span class="nx">cancel</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">g</span><span class="p">.</span><span class="nf">cancel</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">g</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Go calls the given function in a new goroutine.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// The first call to return a non-nil error cancels the group; its error will be
+</span></span></span><span class="line"><span class="cl"><span class="c1">// returned by Wait.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">f</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">g</span><span class="p">.</span><span class="nx">errOnce</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">g</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">g</span><span class="p">.</span><span class="nx">cancel</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">g</span><span class="p">.</span><span class="nf">cancel</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="p">})</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>ErrGroup 有三个方法分别是 WithContext、Go 和 Wait。</p>
 <p>WithContext:</p>
@@ -454,112 +454,110 @@
 </span><span class="lnt"> 99
 </span><span class="lnt">100
 </span><span class="lnt">101
-</span><span class="lnt">102
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;crypto/md5&#34;</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;io/ioutil&#34;</span>
-	<span class="s">&#34;log&#34;</span>
-	<span class="s">&#34;os&#34;</span>
-	<span class="s">&#34;path/filepath&#34;</span>
-
-	<span class="s">&#34;golang.org/x/sync/errgroup&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Pipeline demonstrates the use of a Group to implement a multi-stage
-</span><span class="c1">// pipeline: a version of the MD5All function with bounded parallelism from
-</span><span class="c1">// https://blog.golang.org/pipelines.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">m</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">MD5All</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;.&#34;</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">sum</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">m</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s:\t%x\n&#34;</span><span class="p">,</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">sum</span><span class="p">)</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">result</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">path</span> <span class="kt">string</span>
-	<span class="nx">sum</span>  <span class="p">[</span><span class="nx">md5</span><span class="p">.</span><span class="nx">Size</span><span class="p">]</span><span class="kt">byte</span>
-<span class="p">}</span>
-
-<span class="c1">// MD5All reads all the files in the file tree rooted at root and returns a map
-</span><span class="c1">// from file path to the MD5 sum of the file&#39;s contents. If the directory walk
-</span><span class="c1">// fails or any read operation fails, MD5All returns an error.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">MD5All</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">root</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][</span><span class="nx">md5</span><span class="p">.</span><span class="nx">Size</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="c1">// ctx is canceled when g.Wait() returns. When this version of MD5All returns
-</span><span class="c1"></span>	<span class="c1">// - even in case of error! - we know that all of the goroutines have finished
-</span><span class="c1"></span>	<span class="c1">// and the memory they were using can be garbage-collected.
-</span><span class="c1"></span>	<span class="nx">g</span><span class="p">,</span> <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">errgroup</span><span class="p">.</span><span class="nf">WithContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-	<span class="nx">paths</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">)</span> <span class="c1">// 文件路径channel
-</span><span class="c1"></span>
-    <span class="c1">// 1. 遍历目录下的所有文件，发送到 channel paths 中
-</span><span class="c1"></span>	<span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">paths</span><span class="p">)</span>
-		<span class="k">return</span> <span class="nx">filepath</span><span class="p">.</span><span class="nf">Walk</span><span class="p">(</span><span class="nx">root</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">path</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">info</span> <span class="nx">os</span><span class="p">.</span><span class="nx">FileInfo</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="k">return</span> <span class="nx">err</span>
-			<span class="p">}</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">info</span><span class="p">.</span><span class="nf">Mode</span><span class="p">().</span><span class="nf">IsRegular</span><span class="p">()</span> <span class="p">{</span>
-				<span class="k">return</span> <span class="kc">nil</span>
-			<span class="p">}</span>
-			<span class="k">select</span> <span class="p">{</span>
-			<span class="k">case</span> <span class="nx">paths</span> <span class="o">&lt;-</span> <span class="nx">path</span><span class="p">:</span>
-			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-				<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
-			<span class="p">}</span>
-			<span class="k">return</span> <span class="kc">nil</span>
-		<span class="p">})</span>
-	<span class="p">})</span>
-
-	<span class="c1">// 启动20个goroutine执行计算md5的任务，计算的文件由上一阶段的文件遍历子任务生成.
-</span><span class="c1"></span>	<span class="nx">c</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">result</span><span class="p">)</span>
-	<span class="kd">const</span> <span class="nx">numDigesters</span> <span class="p">=</span> <span class="mi">20</span>
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">numDigesters</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-			<span class="k">for</span> <span class="nx">path</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">paths</span> <span class="p">{</span>
-				<span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadFile</span><span class="p">(</span><span class="nx">path</span><span class="p">)</span>
-				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-					<span class="k">return</span> <span class="nx">err</span>
-				<span class="p">}</span>
-				<span class="k">select</span> <span class="p">{</span>
-				<span class="k">case</span> <span class="nx">c</span> <span class="o">&lt;-</span> <span class="nx">result</span><span class="p">{</span><span class="nx">path</span><span class="p">,</span> <span class="nx">md5</span><span class="p">.</span><span class="nf">Sum</span><span class="p">(</span><span class="nx">data</span><span class="p">)}:</span>
-				<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-					<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
-				<span class="p">}</span>
-			<span class="p">}</span>
-			<span class="k">return</span> <span class="kc">nil</span>
-		<span class="p">})</span>
-	<span class="p">}</span>
-
-    
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span> <span class="c1">// 20个goroutine以及遍历文件的goroutine都执行完
-</span><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span> 
-	<span class="p">}()</span>
-
-	<span class="nx">m</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][</span><span class="nx">md5</span><span class="p">.</span><span class="nx">Size</span><span class="p">]</span><span class="kt">byte</span><span class="p">)</span>
-	<span class="k">for</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">c</span> <span class="p">{</span>
-		<span class="nx">m</span><span class="p">[</span><span class="nx">r</span><span class="p">.</span><span class="nx">path</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">sum</span>
-	<span class="p">}</span>
-	<span class="c1">// Check whether any of the goroutines failed. Since g is accumulating the
-</span><span class="c1"></span>	<span class="c1">// errors, we don&#39;t need to send them (or check for them) in the individual
-</span><span class="c1"></span>	<span class="c1">// results sent on the channel.
-</span><span class="c1"></span>    <span class="c1">// 再次调用Wait，依然可以得到group的error信息
-</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="nx">m</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;crypto/md5&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;io/ioutil&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;path/filepath&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;golang.org/x/sync/errgroup&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Pipeline demonstrates the use of a Group to implement a multi-stage
+</span></span></span><span class="line"><span class="cl"><span class="c1">// pipeline: a version of the MD5All function with bounded parallelism from
+</span></span></span><span class="line"><span class="cl"><span class="c1">// https://blog.golang.org/pipelines.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">MD5All</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;.&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">sum</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">m</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s:\t%x\n&#34;</span><span class="p">,</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">sum</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">result</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">path</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">sum</span>  <span class="p">[</span><span class="nx">md5</span><span class="p">.</span><span class="nx">Size</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// MD5All reads all the files in the file tree rooted at root and returns a map
+</span></span></span><span class="line"><span class="cl"><span class="c1">// from file path to the MD5 sum of the file&#39;s contents. If the directory walk
+</span></span></span><span class="line"><span class="cl"><span class="c1">// fails or any read operation fails, MD5All returns an error.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">MD5All</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">root</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][</span><span class="nx">md5</span><span class="p">.</span><span class="nx">Size</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// ctx is canceled when g.Wait() returns. When this version of MD5All returns
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// - even in case of error! - we know that all of the goroutines have finished
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// and the memory they were using can be garbage-collected.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">g</span><span class="p">,</span> <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">errgroup</span><span class="p">.</span><span class="nf">WithContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">paths</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">string</span><span class="p">)</span> <span class="c1">// 文件路径channel
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 遍历目录下的所有文件，发送到 channel paths 中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">paths</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">filepath</span><span class="p">.</span><span class="nf">Walk</span><span class="p">(</span><span class="nx">root</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">path</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">info</span> <span class="nx">os</span><span class="p">.</span><span class="nx">FileInfo</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">info</span><span class="p">.</span><span class="nf">Mode</span><span class="p">().</span><span class="nf">IsRegular</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="nx">paths</span> <span class="o">&lt;-</span> <span class="nx">path</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 启动20个goroutine执行计算md5的任务，计算的文件由上一阶段的文件遍历子任务生成.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">c</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">result</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">const</span> <span class="nx">numDigesters</span> <span class="p">=</span> <span class="mi">20</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">numDigesters</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">for</span> <span class="nx">path</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">paths</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadFile</span><span class="p">(</span><span class="nx">path</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">case</span> <span class="nx">c</span> <span class="o">&lt;-</span> <span class="nx">result</span><span class="p">{</span><span class="nx">path</span><span class="p">,</span> <span class="nx">md5</span><span class="p">.</span><span class="nf">Sum</span><span class="p">(</span><span class="nx">data</span><span class="p">)}:</span>
+</span></span><span class="line"><span class="cl">				<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span> <span class="c1">// 20个goroutine以及遍历文件的goroutine都执行完
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][</span><span class="nx">md5</span><span class="p">.</span><span class="nx">Size</span><span class="p">]</span><span class="kt">byte</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">c</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">m</span><span class="p">[</span><span class="nx">r</span><span class="p">.</span><span class="nx">path</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">sum</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Check whether any of the goroutines failed. Since g is accumulating the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// errors, we don&#39;t need to send them (or check for them) in the individual
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// results sent on the channel.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 再次调用Wait，依然可以得到group的error信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">m</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>通过这个例子，你可以学习到多阶段 pipeline 的实现（这个例子是遍历文件夹和计算 md5 两个阶段），还可以学习到如何控制执行子任务的 goroutine 数量。</p>
 <h3 id="23-bilibili-errgroup-扩展">2.3 bilibili ErrGroup 扩展</h3>
@@ -629,50 +627,50 @@
 </span><span class="lnt">43
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;context&#34;</span>
-    <span class="s">&#34;fmt&#34;</span>
-    <span class="s">&#34;sync/atomic&#34;</span>
-    <span class="s">&#34;time&#34;</span>
-
-    <span class="s">&#34;github.com/bilibili/kratos/pkg/sync/errgroup&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">g</span> <span class="nx">errgroup</span><span class="p">.</span><span class="nx">Group</span>
-    <span class="nx">g</span><span class="p">.</span><span class="nf">GOMAXPROCS</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">// 只使用一个goroutine处理子任务
-</span><span class="c1"></span>
-    <span class="kd">var</span> <span class="nx">count</span> <span class="kt">int64</span>
-    <span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-        <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span> <span class="c1">//睡眠5秒，把这个goroutine占住
-</span><span class="c1"></span>        <span class="k">return</span> <span class="kc">nil</span>
-    <span class="p">})</span>
-
-    <span class="nx">total</span> <span class="o">:=</span> <span class="mi">10000</span>
-
-    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">total</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span> <span class="c1">// 并发一万个goroutine执行子任务，理论上这些子任务都会加入到Group的待处理列表中
-</span><span class="c1"></span>        <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-            <span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-                <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">count</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                <span class="k">return</span> <span class="kc">nil</span>
-            <span class="p">})</span>
-        <span class="p">}()</span>
-    <span class="p">}</span>
-
-    <span class="c1">// 等待所有的子任务完成。理论上10001个子任务都会被完成
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="nx">got</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">count</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">got</span> <span class="o">!=</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">total</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;expect %d but got %d&#34;</span><span class="p">,</span> <span class="nx">total</span><span class="p">,</span> <span class="nx">got</span><span class="p">))</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;sync/atomic&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;github.com/bilibili/kratos/pkg/sync/errgroup&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">g</span> <span class="nx">errgroup</span><span class="p">.</span><span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">g</span><span class="p">.</span><span class="nf">GOMAXPROCS</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">// 只使用一个goroutine处理子任务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">count</span> <span class="kt">int64</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span> <span class="c1">//睡眠5秒，把这个goroutine占住
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">    <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">total</span> <span class="o">:=</span> <span class="mi">10000</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">total</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span> <span class="c1">// 并发一万个goroutine执行子任务，理论上这些子任务都会加入到Group的待处理列表中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">g</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">count</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">            <span class="p">})</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待所有的子任务完成。理论上10001个子任务都会被完成
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">got</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">count</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">got</span> <span class="o">!=</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">total</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;expect %d but got %d&#34;</span><span class="p">,</span> <span class="nx">total</span><span class="p">,</span> <span class="nx">got</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="24-neilotooleerrgroup-扩展">2.4 neilotoole/errgroup 扩展</h3>
 <p><a href="https://github.com/neilotoole/errgroup" target="_blank" rel="noopener noreffer">neilotoole/errgroup</a> 是今年年中新出现的一个 ErrGroup 扩展库，它可以直接替换官方的 ErrGroup，方法都一样，原有功能也一样，只不过增加了可以控制并发 goroutine 的功能。它的方法集如下：</p>
@@ -685,12 +683,12 @@
 </span><span class="lnt">5
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Group</span>
-  <span class="kd">func</span> <span class="nf">WithContext</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Group</span><span class="p">,</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span>
-  <span class="kd">func</span> <span class="nf">WithContextN</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">numG</span><span class="p">,</span> <span class="nx">qSize</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Group</span><span class="p">,</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="nf">WithContext</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Group</span><span class="p">,</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="nf">WithContextN</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">numG</span><span class="p">,</span> <span class="nx">qSize</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Group</span><span class="p">,</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>新增加的方法 WithContextN，可以<strong>设置并发的 goroutine 数</strong>，以及<strong>等待处理的子任务队列的大小</strong>。当队列满的时候，如果调用 Go 方法，就会被阻塞，直到子任务可以放入到队列中才返回。如果你传给这两个参数的值不是正整数，它就会使用 runtime.NumCPU 代替你传入的参数。</p>
 <h3 id="25-facebookgoerrgroup">2.5 facebookgo/errgroup</h3>
@@ -705,12 +703,12 @@
 </span><span class="lnt">5
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Group</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Add</span><span class="p">(</span><span class="nx">delta</span> <span class="kt">int</span><span class="p">)</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Done</span><span class="p">()</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Error</span><span class="p">(</span><span class="nx">e</span> <span class="kt">error</span><span class="p">)</span> <span class="c1">// 设置 error 给 ErrorGroup，Wait 返回时会返回这些 error
-</span><span class="c1"></span>  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Add</span><span class="p">(</span><span class="nx">delta</span> <span class="kt">int</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Error</span><span class="p">(</span><span class="nx">e</span> <span class="kt">error</span><span class="p">)</span> <span class="c1">// 设置 error 给 ErrorGroup，Wait 返回时会返回这些 error
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>下面这些并发原语都是控制一组子 goroutine 执行的面向特定场景的并发原语，当你遇见这些特定场景时，就可以参考这些库。</p>
 <h2 id="3-go-pkgzsyncs">3. go-pkgz/syncs</h2>
@@ -754,38 +752,38 @@
 </span><span class="lnt">31
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;context&#34;</span>
-    <span class="s">&#34;fmt&#34;</span>
-    <span class="s">&#34;sync/atomic&#34;</span>
-    <span class="s">&#34;time&#34;</span>
-
-    <span class="s">&#34;github.com/go-pkgz/syncs&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// 设置goroutine数是10
-</span><span class="c1"></span>    <span class="nx">swg</span> <span class="o">:=</span> <span class="nx">syncs</span><span class="p">.</span><span class="nf">NewSizedGroup</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
-    <span class="c1">// swg := syncs.NewSizedGroup(10, syncs.Preemptive)
-</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">c</span> <span class="kt">uint32</span>
-
-    <span class="c1">// 执行1000个子任务，只会有10个goroutine去执行
-</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">1000</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-        <span class="nx">swg</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">{</span>
-            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
-            <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddUint32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="p">})</span>
-    <span class="p">}</span>
-
-    <span class="c1">// 等待任务完成
-</span><span class="c1"></span>    <span class="nx">swg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-    <span class="c1">// 输出结果
-</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;sync/atomic&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;github.com/go-pkgz/syncs&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 设置goroutine数是10
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">swg</span> <span class="o">:=</span> <span class="nx">syncs</span><span class="p">.</span><span class="nf">NewSizedGroup</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// swg := syncs.NewSizedGroup(10, syncs.Preemptive)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kd">var</span> <span class="nx">c</span> <span class="kt">uint32</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 执行1000个子任务，只会有10个goroutine去执行
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">1000</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">swg</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddUint32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">c</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待任务完成
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">swg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 输出结果
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h4 id="sizedgroup-实现">SizedGroup 实现</h4>
 <div class="highlight"><div class="chroma">
@@ -862,77 +860,77 @@
 </span><span class="lnt">70
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">syncs</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// SizedGroup has the same role as WaitingGroup but adds a limit of the amount of goroutines started concurrently.
-</span><span class="c1">// Uses similar Go() scheduling as errgrp.Group, thread safe.
-</span><span class="c1">// SizedGroup interface enforces constructor usage and doesn&#39;t allow direct creation of sizedGroup
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">SizedGroup</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">options</span>
-	<span class="nx">wg</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="nx">sema</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
-<span class="p">}</span>
-
-<span class="c1">// NewSizedGroup makes wait group with limited size alive goroutines
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewSizedGroup</span><span class="p">(</span><span class="nx">size</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">GroupOption</span><span class="p">)</span> <span class="o">*</span><span class="nx">SizedGroup</span> <span class="p">{</span>
-	<span class="nx">res</span> <span class="o">:=</span> <span class="nx">SizedGroup</span><span class="p">{</span><span class="nx">sema</span><span class="p">:</span> <span class="nf">NewSemaphore</span><span class="p">(</span><span class="nx">size</span><span class="p">)}</span>
-	<span class="nx">res</span><span class="p">.</span><span class="nx">options</span><span class="p">.</span><span class="nx">ctx</span> <span class="p">=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">opt</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span> <span class="p">{</span>
-		<span class="nf">opt</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">res</span><span class="p">.</span><span class="nx">options</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">res</span>
-<span class="p">}</span>
-
-<span class="c1">// Go calls the given function in a new goroutine.
-</span><span class="c1">// Every call will be unblocked, but some goroutines may wait if semaphore locked.
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">SizedGroup</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">fn</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">))</span> <span class="p">{</span>
-
-	<span class="nx">canceled</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-		<span class="k">select</span> <span class="p">{</span>
-		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">g</span><span class="p">.</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-			<span class="k">return</span> <span class="kc">true</span>
-		<span class="k">default</span><span class="p">:</span>
-			<span class="k">return</span> <span class="kc">false</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="nf">canceled</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-
-	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-
-	<span class="k">if</span> <span class="nx">g</span><span class="p">.</span><span class="nx">preLock</span> <span class="p">{</span>
-		<span class="nx">g</span><span class="p">.</span><span class="nx">sema</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-	<span class="p">}</span>
-
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-
-		<span class="k">if</span> <span class="nf">canceled</span><span class="p">()</span> <span class="p">{</span>
-			<span class="k">return</span>
-		<span class="p">}</span>
-
-		<span class="k">if</span> <span class="p">!</span><span class="nx">g</span><span class="p">.</span><span class="nx">preLock</span> <span class="p">{</span>
-			<span class="nx">g</span><span class="p">.</span><span class="nx">sema</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-		<span class="p">}</span>
-
-		<span class="nf">fn</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">ctx</span><span class="p">)</span>
-		<span class="nx">g</span><span class="p">.</span><span class="nx">sema</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-	<span class="p">}()</span>
-<span class="p">}</span>
-
-<span class="c1">// Wait blocks until the SizedGroup counter is zero.
-</span><span class="c1">// See sync.WaitGroup documentation for more information.
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">SizedGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">syncs</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// SizedGroup has the same role as WaitingGroup but adds a limit of the amount of goroutines started concurrently.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Uses similar Go() scheduling as errgrp.Group, thread safe.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// SizedGroup interface enforces constructor usage and doesn&#39;t allow direct creation of sizedGroup
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">SizedGroup</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">options</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">sema</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// NewSizedGroup makes wait group with limited size alive goroutines
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewSizedGroup</span><span class="p">(</span><span class="nx">size</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">GroupOption</span><span class="p">)</span> <span class="o">*</span><span class="nx">SizedGroup</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span> <span class="o">:=</span> <span class="nx">SizedGroup</span><span class="p">{</span><span class="nx">sema</span><span class="p">:</span> <span class="nf">NewSemaphore</span><span class="p">(</span><span class="nx">size</span><span class="p">)}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span><span class="p">.</span><span class="nx">options</span><span class="p">.</span><span class="nx">ctx</span> <span class="p">=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">opt</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">opt</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">res</span><span class="p">.</span><span class="nx">options</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">res</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Go calls the given function in a new goroutine.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Every call will be unblocked, but some goroutines may wait if semaphore locked.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">SizedGroup</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">fn</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">canceled</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">g</span><span class="p">.</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nf">canceled</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">g</span><span class="p">.</span><span class="nx">preLock</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">g</span><span class="p">.</span><span class="nx">sema</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nf">canceled</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">!</span><span class="nx">g</span><span class="p">.</span><span class="nx">preLock</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">g</span><span class="p">.</span><span class="nx">sema</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="nf">fn</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">g</span><span class="p">.</span><span class="nx">sema</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Wait blocks until the SizedGroup counter is zero.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// See sync.WaitGroup documentation for more information.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">SizedGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="32-errsizedgroup">3.2 ErrSizedGroup</h3>
 <p>ErrSizedGroup 为 SizedGroup 提供了 error 处理的功能，它的功能和 Go 官方扩展库的功能一样，就是等待子任务完成并返回第一个出现的 error。不过，它还提供了额外的功能</p>
@@ -992,53 +990,53 @@
 </span><span class="lnt">46
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">ErrSizedGroup</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">options</span>
-	<span class="nx">wg</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="nx">sema</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
-
-	<span class="nx">err</span>     <span class="o">*</span><span class="nx">multierror</span>
-	<span class="nx">errLock</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
-	<span class="nx">errOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">multierror</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">errors</span> <span class="p">[]</span><span class="kt">error</span>
-	<span class="nx">lock</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">multierror</span><span class="p">)</span> <span class="nb">append</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="o">*</span><span class="nx">multierror</span> <span class="p">{</span>
-	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-	<span class="nx">m</span><span class="p">.</span><span class="nx">errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-	<span class="k">return</span> <span class="nx">m</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">multierror</span><span class="p">)</span> <span class="nf">errorOrNil</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-	<span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="nx">m</span>
-<span class="p">}</span>
-
-<span class="c1">// Error returns multierror string
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">multierror</span><span class="p">)</span> <span class="nf">Error</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
-	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-	<span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="s">&#34;&#34;</span>
-	<span class="p">}</span>
-
-	<span class="nx">errs</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{}</span>
-
-	<span class="k">for</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">m</span><span class="p">.</span><span class="nx">errors</span> <span class="p">{</span>
-		<span class="nx">errs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">errs</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;[%d] {%s}&#34;</span><span class="p">,</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Error</span><span class="p">()))</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d error(s) occurred: %s&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">),</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">errs</span><span class="p">,</span> <span class="s">&#34;, &#34;</span><span class="p">))</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">ErrSizedGroup</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">options</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">sema</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span>     <span class="o">*</span><span class="nx">multierror</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errLock</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">multierror</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errors</span> <span class="p">[]</span><span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">lock</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">multierror</span><span class="p">)</span> <span class="nb">append</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="o">*</span><span class="nx">multierror</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">.</span><span class="nx">errors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">m</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">multierror</span><span class="p">)</span> <span class="nf">errorOrNil</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">m</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Error returns multierror string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">multierror</span><span class="p">)</span> <span class="nf">Error</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">errs</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">m</span><span class="p">.</span><span class="nx">errors</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">errs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">errs</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;[%d] {%s}&#34;</span><span class="p">,</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Error</span><span class="p">()))</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%d error(s) occurred: %s&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">errors</span><span class="p">),</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">errs</span><span class="p">,</span> <span class="s">&#34;, &#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="4-gollback">4. gollback</h2>
 <p><a href="https://github.com/vardius/gollback" target="_blank" rel="noopener noreffer">gollback</a>也是用来处理一组子任务的执行的，不过它解决了 ErrGroup 收集子任务返回结果的痛点。它的方法会把结果和 error 信息都返回。</p>
@@ -1089,36 +1087,36 @@
 </span><span class="lnt">29
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-  <span class="s">&#34;context&#34;</span>
-  <span class="s">&#34;errors&#34;</span>
-  <span class="s">&#34;fmt&#34;</span>
-  <span class="s">&#34;github.com/vardius/gollback&#34;</span>
-  <span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-  <span class="nx">rs</span><span class="p">,</span> <span class="nx">errs</span> <span class="o">:=</span> <span class="nx">gollback</span><span class="p">.</span><span class="nf">All</span><span class="p">(</span> <span class="c1">// 调用All方法
-</span><span class="c1"></span>    <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span>
-    <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span> 
-      <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-      <span class="k">return</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">nil</span> <span class="c1">// 第一个任务没有错误，返回1
-</span><span class="c1"></span>    <span class="p">},</span>
-    <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;failed&#34;</span><span class="p">)</span> <span class="c1">// 第二个任务返回一个错误
-</span><span class="c1"></span>    <span class="p">},</span>
-    <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-      <span class="k">return</span> <span class="mi">3</span><span class="p">,</span> <span class="kc">nil</span> <span class="c1">// 第三个任务没有错误，返回3
-</span><span class="c1"></span>    <span class="p">},</span>
-  <span class="p">)</span>
-
-  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span> <span class="c1">// 输出子任务的结果
-</span><span class="c1"></span>  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">errs</span><span class="p">)</span> <span class="c1">// 输出子任务的错误信息
-</span><span class="c1"></span><span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;errors&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;github.com/vardius/gollback&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">rs</span><span class="p">,</span> <span class="nx">errs</span> <span class="o">:=</span> <span class="nx">gollback</span><span class="p">.</span><span class="nf">All</span><span class="p">(</span> <span class="c1">// 调用All方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span> 
+</span></span><span class="line"><span class="cl">      <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">nil</span> <span class="c1">// 第一个任务没有错误，返回1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;failed&#34;</span><span class="p">)</span> <span class="c1">// 第二个任务返回一个错误
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="mi">3</span><span class="p">,</span> <span class="kc">nil</span> <span class="c1">// 第三个任务没有错误，返回3
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span> <span class="c1">// 输出子任务的结果
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">errs</span><span class="p">)</span> <span class="c1">// 输出子任务的错误信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="42-race">4.2 Race</h3>
 <p>Race:</p>
@@ -1168,30 +1166,30 @@
 </span><span class="lnt">23
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-  <span class="s">&#34;context&#34;</span>
-  <span class="s">&#34;errors&#34;</span>
-  <span class="s">&#34;fmt&#34;</span>
-  <span class="s">&#34;github.com/vardius/gollback&#34;</span>
-  <span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-  <span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">5</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-  <span class="k">defer</span> <span class="nf">cancel</span><span class="p">()</span>
-
-  <span class="c1">// 尝试5次，或者超时返回
-</span><span class="c1"></span>  <span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gollback</span><span class="p">.</span><span class="nf">Retry</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;failed&#34;</span><span class="p">)</span>
-  <span class="p">})</span>
-
-  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">res</span><span class="p">)</span> <span class="c1">// 输出结果
-</span><span class="c1"></span>  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="c1">// 输出错误信息
-</span><span class="c1"></span><span class="p">}</span> 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;errors&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;github.com/vardius/gollback&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">5</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">defer</span> <span class="nf">cancel</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// 尝试5次，或者超时返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gollback</span><span class="p">.</span><span class="nf">Retry</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;failed&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">res</span><span class="p">)</span> <span class="c1">// 输出结果
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="c1">// 输出错误信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span> 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="44-gollback-实现">4.4 gollback 实现</h3>
 <div class="highlight"><div class="chroma">
@@ -1343,152 +1341,152 @@
 </span><span class="lnt">145
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">gollback</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;errors&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">ErrNoCallbacks</span> <span class="p">=</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;no callback to run&#34;</span><span class="p">)</span>
-
-<span class="c1">// AsyncFunc represents asynchronous function
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">AsyncFunc</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
-
-<span class="kd">type</span> <span class="nx">response</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">res</span> <span class="kd">interface</span><span class="p">{}</span>
-	<span class="nx">err</span> <span class="kt">error</span>
-<span class="p">}</span>
-
-<span class="c1">// Race method returns a response as soon as one of the callbacks executes without an error,
-</span><span class="c1">// otherwise last error is returned
-</span><span class="c1">// will panic if context is nil
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Race</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">fns</span> <span class="o">...</span><span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nil context provided&#34;</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ErrNoCallbacks</span>
-	<span class="p">}</span>
-
-	<span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-	<span class="k">defer</span> <span class="nf">cancel</span><span class="p">()</span>
-
-	<span class="nx">out</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">response</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">out</span><span class="p">)</span>
-	<span class="nx">responses</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">response</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
-	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">responses</span><span class="p">)</span>
-
-	<span class="kd">var</span> <span class="nx">responded</span> <span class="kt">bool</span>
-	<span class="kd">var</span> <span class="nx">lock</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-	<span class="kd">var</span> <span class="nx">errCount</span> <span class="kt">int</span>
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">for</span> <span class="p">{</span>
-			<span class="k">select</span> <span class="p">{</span>
-			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-				<span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-				<span class="k">if</span> <span class="p">!</span><span class="nx">responded</span> <span class="p">{</span>
-					<span class="nx">responded</span> <span class="p">=</span> <span class="kc">true</span>
-					<span class="nx">out</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">response</span><span class="p">{</span>
-						<span class="nx">err</span><span class="p">:</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">(),</span>
-					<span class="p">}</span>
-					<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-					<span class="k">return</span>
-				<span class="p">}</span>
-				<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-			<span class="k">case</span> <span class="nx">r</span><span class="p">,</span> <span class="nx">more</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">responses</span><span class="p">:</span>
-				<span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-				<span class="k">if</span> <span class="p">!</span><span class="nx">more</span> <span class="o">||</span> <span class="p">(!</span><span class="nx">responded</span> <span class="o">&amp;&amp;</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="nx">errCount</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span> <span class="p">{</span>
-					<span class="nx">responded</span> <span class="p">=</span> <span class="kc">true</span>
-					<span class="nx">out</span> <span class="o">&lt;-</span> <span class="nx">r</span>
-					<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-					<span class="k">return</span>
-				<span class="p">}</span>
-				<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-			<span class="p">}</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
-
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
-		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">f</span> <span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">{</span>
-			<span class="kd">var</span> <span class="nx">r</span> <span class="nx">response</span>
-			<span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">f</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-
-			<span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-			<span class="k">defer</span> <span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-			<span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nx">errCount</span> <span class="o">++</span>
-			<span class="p">}</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">responded</span> <span class="p">{</span>
-				<span class="nx">responses</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">r</span>
-			<span class="p">}</span>
-		<span class="p">}(</span><span class="nx">fn</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">r</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">out</span>
-
-	<span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span>
-<span class="p">}</span>
-
-<span class="c1">// All method returns when all the callbacks passed as an iterable have finished,
-</span><span class="c1">// returned responses and errors are ordered according to callback order
-</span><span class="c1">// will panic if context is nil
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">All</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">fns</span> <span class="o">...</span><span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="p">[]</span><span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nil context provided&#34;</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">rs</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
-	<span class="nx">errs</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">error</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
-
-	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
-
-	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
-		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">index</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">f</span> <span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">{</span>
-			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-
-			<span class="kd">var</span> <span class="nx">r</span> <span class="nx">response</span>
-			<span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">f</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-
-			<span class="nx">rs</span><span class="p">[</span><span class="nx">index</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">res</span>
-			<span class="nx">errs</span><span class="p">[</span><span class="nx">index</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span>
-		<span class="p">}(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-
-	<span class="k">return</span> <span class="nx">rs</span><span class="p">,</span> <span class="nx">errs</span>
-<span class="p">}</span>
-
-<span class="c1">// Retry method retries callback given amount of times until it executes without an error,
-</span><span class="c1">// when retries = 0 it will retry infinitely
-</span><span class="c1">// will panic if context is nil
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Retry</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">retires</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">fn</span> <span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nil context provided&#34;</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">i</span> <span class="o">:=</span> <span class="mi">1</span>
-
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="k">select</span> <span class="p">{</span>
-		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
-		<span class="k">default</span><span class="p">:</span>
-			<span class="kd">var</span> <span class="nx">r</span> <span class="nx">response</span>
-			<span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">fn</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-
-			<span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">i</span> <span class="o">==</span> <span class="nx">retires</span> <span class="p">{</span>
-				<span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span>
-			<span class="p">}</span>
-
-			<span class="nx">i</span><span class="o">++</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">gollback</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;errors&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">ErrNoCallbacks</span> <span class="p">=</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;no callback to run&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// AsyncFunc represents asynchronous function
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">AsyncFunc</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">response</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Race method returns a response as soon as one of the callbacks executes without an error,
+</span></span></span><span class="line"><span class="cl"><span class="c1">// otherwise last error is returned
+</span></span></span><span class="line"><span class="cl"><span class="c1">// will panic if context is nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">Race</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">fns</span> <span class="o">...</span><span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nil context provided&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ErrNoCallbacks</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nf">cancel</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">out</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">response</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">out</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">responses</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">response</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">responses</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">responded</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">lock</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">errCount</span> <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="p">!</span><span class="nx">responded</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">responded</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">out</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">response</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">						<span class="nx">err</span><span class="p">:</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">					<span class="p">}</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="nx">r</span><span class="p">,</span> <span class="nx">more</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">responses</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="p">!</span><span class="nx">more</span> <span class="o">||</span> <span class="p">(!</span><span class="nx">responded</span> <span class="o">&amp;&amp;</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="nx">errCount</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">responded</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">out</span> <span class="o">&lt;-</span> <span class="nx">r</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">f</span> <span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="kd">var</span> <span class="nx">r</span> <span class="nx">response</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">f</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">defer</span> <span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">errCount</span> <span class="o">++</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">responded</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">responses</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">r</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}(</span><span class="nx">fn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">r</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">out</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// All method returns when all the callbacks passed as an iterable have finished,
+</span></span></span><span class="line"><span class="cl"><span class="c1">// returned responses and errors are ordered according to callback order
+</span></span></span><span class="line"><span class="cl"><span class="c1">// will panic if context is nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">All</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">fns</span> <span class="o">...</span><span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="p">[]</span><span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nil context provided&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">rs</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errs</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">error</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">index</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">f</span> <span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="kd">var</span> <span class="nx">r</span> <span class="nx">response</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">f</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="nx">rs</span><span class="p">[</span><span class="nx">index</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">res</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">errs</span><span class="p">[</span><span class="nx">index</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">rs</span><span class="p">,</span> <span class="nx">errs</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Retry method retries callback given amount of times until it executes without an error,
+</span></span></span><span class="line"><span class="cl"><span class="c1">// when retries = 0 it will retry infinitely
+</span></span></span><span class="line"><span class="cl"><span class="c1">// will panic if context is nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">Retry</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">retires</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">fn</span> <span class="nx">AsyncFunc</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">ctx</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nil context provided&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">i</span> <span class="o">:=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="kd">var</span> <span class="nx">r</span> <span class="nx">response</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">fn</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">i</span> <span class="o">==</span> <span class="nx">retires</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">res</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="nx">i</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="5-hunch">5. Hunch</h2>
 <p><a href="https://github.com/AaronJan/Hunch" target="_blank" rel="noopener noreffer">Hunch</a> 提供的功能和 gollback 类似，不过它提供的方法更多包括:</p>
@@ -1505,8 +1503,8 @@
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Executable</span> <span class="kd">func</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Executable</span> <span class="kd">func</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="51-all">5.1 All</h3>
 <p>All:</p>
@@ -1576,13 +1574,13 @@
 </span><span class="lnt">6
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">type</span> <span class="nx">Group</span>
-  <span class="kd">func</span> <span class="nf">New</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="o">*</span><span class="nx">Group</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Delay</span><span class="p">(</span><span class="nx">delay</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">,</span> <span class="nx">fn</span> <span class="kd">func</span><span class="p">())</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Schedule</span><span class="p">(</span><span class="nx">when</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">,</span> <span class="nx">fn</span> <span class="kd">func</span><span class="p">())</span>
-  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="nf">New</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="o">*</span><span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Delay</span><span class="p">(</span><span class="nx">delay</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">,</span> <span class="nx">fn</span> <span class="kd">func</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Schedule</span><span class="p">(</span><span class="nx">when</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">,</span> <span class="nx">fn</span> <span class="kd">func</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">func</span> <span class="p">(</span><span class="nx">g</span> <span class="o">*</span><span class="nx">Group</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="kt">error</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><ol>
 <li>Delay 和 Schedule: 功能其实是一样的，都是用来指定在某个时间或者之后执行一个函数。</li>
@@ -1613,22 +1611,22 @@
 </span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="nx">sg</span> <span class="o">:=</span> <span class="nx">schedgroup</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
-
-<span class="c1">// 设置子任务分别在100、200、300之后执行
-</span><span class="c1"></span><span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-    <span class="nx">n</span> <span class="o">:=</span> <span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span>
-    <span class="nx">sg</span><span class="p">.</span><span class="nf">Delay</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span> <span class="c1">//输出任务编号
-</span><span class="c1"></span>    <span class="p">})</span>
-<span class="p">}</span>
-
-<span class="c1">// 等待所有的子任务都完成
-</span><span class="c1"></span><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;failed to wait: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">sg</span> <span class="o">:=</span> <span class="nx">schedgroup</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 设置子任务分别在100、200、300之后执行
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">n</span> <span class="o">:=</span> <span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">sg</span><span class="p">.</span><span class="nf">Delay</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span> <span class="c1">//输出任务编号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">})</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 等待所有的子任务都完成
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;failed to wait: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="7-go-waitgroup">7. go-waitgroup</h2>
 <p><a href="https://github.com/pieterclaerhout/go-waitgroup" target="_blank" rel="noopener noreffer">go-waitgroup</a> 是一个带并发控制的 waitGroup。功能上跟 SizedGroup 差不多，这里不再赘述。</p>
@@ -1677,7 +1675,7 @@
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>

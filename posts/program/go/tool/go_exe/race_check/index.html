@@ -149,9 +149,9 @@
 </span><span class="lnt">2
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// -race 启动 data race 检测
-</span><span class="c1"></span><span class="k">go</span> <span class="nx">run</span> <span class="o">-</span><span class="nx">race</span> <span class="nx">counter</span><span class="p">.</span><span class="k">go</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// -race 启动 data race 检测
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">go</span> <span class="nx">run</span> <span class="o">-</span><span class="nx">race</span> <span class="nx">counter</span><span class="p">.</span><span class="k">go</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>虽然这个工具使用起来很方便，但是，因为它的实现方式，只能通过真正对实际地址进行读写访问的时候才能探测，所以它不能再编译的时候发现 data race 问题，而且只有在运行时出现 data race 才能检测到。如果碰巧没有出现 data race 是检测不出来的。而且，把开启了 race 的程序部署在线上，还是比较影响性能的。</p>
 <h3 id="12-race-编译后代码">1.2 race 编译后代码</h3>
@@ -186,33 +186,33 @@
 </span><span class="lnt">26
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">// 显示添加 -race 后编译的 go 代码
-go tool compile -race -S counter.go
-
-
-0x002a <span class="m">00042</span> <span class="o">(</span>counter.go:13<span class="o">)</span>    CALL    runtime.racefuncenter<span class="o">(</span>SB<span class="o">)</span>
-       ......
-        0x0061 <span class="m">00097</span> <span class="o">(</span>counter.go:14<span class="o">)</span>    JMP     <span class="m">173</span>
-        0x0063 <span class="m">00099</span> <span class="o">(</span>counter.go:15<span class="o">)</span>    MOVQ    AX, <span class="s2">&#34;&#34;</span>.j+8<span class="o">(</span>SP<span class="o">)</span>
-        0x0068 <span class="m">00104</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$1</span>
-        0x0068 <span class="m">00104</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>.<span class="p">&amp;</span>count+128<span class="o">(</span>SP<span class="o">)</span>, AX
-        0x0070 <span class="m">00112</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$0</span>
-        0x0070 <span class="m">00112</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    AX, <span class="o">(</span>SP<span class="o">)</span>
-        0x0074 <span class="m">00116</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    CALL    runtime.raceread<span class="o">(</span>SB<span class="o">)</span>
-        0x0079 <span class="m">00121</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$1</span>
-        0x0079 <span class="m">00121</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>.<span class="p">&amp;</span>count+128<span class="o">(</span>SP<span class="o">)</span>, AX
-        0x0081 <span class="m">00129</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="o">(</span>AX<span class="o">)</span>, CX
-        0x0084 <span class="m">00132</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    CX, <span class="s2">&#34;&#34;</span>..autotmp_8+16<span class="o">(</span>SP<span class="o">)</span>
-        0x0089 <span class="m">00137</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$0</span>
-        0x0089 <span class="m">00137</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    AX, <span class="o">(</span>SP<span class="o">)</span>
-        0x008d <span class="m">00141</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    CALL    runtime.racewrite<span class="o">(</span>SB<span class="o">)</span>
-        0x0092 <span class="m">00146</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>..autotmp_8+16<span class="o">(</span>SP<span class="o">)</span>, AX
-       ......
-        0x00b6 <span class="m">00182</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    CALL    runtime.deferreturn<span class="o">(</span>SB<span class="o">)</span>
-        0x00bb <span class="m">00187</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    CALL    runtime.racefuncexit<span class="o">(</span>SB<span class="o">)</span>
-        0x00c0 <span class="m">00192</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    MOVQ    104<span class="o">(</span>SP<span class="o">)</span>, BP
-        0x00c5 <span class="m">00197</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    ADDQ    <span class="nv">$112</span>, SP
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">// 显示添加 -race 后编译的 go 代码
+</span></span><span class="line"><span class="cl">go tool compile -race -S counter.go
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">0x002a <span class="m">00042</span> <span class="o">(</span>counter.go:13<span class="o">)</span>    CALL    runtime.racefuncenter<span class="o">(</span>SB<span class="o">)</span>
+</span></span><span class="line"><span class="cl">       ......
+</span></span><span class="line"><span class="cl">        0x0061 <span class="m">00097</span> <span class="o">(</span>counter.go:14<span class="o">)</span>    JMP     <span class="m">173</span>
+</span></span><span class="line"><span class="cl">        0x0063 <span class="m">00099</span> <span class="o">(</span>counter.go:15<span class="o">)</span>    MOVQ    AX, <span class="s2">&#34;&#34;</span>.j+8<span class="o">(</span>SP<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x0068 <span class="m">00104</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$1</span>
+</span></span><span class="line"><span class="cl">        0x0068 <span class="m">00104</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>.<span class="p">&amp;</span>count+128<span class="o">(</span>SP<span class="o">)</span>, AX
+</span></span><span class="line"><span class="cl">        0x0070 <span class="m">00112</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$0</span>
+</span></span><span class="line"><span class="cl">        0x0070 <span class="m">00112</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    AX, <span class="o">(</span>SP<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x0074 <span class="m">00116</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    CALL    runtime.raceread<span class="o">(</span>SB<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x0079 <span class="m">00121</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$1</span>
+</span></span><span class="line"><span class="cl">        0x0079 <span class="m">00121</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>.<span class="p">&amp;</span>count+128<span class="o">(</span>SP<span class="o">)</span>, AX
+</span></span><span class="line"><span class="cl">        0x0081 <span class="m">00129</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="o">(</span>AX<span class="o">)</span>, CX
+</span></span><span class="line"><span class="cl">        0x0084 <span class="m">00132</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    CX, <span class="s2">&#34;&#34;</span>..autotmp_8+16<span class="o">(</span>SP<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x0089 <span class="m">00137</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    PCDATA  <span class="nv">$0</span>, <span class="nv">$0</span>
+</span></span><span class="line"><span class="cl">        0x0089 <span class="m">00137</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    AX, <span class="o">(</span>SP<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x008d <span class="m">00141</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    CALL    runtime.racewrite<span class="o">(</span>SB<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x0092 <span class="m">00146</span> <span class="o">(</span>counter.go:16<span class="o">)</span>    MOVQ    <span class="s2">&#34;&#34;</span>..autotmp_8+16<span class="o">(</span>SP<span class="o">)</span>, AX
+</span></span><span class="line"><span class="cl">       ......
+</span></span><span class="line"><span class="cl">        0x00b6 <span class="m">00182</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    CALL    runtime.deferreturn<span class="o">(</span>SB<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x00bb <span class="m">00187</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    CALL    runtime.racefuncexit<span class="o">(</span>SB<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        0x00c0 <span class="m">00192</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    MOVQ    104<span class="o">(</span>SP<span class="o">)</span>, BP
+</span></span><span class="line"><span class="cl">        0x00c5 <span class="m">00197</span> <span class="o">(</span>counter.go:18<span class="o">)</span>    ADDQ    <span class="nv">$112</span>, SP
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>在编译的代码中，增加了 runtime.racefuncenter、runtime.raceread、runtime.racewrite、runtime.racefuncexit 等检测 data race 的方法。通过这些插入的指令，Go race detector 工具就能够成功地检测出 data race 问题了。</p>
 <p>总结一下，通过在编译的时候插入一些指令，在运行时通过这些插入的指令检测并发读写从而发现 data race 问题，就是这个工具的实现机制。</p>
@@ -225,8 +225,8 @@ go tool compile -race -S counter.go
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="nx">vet</span> <span class="nx">counter</span><span class="p">.</span><span class="k">go</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">go</span> <span class="nx">vet</span> <span class="nx">counter</span><span class="p">.</span><span class="k">go</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p><img
         class="lazyload"
@@ -256,19 +256,19 @@ go tool compile -race -S counter.go
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">var</span> <span class="nx">lockerType</span> <span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Interface</span>
-  
-  <span class="c1">// Construct a sync.Locker interface type.
-</span><span class="c1"></span>  <span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">nullary</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">NewSignature</span><span class="p">(</span><span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span><span class="p">)</span> <span class="c1">// func()
-</span><span class="c1"></span>    <span class="nx">methods</span> <span class="o">:=</span> <span class="p">[]</span><span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Func</span><span class="p">{</span>
-      <span class="nx">types</span><span class="p">.</span><span class="nf">NewFunc</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">NoPos</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;Lock&#34;</span><span class="p">,</span> <span class="nx">nullary</span><span class="p">),</span>
-      <span class="nx">types</span><span class="p">.</span><span class="nf">NewFunc</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">NoPos</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;Unlock&#34;</span><span class="p">,</span> <span class="nx">nullary</span><span class="p">),</span>
-    <span class="p">}</span>
-    <span class="nx">lockerType</span> <span class="p">=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">NewInterface</span><span class="p">(</span><span class="nx">methods</span><span class="p">,</span> <span class="kc">nil</span><span class="p">).</span><span class="nf">Complete</span><span class="p">()</span>
-  <span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">lockerType</span> <span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Interface</span>
+</span></span><span class="line"><span class="cl">  
+</span></span><span class="line"><span class="cl">  <span class="c1">// Construct a sync.Locker interface type.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">nullary</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">NewSignature</span><span class="p">(</span><span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span><span class="p">)</span> <span class="c1">// func()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">methods</span> <span class="o">:=</span> <span class="p">[]</span><span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Func</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">types</span><span class="p">.</span><span class="nf">NewFunc</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">NoPos</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;Lock&#34;</span><span class="p">,</span> <span class="nx">nullary</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">types</span><span class="p">.</span><span class="nf">NewFunc</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">NoPos</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;Unlock&#34;</span><span class="p">,</span> <span class="nx">nullary</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">lockerType</span> <span class="p">=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">NewInterface</span><span class="p">(</span><span class="nx">methods</span><span class="p">,</span> <span class="kc">nil</span><span class="p">).</span><span class="nf">Complete</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="23-nocopy-辅助-vet-检查">2.3 noCopy 辅助 vet 检查</h3>
 <p>其实，有些没有实现 Locker 接口的同步原语，也能被分析，比如 WaitGroup。WaitGroup 的结构如下所示:</p>
@@ -297,28 +297,28 @@ go tool compile -race -S counter.go
 </span><span class="lnt">21
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">WaitGroup</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="c1">// 避免复制使用的一个技巧，可以告诉vet工具违反了复制使用的规则
-</span><span class="c1"></span>    <span class="nx">noCopy</span> <span class="nx">noCopy</span>
-    <span class="c1">// 64bit(8bytes)的值分成两段，高32bit是计数值，低32bit是waiter的计数
-</span><span class="c1"></span>    <span class="c1">// 另外32bit是用作信号量的
-</span><span class="c1"></span>    <span class="c1">// 因为64bit值的原子操作需要64bit对齐，但是32bit编译器不支持，所以数组中的元素在不同的架构中不一样，具体处理看下面的方法
-</span><span class="c1"></span>    <span class="c1">// 总之，会找到对齐的那64bit作为state，其余的32bit做信号量
-</span><span class="c1"></span>    <span class="nx">state1</span> <span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="kt">uint32</span>
-<span class="p">}</span>
-
- 
-<span class="c1">// 得到state的地址和信号量的地址
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">state</span><span class="p">()</span> <span class="p">(</span><span class="nx">statep</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">))</span><span class="o">%</span><span class="mi">8</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="c1">// 如果地址是64bit对齐的，数组前两个元素做state，后一个元素做信号量
-</span><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">)),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="c1">// 如果地址是32bit对齐的，数组后两个元素用来做state，它可以用来做64bit的原子操作，第一个元素32bit用来做信号量
-</span><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">WaitGroup</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 避免复制使用的一个技巧，可以告诉vet工具违反了复制使用的规则
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">noCopy</span> <span class="nx">noCopy</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 64bit(8bytes)的值分成两段，高32bit是计数值，低32bit是waiter的计数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 另外32bit是用作信号量的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 因为64bit值的原子操作需要64bit对齐，但是32bit编译器不支持，所以数组中的元素在不同的架构中不一样，具体处理看下面的方法
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 总之，会找到对齐的那64bit作为state，其余的32bit做信号量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">state1</span> <span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="kt">uint32</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"><span class="c1">// 得到state的地址和信号量的地址
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">wg</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">state</span><span class="p">()</span> <span class="p">(</span><span class="nx">statep</span> <span class="o">*</span><span class="kt">uint64</span><span class="p">,</span> <span class="nx">semap</span> <span class="o">*</span><span class="kt">uint32</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">))</span><span class="o">%</span><span class="mi">8</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 如果地址是64bit对齐的，数组前两个元素做state，后一个元素做信号量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">)),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 如果地址是32bit对齐的，数组后两个元素用来做state，它可以用来做64bit的原子操作，第一个元素32bit用来做信号量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="kt">uint64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="o">&amp;</span><span class="nx">wg</span><span class="p">.</span><span class="nx">state1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>它有一个 noCopy 的辅助字段，它的作用就是指示 vet 工具在做检查的时候，这个数据结构不能做值复制使用。更严谨地说，是不能在第一次使用之后复制使用 ( must not be copied after first use)。</p>
 <p>通过给 WaitGroup 添加一个 noCopy 字段，我们就可以为 WaitGroup 实现 Locker 接口，这样 vet 工具就可以做复制检查了。而且因为 noCopy 字段是未输出类型，所以 WaitGroup 不会暴露 Lock/Unlock 方法。</p>
@@ -332,12 +332,12 @@ go tool compile -race -S counter.go
 </span><span class="lnt">5
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">noCopy</span> <span class="kd">struct</span><span class="p">{}</span>
-
-<span class="c1">// Lock is a no-op used by -copylocks checker from `go vet`.
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span>   <span class="p">{}</span>
-<span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">noCopy</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Lock is a no-op used by -copylocks checker from `go vet`.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span>   <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">noCopy</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>noCopy 是一个通用的计数技术，其他并发原语中也会用到。同样的，如果你想要自己定义的数据结构不被复制使用，或者说，不能通过 vet 工具检查出复制使用的报警，就可以通过嵌入 noCopy 这个数据类型来实现。</p>
 <h2 id="3-死锁检测">3. 死锁检测</h2>
@@ -383,7 +383,7 @@ go tool compile -race -S counter.go
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>

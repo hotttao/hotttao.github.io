@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_4\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2380 ,
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2379 ,
         "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_4\/","datePublished": "2021-05-03T22:00:00+08:00","dateModified": "2022-02-19T17:43:41+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
@@ -111,7 +111,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">Mutex 扩展</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-03">2021-05-03</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2380 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-03">2021-05-03</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2379 字&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
@@ -232,66 +232,66 @@
 </span><span class="lnt">59
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;runtime&#34;</span>
-	<span class="s">&#34;strconv&#34;</span>
-	<span class="s">&#34;strings&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-	<span class="s">&#34;sync/atomic&#34;</span>
-
-	<span class="s">&#34;github.com/petermattis/goid&#34;</span> <span class="c1">// 使用第三方包通过 hacker 方式获取 goroutine id 
-</span><span class="c1"></span><span class="p">)</span>
-
-<span class="c1">// 简单方式
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GoID</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">buffer</span> <span class="p">[</span><span class="mi">64</span><span class="p">]</span><span class="kt">byte</span>
-	<span class="nx">n</span> <span class="o">:=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">Stack</span><span class="p">(</span><span class="nx">buffer</span><span class="p">[:],</span> <span class="kc">false</span><span class="p">)</span>
-	<span class="nx">idField</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Fields</span><span class="p">(</span><span class="nx">strings</span><span class="p">.</span><span class="nf">TrimPrefix</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">buffer</span><span class="p">[:</span><span class="nx">n</span><span class="p">]),</span> <span class="s">&#34;goroutine &#34;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
-	<span class="nx">d</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">idField</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;can not get goroutine id %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
-	<span class="p">}</span>
-	<span class="k">return</span> <span class="nx">d</span>
-<span class="p">}</span>
-
-
-<span class="c1">// RecursiveMutex 包装一个Mutex,实现可重入
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">RecursiveMutex</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-    <span class="nx">owner</span>     <span class="kt">int64</span> <span class="c1">// 当前持有锁的goroutine id
-</span><span class="c1"></span>    <span class="nx">recursion</span> <span class="kt">int32</span> <span class="c1">// 这个goroutine 重入的次数
-</span><span class="c1"></span><span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RecursiveMutex</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">gid</span> <span class="o">:=</span> <span class="nx">goid</span><span class="p">.</span><span class="nf">Get</span><span class="p">()</span>
-    <span class="c1">// 如果当前持有锁的goroutine就是这次调用的goroutine,说明是重入
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="o">==</span> <span class="nx">gid</span> <span class="p">{</span>
-        <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">++</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-    <span class="c1">// 获得锁的goroutine第一次调用，记录下它的goroutine id,调用次数加1
-</span><span class="c1"></span>    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">,</span> <span class="nx">gid</span><span class="p">)</span>
-    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="p">=</span> <span class="mi">1</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RecursiveMutex</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">gid</span> <span class="o">:=</span> <span class="nx">goid</span><span class="p">.</span><span class="nf">Get</span><span class="p">()</span>
-    <span class="c1">// 非持有锁的goroutine尝试释放锁，错误的使用
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">gid</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;wrong the owner(%d): %d!&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">,</span> <span class="nx">gid</span><span class="p">))</span>
-    <span class="p">}</span>
-    <span class="c1">// 调用次数减1
-</span><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">--</span>
-    <span class="k">if</span> <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span> <span class="c1">// 如果这个goroutine还没有完全释放，则直接返回
-</span><span class="c1"></span>        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="c1">// 此goroutine最后一次调用，需要释放锁
-</span><span class="c1"></span>    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;runtime&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;strconv&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;strings&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync/atomic&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/petermattis/goid&#34;</span> <span class="c1">// 使用第三方包通过 hacker 方式获取 goroutine id 
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 简单方式
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">GoID</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">buffer</span> <span class="p">[</span><span class="mi">64</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">n</span> <span class="o">:=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">Stack</span><span class="p">(</span><span class="nx">buffer</span><span class="p">[:],</span> <span class="kc">false</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">idField</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Fields</span><span class="p">(</span><span class="nx">strings</span><span class="p">.</span><span class="nf">TrimPrefix</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">buffer</span><span class="p">[:</span><span class="nx">n</span><span class="p">]),</span> <span class="s">&#34;goroutine &#34;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">d</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">idField</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;can not get goroutine id %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">d</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// RecursiveMutex 包装一个Mutex,实现可重入
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">RecursiveMutex</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">owner</span>     <span class="kt">int64</span> <span class="c1">// 当前持有锁的goroutine id
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">recursion</span> <span class="kt">int32</span> <span class="c1">// 这个goroutine 重入的次数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RecursiveMutex</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">gid</span> <span class="o">:=</span> <span class="nx">goid</span><span class="p">.</span><span class="nf">Get</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果当前持有锁的goroutine就是这次调用的goroutine,说明是重入
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="o">==</span> <span class="nx">gid</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 获得锁的goroutine第一次调用，记录下它的goroutine id,调用次数加1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">,</span> <span class="nx">gid</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="p">=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RecursiveMutex</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">gid</span> <span class="o">:=</span> <span class="nx">goid</span><span class="p">.</span><span class="nf">Get</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 非持有锁的goroutine尝试释放锁，错误的使用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">gid</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;wrong the owner(%d): %d!&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">,</span> <span class="nx">gid</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 调用次数减1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">--</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span> <span class="c1">// 如果这个goroutine还没有完全释放，则直接返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 此goroutine最后一次调用，需要释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">owner</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="22-token">2.2 token</h3>
 <p>通过 token 的实现方式需要调用者自己提供一个 token，获取锁的时候把这个 token 传入，释放锁的时候也需要把这个 token 传入。通过用户传入的 token 替换方案一中 goroutine id，其它逻辑和方案一一致。</p>
@@ -329,43 +329,41 @@
 </span><span class="lnt">30
 </span><span class="lnt">31
 </span><span class="lnt">32
-</span><span class="lnt">33
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="c1">// Token方式的递归锁
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">TokenRecursiveMutex</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-    <span class="nx">token</span>     <span class="kt">int64</span>
-    <span class="nx">recursion</span> <span class="kt">int32</span>
-<span class="p">}</span>
-
-<span class="c1">// 请求锁，需要传入token
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">TokenRecursiveMutex</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">(</span><span class="nx">token</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span> <span class="o">==</span> <span class="nx">token</span> <span class="p">{</span> <span class="c1">//如果传入的token和持有锁的token一致，说明是递归调用
-</span><span class="c1"></span>        <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">++</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span> <span class="c1">// 传入的token不一致，说明不是递归调用
-</span><span class="c1"></span>    <span class="c1">// 抢到锁之后记录这个token
-</span><span class="c1"></span>    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span> <span class="nx">token</span><span class="p">)</span>
-    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="p">=</span> <span class="mi">1</span>
-<span class="p">}</span>
-
-<span class="c1">// 释放锁
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">TokenRecursiveMutex</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">(</span><span class="nx">token</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">token</span> <span class="p">{</span> <span class="c1">// 释放其它token持有的锁
-</span><span class="c1"></span>        <span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;wrong the owner(%d): %d!&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span> <span class="nx">token</span><span class="p">))</span>
-    <span class="p">}</span>
-    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">--</span> <span class="c1">// 当前持有这个锁的token释放锁
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span> <span class="c1">// 还没有回退到最初的递归调用
-</span><span class="c1"></span>        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">// 没有递归调用了，释放锁
-</span><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-<span class="p">}</span>
-
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Token方式的递归锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">TokenRecursiveMutex</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">token</span>     <span class="kt">int64</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">recursion</span> <span class="kt">int32</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 请求锁，需要传入token
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">TokenRecursiveMutex</span><span class="p">)</span> <span class="nf">Lock</span><span class="p">(</span><span class="nx">token</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span> <span class="o">==</span> <span class="nx">token</span> <span class="p">{</span> <span class="c1">//如果传入的token和持有锁的token一致，说明是递归调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span> <span class="c1">// 传入的token不一致，说明不是递归调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 抢到锁之后记录这个token
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span> <span class="nx">token</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="p">=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">TokenRecursiveMutex</span><span class="p">)</span> <span class="nf">Unlock</span><span class="p">(</span><span class="nx">token</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">token</span> <span class="p">{</span> <span class="c1">// 释放其它token持有的锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nb">panic</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;wrong the owner(%d): %d!&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span> <span class="nx">token</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span><span class="o">--</span> <span class="c1">// 当前持有这个锁的token释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">m</span><span class="p">.</span><span class="nx">recursion</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span> <span class="c1">// 还没有回退到最初的递归调用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">// 没有递归调用了，释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="3-trylock">3. TryLock</h2>
 <p>我们可以为 Mutex 添加一个 TryLock 请求锁的方法:</p>
@@ -409,38 +407,38 @@
 </span><span class="lnt">31
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="c1">// 复制Mutex定义的常量
-</span><span class="c1"></span><span class="kd">const</span> <span class="p">(</span>
-    <span class="nx">mutexLocked</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="kc">iota</span> <span class="c1">// 加锁标识位置
-</span><span class="c1"></span>    <span class="nx">mutexWoken</span>              <span class="c1">// 唤醒标识位置
-</span><span class="c1"></span>    <span class="nx">mutexStarving</span>           <span class="c1">// 锁饥饿标识位置
-</span><span class="c1"></span>    <span class="nx">mutexWaiterShift</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">// 标识waiter的起始bit位置
-</span><span class="c1"></span><span class="p">)</span>
-
-<span class="c1">// 扩展一个Mutex结构
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-<span class="p">}</span>
-
-<span class="c1">// 尝试获取锁
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">TryLock</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-    <span class="c1">// 如果能成功抢到锁
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">mutexLocked</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="kc">true</span>
-    <span class="p">}</span>
-
-    <span class="c1">// 如果处于唤醒、加锁或者饥饿状态，这次请求就不参与竞争了，返回false
-</span><span class="c1"></span>    <span class="nx">old</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
-    <span class="k">if</span> <span class="nx">old</span><span class="o">&amp;</span><span class="p">(</span><span class="nx">mutexLocked</span><span class="p">|</span><span class="nx">mutexStarving</span><span class="p">|</span><span class="nx">mutexWoken</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="kc">false</span>
-    <span class="p">}</span>
-
-    <span class="c1">// 尝试在竞争的状态下请求锁
-</span><span class="c1"></span>    <span class="nx">new</span> <span class="o">:=</span> <span class="nx">old</span> <span class="p">|</span> <span class="nx">mutexLocked</span>
-    <span class="k">return</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)),</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 复制Mutex定义的常量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">const</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mutexLocked</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="kc">iota</span> <span class="c1">// 加锁标识位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">mutexWoken</span>              <span class="c1">// 唤醒标识位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">mutexStarving</span>           <span class="c1">// 锁饥饿标识位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">mutexWaiterShift</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">// 标识waiter的起始bit位置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 扩展一个Mutex结构
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 尝试获取锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">TryLock</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果能成功抢到锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">mutexLocked</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果处于唤醒、加锁或者饥饿状态，这次请求就不参与竞争了，返回false
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">old</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">old</span><span class="o">&amp;</span><span class="p">(</span><span class="nx">mutexLocked</span><span class="p">|</span><span class="nx">mutexStarving</span><span class="p">|</span><span class="nx">mutexWoken</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 尝试在竞争的状态下请求锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">new</span> <span class="o">:=</span> <span class="nx">old</span> <span class="p">|</span> <span class="nx">mutexLocked</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)),</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">new</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="4-获取等待者的数量">4. 获取等待者的数量</h2>
 <h3 id="41-应用场景">4.1 应用场景</h3>
@@ -491,47 +489,47 @@
 </span><span class="lnt">40
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">const</span> <span class="p">(</span>
-    <span class="nx">mutexLocked</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="kc">iota</span> <span class="c1">// mutex is locked
-</span><span class="c1"></span>    <span class="nx">mutexWoken</span>
-    <span class="nx">mutexStarving</span>
-    <span class="nx">mutexWaiterShift</span> <span class="p">=</span> <span class="kc">iota</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">Count</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
-    <span class="c1">// 获取state字段的值
-</span><span class="c1"></span>    
-    <span class="nx">v</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
-    <span class="nx">isLock</span> <span class="p">=</span> <span class="nx">v</span> <span class="o">&amp;</span> <span class="nx">mutexLocked</span>
-    <span class="nx">v</span> <span class="p">=</span> <span class="nx">v</span> <span class="o">&gt;&gt;</span> <span class="nx">mutexWaiterShift</span> <span class="c1">//得到等待者的数值
-</span><span class="c1"></span>    <span class="nx">v</span> <span class="p">=</span> <span class="nx">v</span> <span class="o">+</span> <span class="nx">isLock</span> <span class="c1">//再加上锁持有者的数量，0或者1
-</span><span class="c1"></span>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-<span class="p">}</span>
-
-
-<span class="c1">// 锁是否被持有
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">IsLocked</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
-    <span class="k">return</span> <span class="nx">state</span><span class="o">&amp;</span><span class="nx">mutexLocked</span> <span class="o">==</span> <span class="nx">mutexLocked</span>
-<span class="p">}</span>
-
-<span class="c1">// 是否有等待者被唤醒
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">IsWoken</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
-    <span class="k">return</span> <span class="nx">state</span><span class="o">&amp;</span><span class="nx">mutexWoken</span> <span class="o">==</span> <span class="nx">mutexWoken</span>
-<span class="p">}</span>
-
-<span class="c1">// 锁是否处于饥饿状态
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">IsStarving</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
-    <span class="k">return</span> <span class="nx">state</span><span class="o">&amp;</span><span class="nx">mutexStarving</span> <span class="o">==</span> <span class="nx">mutexStarving</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">const</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mutexLocked</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="kc">iota</span> <span class="c1">// mutex is locked
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">mutexWoken</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mutexStarving</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mutexWaiterShift</span> <span class="p">=</span> <span class="kc">iota</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">Count</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 获取state字段的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    
+</span></span><span class="line"><span class="cl">    <span class="nx">v</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">isLock</span> <span class="p">=</span> <span class="nx">v</span> <span class="o">&amp;</span> <span class="nx">mutexLocked</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">v</span> <span class="p">=</span> <span class="nx">v</span> <span class="o">&gt;&gt;</span> <span class="nx">mutexWaiterShift</span> <span class="c1">//得到等待者的数值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">v</span> <span class="p">=</span> <span class="nx">v</span> <span class="o">+</span> <span class="nx">isLock</span> <span class="c1">//再加上锁持有者的数量，0或者1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 锁是否被持有
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">IsLocked</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">state</span><span class="o">&amp;</span><span class="nx">mutexLocked</span> <span class="o">==</span> <span class="nx">mutexLocked</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 是否有等待者被唤醒
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">IsWoken</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">state</span><span class="o">&amp;</span><span class="nx">mutexWoken</span> <span class="o">==</span> <span class="nx">mutexWoken</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 锁是否处于饥饿状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nf">IsStarving</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">state</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">((</span><span class="o">*</span><span class="kt">int32</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">state</span><span class="o">&amp;</span><span class="nx">mutexStarving</span> <span class="o">==</span> <span class="nx">mutexStarving</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>需要注意的是在获取 state 字段的时候，并没有通过 Lock 获取这把锁，所以获取的这个 state 的值是一个瞬态的值。</p>
 <h2 id="5-实现一个线程安全的队列">5. 实现一个线程安全的队列</h2>
@@ -568,35 +566,35 @@
 </span><span class="lnt">28
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">SliceQueue</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">data</span> <span class="p">[]</span><span class="kd">interface</span><span class="p">{}</span>
-    <span class="nx">mu</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">NewSliceQueue</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">SliceQueue</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">SliceQueue</span><span class="p">{</span><span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">n</span><span class="p">)}</span>
-<span class="p">}</span>
-
-<span class="c1">// Enqueue 把值放在队尾
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">SliceQueue</span><span class="p">)</span> <span class="nf">Enqueue</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-    <span class="nx">q</span><span class="p">.</span><span class="nx">data</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
-    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="c1">// Dequeue 移去队头并返回
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">SliceQueue</span><span class="p">)</span> <span class="nf">Dequeue</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
-    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-        <span class="k">return</span> <span class="kc">nil</span>
-    <span class="p">}</span>
-    <span class="nx">v</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="nx">q</span><span class="p">.</span><span class="nx">data</span> <span class="p">=</span> <span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-    <span class="k">return</span> <span class="nx">v</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">SliceQueue</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">data</span> <span class="p">[]</span><span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mu</span>   <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewSliceQueue</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">SliceQueue</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">SliceQueue</span><span class="p">{</span><span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">n</span><span class="p">)}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Enqueue 把值放在队尾
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">SliceQueue</span><span class="p">)</span> <span class="nf">Enqueue</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">q</span><span class="p">.</span><span class="nx">data</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Dequeue 移去队头并返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">SliceQueue</span><span class="p">)</span> <span class="nf">Dequeue</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">v</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">q</span><span class="p">.</span><span class="nx">data</span> <span class="p">=</span> <span class="nx">q</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">q</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">v</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="参考">参考</h2>
 <p>本文内容摘录自:</p>
@@ -636,7 +634,7 @@
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>

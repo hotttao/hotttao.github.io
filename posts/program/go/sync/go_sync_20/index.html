@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_20\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  3177 ,
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  3176 ,
         "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_20\/","datePublished": "2021-05-19T22:00:00+08:00","dateModified": "2022-02-27T16:02:41+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
@@ -111,7 +111,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">go 分布式并发原语一</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-19">2021-05-19</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3177 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-19">2021-05-19</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3176 字&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
@@ -155,10 +155,10 @@
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">yum install etcd
-
-etcd -listen-client-urls<span class="o">=</span>http://192.168.108.55:2379 --advertise-client-urls<span class="o">=</span>http://192.168.108.55:2379
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">yum install etcd
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">etcd -listen-client-urls<span class="o">=</span>http://192.168.108.55:2379 --advertise-client-urls<span class="o">=</span>http://192.168.108.55:2379
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="21-etcd-go-模块安装">2.1 etcd go 模块安装</h3>
 <div class="highlight"><div class="chroma">
@@ -168,10 +168,10 @@ etcd -listen-client-urls<span class="o">=</span>http://192.168.108.55:2379 --adv
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># 1. 安装 gRPC</span>
-go get -u google.golang.org/grpc
-go get github.com/grpc-ecosystem/go-grpc-middleware
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 安装 gRPC</span>
+</span></span><span class="line"><span class="cl">go get -u google.golang.org/grpc
+</span></span><span class="line"><span class="cl">go get github.com/grpc-ecosystem/go-grpc-middleware
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="3-leader-选举">3. Leader 选举</h2>
 <p>Leader 选举常常用在主从架构的系统中。主从架构中的服务节点分为主（Leader、Master）和从（Follower、Slave）两种角色，实际节点包括 1 主 n 从，一共是 n+1 个节点。主节点常常执行写操作，从节点常常执行读操作，如果读写都在主节点，从节点只是提供一个备份功能的话，那么，主从架构就会退化成主备模式架构。</p>
@@ -354,125 +354,123 @@ go get github.com/grpc-ecosystem/go-grpc-middleware
 </span><span class="lnt">112
 </span><span class="lnt">113
 </span><span class="lnt">114
-</span><span class="lnt">115
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;bufio&#34;</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;flag&#34;</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;log&#34;</span>
-	<span class="s">&#34;os&#34;</span>
-	<span class="s">&#34;strings&#34;</span>
-
-	<span class="s">&#34;go.etcd.io/etcd/client/v3/concurrency&#34;</span>
-	<span class="s">&#34;go.etcd.io/etcd/clientv3&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-	<span class="nx">nodeID</span>    <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">Int</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;node ID&#34;</span><span class="p">)</span>
-	<span class="nx">addr</span>      <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://192.168.108.55:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
-	<span class="nx">electName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-elect&#34;</span><span class="p">,</span> <span class="s">&#34;election name&#34;</span><span class="p">)</span>
-	<span class="nx">count</span>     <span class="kt">int</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
-	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-	<span class="nx">session</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
-	<span class="k">defer</span> <span class="nx">session</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-
-	<span class="nx">el</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewElection</span><span class="p">(</span><span class="nx">session</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-	<span class="nx">consolescanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span>
-	<span class="k">for</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">action</span> <span class="o">:=</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
-		<span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
-		<span class="k">case</span> <span class="s">&#34;elect&#34;</span><span class="p">:</span>
-			<span class="k">go</span> <span class="nf">elect</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-		<span class="k">case</span> <span class="s">&#34;proclaim&#34;</span><span class="p">:</span>
-			<span class="nf">proclaim</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-		<span class="k">case</span> <span class="s">&#34;resign&#34;</span><span class="p">:</span>
-			<span class="nf">resign</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-		<span class="k">case</span> <span class="s">&#34;watch&#34;</span><span class="p">:</span>
-			<span class="k">go</span> <span class="nf">watch</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-		<span class="k">case</span> <span class="s">&#34;query&#34;</span><span class="p">:</span>
-			<span class="nf">query</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-		<span class="k">case</span> <span class="s">&#34;rev&#34;</span><span class="p">:</span>
-			<span class="nf">rev</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
-		<span class="k">default</span><span class="p">:</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;unkonw error&#34;</span><span class="p">)</span>
-		<span class="p">}</span>
-
-	<span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1">// 选主
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">elect</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acampaigning for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-	<span class="c1">// 调用Campaign方法选主,主的值为value-&lt;主节点ID&gt;-&lt;count&gt;
-</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Campaign</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;value-%d-%d&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">,</span> <span class="nx">count</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;campaigned for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-	<span class="nx">count</span><span class="o">++</span>
-<span class="p">}</span>
-
-<span class="c1">// 为主设置新值
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">proclaim</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;proclaiming for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-	<span class="c1">// 调用Proclaim方法设置新值,新值为value-&lt;主节点ID&gt;-&lt;count&gt;
-</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Proclaim</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;value-%d-%d&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">,</span> <span class="nx">count</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;proclaimed for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-	<span class="nx">count</span><span class="o">++</span>
-<span class="p">}</span>
-
-<span class="c1">// 重新选主，有可能另外一个节点被选为了主
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">resign</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;resigning for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-	<span class="c1">// 调用Resign重新选主
-</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Resign</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;resigned for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 查询主的信息
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">query</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="c1">// 调用Leader返回主的信息，包括key和value等信息
-</span><span class="c1"></span>	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Leader</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;failed to get the current leader: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;current leader:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Key</span><span class="p">),</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Value</span><span class="p">))</span>
-<span class="p">}</span>
-
-<span class="c1">// 可以直接查询主的rev信息
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">rev</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">rev</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Rev</span><span class="p">()</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;current rev:&#34;</span><span class="p">,</span> <span class="nx">rev</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 监控主节点的变化
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">watch</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">ch</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Observe</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">())</span>
-
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;start to watch for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">resp</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">ch</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;leader changed to&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Key</span><span class="p">),</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Value</span><span class="p">))</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;bufio&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;flag&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;strings&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;go.etcd.io/etcd/client/v3/concurrency&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;go.etcd.io/etcd/clientv3&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">nodeID</span>    <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">Int</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;node ID&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">addr</span>      <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://192.168.108.55:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">electName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-elect&#34;</span><span class="p">,</span> <span class="s">&#34;election name&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">count</span>     <span class="kt">int</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">session</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">session</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">el</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewElection</span><span class="p">(</span><span class="nx">session</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">consolescanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">action</span> <span class="o">:=</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="s">&#34;elect&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">go</span> <span class="nf">elect</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="s">&#34;proclaim&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">proclaim</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="s">&#34;resign&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">resign</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="s">&#34;watch&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">go</span> <span class="nf">watch</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="s">&#34;query&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">query</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="s">&#34;rev&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">rev</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span> <span class="o">*</span><span class="nx">electName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;unkonw error&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 选主
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">elect</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acampaigning for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 调用Campaign方法选主,主的值为value-&lt;主节点ID&gt;-&lt;count&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Campaign</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;value-%d-%d&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">,</span> <span class="nx">count</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;campaigned for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">count</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 为主设置新值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">proclaim</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;proclaiming for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 调用Proclaim方法设置新值,新值为value-&lt;主节点ID&gt;-&lt;count&gt;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Proclaim</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;value-%d-%d&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">,</span> <span class="nx">count</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;proclaimed for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">count</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 重新选主，有可能另外一个节点被选为了主
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">resign</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;resigning for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 调用Resign重新选主
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Resign</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;resigned for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 查询主的信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">query</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 调用Leader返回主的信息，包括key和value等信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Leader</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;failed to get the current leader: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;current leader:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Key</span><span class="p">),</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Value</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 可以直接查询主的rev信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">rev</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">rev</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Rev</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;current rev:&#34;</span><span class="p">,</span> <span class="nx">rev</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 监控主节点的变化
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">watch</span><span class="p">(</span><span class="nx">e1</span> <span class="o">*</span><span class="nx">concurrency</span><span class="p">.</span><span class="nx">Election</span><span class="p">,</span> <span class="nx">electName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ch</span> <span class="o">:=</span> <span class="nx">e1</span><span class="p">.</span><span class="nf">Observe</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;start to watch for ID:&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">resp</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">ch</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;leader changed to&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Key</span><span class="p">),</span> <span class="nb">string</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Kvs</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Value</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="4-互斥锁">4. 互斥锁</h2>
 <p>前面说的互斥锁都是用来保护同一进程内的共享资源的，今天我们要重点学习下分布在不同机器中的不同进程内的 goroutine，如何利用分布式互斥锁来保护共享资源。</p>
@@ -484,8 +482,8 @@ go get github.com/grpc-ecosystem/go-grpc-middleware
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewLocker</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Session</span><span class="p">,</span> <span class="nx">pfx</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewLocker</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">Session</span><span class="p">,</span> <span class="nx">pfx</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Locker</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>下面的代码是一个使用 Locker 并发原语的例子：</p>
 <div class="highlight"><div class="chroma">
@@ -547,62 +545,62 @@ go get github.com/grpc-ecosystem/go-grpc-middleware
 </span><span class="lnt">55
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;flag&#34;</span>
-    <span class="s">&#34;log&#34;</span>
-    <span class="s">&#34;math/rand&#34;</span>
-    <span class="s">&#34;strings&#34;</span>
-    <span class="s">&#34;time&#34;</span>
-
-    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
-    <span class="s">&#34;github.com/coreos/etcd/clientv3/concurrency&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-    <span class="nx">addr</span>     <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
-    <span class="nx">lockName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-lock&#34;</span><span class="p">,</span> <span class="s">&#34;lock name&#34;</span><span class="p">)</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
-    
-    <span class="nx">rand</span><span class="p">.</span><span class="nf">Seed</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">())</span>
-    <span class="c1">// etcd地址
-</span><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
-    <span class="c1">// 生成一个etcd client
-</span><span class="c1"></span>    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-    <span class="nf">useLock</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span> <span class="c1">// 测试锁
-</span><span class="c1"></span><span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">useLock</span><span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// 为锁生成session
-</span><span class="c1"></span>    <span class="nx">s1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">s1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-    <span class="c1">//得到一个分布式锁
-</span><span class="c1"></span>    <span class="nx">locker</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewLocker</span><span class="p">(</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="nx">lockName</span><span class="p">)</span>
-
-    <span class="c1">// 请求锁
-</span><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring lock&#34;</span><span class="p">)</span>
-    <span class="nx">locker</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquired lock&#34;</span><span class="p">)</span>
-
-    <span class="c1">// 等待一段时间
-</span><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-    <span class="nx">locker</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span> <span class="c1">// 释放锁
-</span><span class="c1"></span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released lock&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;flag&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;math/rand&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;strings&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;github.com/coreos/etcd/clientv3/concurrency&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">addr</span>     <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">lockName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-lock&#34;</span><span class="p">,</span> <span class="s">&#34;lock name&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="nx">rand</span><span class="p">.</span><span class="nf">Seed</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// etcd地址
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 生成一个etcd client
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">useLock</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span> <span class="c1">// 测试锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">useLock</span><span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 为锁生成session
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">s1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">s1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">//得到一个分布式锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">locker</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewLocker</span><span class="p">(</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="nx">lockName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 请求锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">locker</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquired lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待一段时间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">locker</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span> <span class="c1">// 释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="42-mutex">4.2 Mutex</h3>
 <p>Locker 是基于 Mutex 实现的，只不过，Mutex 提供了查询 Mutex 的 key 的信息的功能</p>
@@ -638,35 +636,35 @@ go get github.com/grpc-ecosystem/go-grpc-middleware
 </span><span class="lnt">28
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">func</span> <span class="nf">useMutex</span><span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// 为锁生成session
-</span><span class="c1"></span>    <span class="nx">s1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">s1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-    <span class="nx">m1</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewMutex</span><span class="p">(</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="nx">lockName</span><span class="p">)</span>
-
-    <span class="c1">//在请求锁之前查询key
-</span><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;before acquiring. key: %s&#34;</span><span class="p">,</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Key</span><span class="p">())</span>
-    <span class="c1">// 请求锁
-</span><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring lock&#34;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Lock</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;acquired lock. key: %s&#34;</span><span class="p">,</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Key</span><span class="p">())</span>
-
-    <span class="c1">//等待一段时间
-</span><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-
-    <span class="c1">// 释放锁
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released lock&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">useMutex</span><span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 为锁生成session
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">s1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">s1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m1</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewMutex</span><span class="p">(</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="nx">lockName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//在请求锁之前查询key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;before acquiring. key: %s&#34;</span><span class="p">,</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Key</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 请求锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Lock</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;acquired lock. key: %s&#34;</span><span class="p">,</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Key</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//等待一段时间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 释放锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">TODO</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到，Mutex 并没有实现 sync.Locker 接口，它的 Lock/Unlock 方法需要提供一个 context.Context 实例做参数，这也就意味着，在请求锁的时候，你可以设置超时时间，或者主动取消请求。</p>
 <h2 id="5-读写锁">5. 读写锁</h2>
@@ -773,104 +771,104 @@ go get github.com/grpc-ecosystem/go-grpc-middleware
 </span><span class="lnt">97
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go">
-<span class="kn">package</span> <span class="nx">main</span>
-
-
-<span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;bufio&#34;</span>
-    <span class="s">&#34;flag&#34;</span>
-    <span class="s">&#34;fmt&#34;</span>
-    <span class="s">&#34;log&#34;</span>
-    <span class="s">&#34;math/rand&#34;</span>
-    <span class="s">&#34;os&#34;</span>
-    <span class="s">&#34;strings&#34;</span>
-    <span class="s">&#34;time&#34;</span>
-
-    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
-    <span class="s">&#34;github.com/coreos/etcd/clientv3/concurrency&#34;</span>
-    <span class="nx">recipe</span> <span class="s">&#34;github.com/coreos/etcd/contrib/recipes&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-    <span class="nx">addr</span>     <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
-    <span class="nx">lockName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-lock&#34;</span><span class="p">,</span> <span class="s">&#34;lock name&#34;</span><span class="p">)</span>
-    <span class="nx">action</span>   <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;rw&#34;</span><span class="p">,</span> <span class="s">&#34;w&#34;</span><span class="p">,</span> <span class="s">&#34;r means acquiring read lock, w means acquiring write lock&#34;</span><span class="p">)</span>
-<span class="p">)</span>
-
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
-    <span class="nx">rand</span><span class="p">.</span><span class="nf">Seed</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">())</span>
-
-    <span class="c1">// 解析etcd地址
-</span><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
-
-    <span class="c1">// 创建etcd的client
-</span><span class="c1"></span>    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-    <span class="c1">// 创建session
-</span><span class="c1"></span>    <span class="nx">s1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">s1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-    <span class="nx">m1</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewRWMutex</span><span class="p">(</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="nx">lockName</span><span class="p">)</span>
-
-    <span class="c1">// 从命令行读取命令
-</span><span class="c1"></span>    <span class="nx">consolescanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span>
-    <span class="k">for</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
-        <span class="nx">action</span> <span class="o">:=</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
-        <span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
-        <span class="k">case</span> <span class="s">&#34;w&#34;</span><span class="p">:</span> <span class="c1">// 请求写锁
-</span><span class="c1"></span>            <span class="nf">testWriteLocker</span><span class="p">(</span><span class="nx">m1</span><span class="p">)</span>
-        <span class="k">case</span> <span class="s">&#34;r&#34;</span><span class="p">:</span> <span class="c1">// 请求读锁
-</span><span class="c1"></span>            <span class="nf">testReadLocker</span><span class="p">(</span><span class="nx">m1</span><span class="p">)</span>
-        <span class="k">default</span><span class="p">:</span>
-            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;unknown action&#34;</span><span class="p">)</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">testWriteLocker</span><span class="p">(</span><span class="nx">m1</span> <span class="o">*</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// 请求写锁
-</span><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring write lock&#34;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Lock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquired write lock&#34;</span><span class="p">)</span>
-
-    <span class="c1">// 等待一段时间
-</span><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-
-    <span class="c1">// 释放写锁
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released write lock&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">testReadLocker</span><span class="p">(</span><span class="nx">m1</span> <span class="o">*</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// 请求读锁
-</span><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring read lock&#34;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">RLock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquired read lock&#34;</span><span class="p">)</span>
-
-    <span class="c1">// 等待一段时间
-</span><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-
-    <span class="c1">// 释放写锁
-</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released read lock&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;bufio&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;flag&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;math/rand&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;strings&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="s">&#34;github.com/coreos/etcd/clientv3/concurrency&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">recipe</span> <span class="s">&#34;github.com/coreos/etcd/contrib/recipes&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">addr</span>     <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd addresses&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">lockName</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;name&#34;</span><span class="p">,</span> <span class="s">&#34;my-test-lock&#34;</span><span class="p">,</span> <span class="s">&#34;lock name&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">action</span>   <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;rw&#34;</span><span class="p">,</span> <span class="s">&#34;w&#34;</span><span class="p">,</span> <span class="s">&#34;r means acquiring read lock, w means acquiring write lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">rand</span><span class="p">.</span><span class="nf">Seed</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 解析etcd地址
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 创建etcd的client
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 创建session
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">s1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">s1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">m1</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewRWMutex</span><span class="p">(</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="nx">lockName</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 从命令行读取命令
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">consolescanner</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewScanner</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Scan</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">action</span> <span class="o">:=</span> <span class="nx">consolescanner</span><span class="p">.</span><span class="nf">Text</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">case</span> <span class="s">&#34;w&#34;</span><span class="p">:</span> <span class="c1">// 请求写锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nf">testWriteLocker</span><span class="p">(</span><span class="nx">m1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">case</span> <span class="s">&#34;r&#34;</span><span class="p">:</span> <span class="c1">// 请求读锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nf">testReadLocker</span><span class="p">(</span><span class="nx">m1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;unknown action&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">testWriteLocker</span><span class="p">(</span><span class="nx">m1</span> <span class="o">*</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 请求写锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring write lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Lock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquired write lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待一段时间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 释放写锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released write lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">testReadLocker</span><span class="p">(</span><span class="nx">m1</span> <span class="o">*</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 请求读锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquiring read lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">RLock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;acquired read lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待一段时间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Duration</span><span class="p">(</span><span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 释放写锁
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m1</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;released read lock&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="参考">参考</h2>
 <p>本文内容摘录自:</p>
@@ -910,7 +908,7 @@ go get github.com/grpc-ecosystem/go-grpc-middleware
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>

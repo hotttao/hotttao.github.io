@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/modules\/33_work_pool\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 库","wordcount":  1132 ,
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 库","wordcount":  1131 ,
         "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/modules\/33_work_pool\/","datePublished": "2021-06-23T22:00:00+08:00","dateModified": "2022-02-26T17:35:24+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
@@ -111,7 +111,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">Go Work Pool</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-06-23">2021-06-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1132 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-06-23">2021-06-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1131 字&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
@@ -183,45 +183,45 @@
 </span><span class="lnt">38
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 1. 定义Worker 池和消息队列的长度
-</span><span class="c1"></span><span class="kd">var</span> <span class="p">(</span>
-	<span class="nx">MaxWorker</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;MAX_WORKERS&#34;</span><span class="p">)</span>
-	<span class="nx">MaxQueue</span>  <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;MAX_QUEUE&#34;</span><span class="p">)</span>
-<span class="p">)</span>
-
-<span class="c1">// 2. 定义任务队列 
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Job</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Payload</span> <span class="nx">Payload</span>
-<span class="p">}</span>
-
-<span class="kd">var</span> <span class="nx">JobQueue</span> <span class="kd">chan</span> <span class="nx">Job</span>
-
-<span class="c1">// 3. 定义 Worker
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Worker</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">WorkerPool</span>  <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span> 
-	<span class="nx">JobChannel</span>  <span class="kd">chan</span> <span class="nx">Job</span>  <span class="c1">// 接收任务
-</span><span class="c1"></span>	<span class="nx">quit</span>    	<span class="kd">chan</span> <span class="kt">bool</span> <span class="c1">// Worker 退出
-</span><span class="c1"></span><span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">workerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">)</span> <span class="nx">Worker</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">Worker</span><span class="p">{</span>
-		<span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">workerPool</span><span class="p">,</span>
-    <span class="c1">// 这个每个 worker 监听的任务队列
-</span><span class="c1"></span>		<span class="nx">JobChannel</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Job</span><span class="p">),</span>
-		<span class="nx">quit</span><span class="p">:</span>       <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)}</span>
-<span class="p">}</span>
-
-<span class="c1">// 4. 创建 Worker Pool
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Dispatcher</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="c1">// 这是 worker 池，也是任务传递的中介
-</span><span class="c1"></span>	<span class="nx">WorkerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">NewDispatcher</span><span class="p">(</span><span class="nx">maxWorkers</span> <span class="kt">int</span><span class="p">)</span> <span class="o">*</span><span class="nx">Dispatcher</span> <span class="p">{</span>
-	<span class="nx">pool</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">,</span> <span class="nx">maxWorkers</span><span class="p">)</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Dispatcher</span><span class="p">{</span><span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">pool</span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 1. 定义Worker 池和消息队列的长度
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">MaxWorker</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;MAX_WORKERS&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">MaxQueue</span>  <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;MAX_QUEUE&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 2. 定义任务队列 
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Job</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Payload</span> <span class="nx">Payload</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">JobQueue</span> <span class="kd">chan</span> <span class="nx">Job</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3. 定义 Worker
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Worker</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">WorkerPool</span>  <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span> 
+</span></span><span class="line"><span class="cl">	<span class="nx">JobChannel</span>  <span class="kd">chan</span> <span class="nx">Job</span>  <span class="c1">// 接收任务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">quit</span>    	<span class="kd">chan</span> <span class="kt">bool</span> <span class="c1">// Worker 退出
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">workerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">)</span> <span class="nx">Worker</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">Worker</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">workerPool</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 这个每个 worker 监听的任务队列
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">JobChannel</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Job</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">quit</span><span class="p">:</span>       <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 4. 创建 Worker Pool
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Dispatcher</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 这是 worker 池，也是任务传递的中介
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">WorkerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewDispatcher</span><span class="p">(</span><span class="nx">maxWorkers</span> <span class="kt">int</span><span class="p">)</span> <span class="o">*</span><span class="nx">Dispatcher</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">pool</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">,</span> <span class="nx">maxWorkers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Dispatcher</span><span class="p">{</span><span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">pool</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="12-任务启动创建-worker-pool">1.2 任务启动，创建 worker pool</h3>
 <div class="highlight"><div class="chroma">
@@ -282,67 +282,65 @@
 </span><span class="lnt">54
 </span><span class="lnt">55
 </span><span class="lnt">56
-</span><span class="lnt">57
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// starting n number of workers
-</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">d</span><span class="p">.</span><span class="nx">maxWorkers</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">worker</span> <span class="o">:=</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">pool</span><span class="p">)</span>
-		<span class="nx">worker</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
-	<span class="p">}</span>
-
-	<span class="k">go</span> <span class="nx">d</span><span class="p">.</span><span class="nf">dispatch</span><span class="p">()</span>
-<span class="p">}</span>
-<span class="c1">// 4.1 将任务从 JobQueue 放入到 Worker Pool 中某一个 Workder 的 JobChannel 中，来调用 Worker
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">dispatch</span><span class="p">()</span> <span class="p">{</span>
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="k">select</span> <span class="p">{</span>
-    <span class="c1">// JobQueue 就是一个待处理任务队列
-</span><span class="c1"></span>		<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">JobQueue</span><span class="p">:</span>
-			<span class="c1">// a job request has been received
-</span><span class="c1"></span>			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">job</span> <span class="nx">Job</span><span class="p">)</span> <span class="p">{</span>
-				<span class="c1">// try to obtain a worker job channel that is available.
-</span><span class="c1"></span>				<span class="c1">// this will block until a worker is idle
-</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span>
-
-				<span class="c1">// dispatch the job to the worker job channel
-</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">&lt;-</span> <span class="nx">job</span>
-			<span class="p">}(</span><span class="nx">job</span><span class="p">)</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1">// 3.1 启动任务
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">Start</span><span class="p">()</span> <span class="p">{</span>
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">for</span> <span class="p">{</span>
-			<span class="c1">// 重要: 把当前 worker 注册到  worker 池中
-</span><span class="c1"></span>			<span class="nx">w</span><span class="p">.</span><span class="nx">WorkerPool</span> <span class="o">&lt;-</span> <span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span>
-
-			<span class="k">select</span> <span class="p">{</span>
-			<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span><span class="p">:</span>
-				<span class="c1">// we have received a work request.
-</span><span class="c1"></span>				<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">job</span><span class="p">.</span><span class="nx">Payload</span><span class="p">.</span><span class="nf">UploadToS3</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-					<span class="nx">log</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;Error uploading to S3: %s&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">())</span>
-				<span class="p">}</span>
-
-			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">quit</span><span class="p">:</span>
-				<span class="c1">// we have received a signal to stop
-</span><span class="c1"></span>				<span class="k">return</span>
-			<span class="p">}</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
-<span class="p">}</span>
-
-<span class="c1">// 3.2 停止任务
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">Stop</span><span class="p">()</span> <span class="p">{</span>
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">w</span><span class="p">.</span><span class="nx">quit</span> <span class="o">&lt;-</span> <span class="kc">true</span>
-	<span class="p">}()</span>
-<span class="p">}</span>
-
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// starting n number of workers
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">d</span><span class="p">.</span><span class="nx">maxWorkers</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">worker</span> <span class="o">:=</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">pool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">worker</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="nx">d</span><span class="p">.</span><span class="nf">dispatch</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 4.1 将任务从 JobQueue 放入到 Worker Pool 中某一个 Workder 的 JobChannel 中，来调用 Worker
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">dispatch</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// JobQueue 就是一个待处理任务队列
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">JobQueue</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// a job request has been received
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">job</span> <span class="nx">Job</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="c1">// try to obtain a worker job channel that is available.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="c1">// this will block until a worker is idle
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">				<span class="c1">// dispatch the job to the worker job channel
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">&lt;-</span> <span class="nx">job</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}(</span><span class="nx">job</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.1 启动任务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">Start</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 重要: 把当前 worker 注册到  worker 池中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">w</span><span class="p">.</span><span class="nx">WorkerPool</span> <span class="o">&lt;-</span> <span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="c1">// we have received a work request.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">job</span><span class="p">.</span><span class="nx">Payload</span><span class="p">.</span><span class="nf">UploadToS3</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">log</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;Error uploading to S3: %s&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">quit</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="c1">// we have received a signal to stop
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="k">return</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.2 停止任务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">Stop</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">w</span><span class="p">.</span><span class="nx">quit</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="13-使用-worker-pool">1.3 使用 worker pool</h3>
 <div class="highlight"><div class="chroma">
@@ -379,37 +377,37 @@
 </span><span class="lnt">30
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 5. 使用 Worker Pool
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
-
-    <span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Method</span> <span class="o">!=</span> <span class="s">&#34;POST&#34;</span> <span class="p">{</span>
-		<span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusMethodNotAllowed</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-
-    <span class="c1">// Read the body into a string for json decoding
-</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">content</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">PayloadCollection</span><span class="p">{}</span>
-	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Body</span><span class="p">,</span> <span class="nx">MaxLength</span><span class="p">)).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">content</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">w</span><span class="p">.</span><span class="nf">Header</span><span class="p">().</span><span class="nf">Set</span><span class="p">(</span><span class="s">&#34;Content-Type&#34;</span><span class="p">,</span> <span class="s">&#34;application/json; charset=UTF-8&#34;</span><span class="p">)</span>
-		<span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusBadRequest</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-
-    <span class="c1">// Go through each payload and queue items individually to be posted to S3
-</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">payload</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">content</span><span class="p">.</span><span class="nx">Payloads</span> <span class="p">{</span>
-
-        <span class="c1">// let&#39;s create a job with the payload
-</span><span class="c1"></span>        <span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">Payload</span><span class="p">:</span> <span class="nx">payload</span><span class="p">}</span>
-
-        <span class="c1">// Push the work onto the queue.
-</span><span class="c1"></span>        <span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
-    <span class="p">}</span>
-
-    <span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusOK</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 5. 使用 Worker Pool
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Method</span> <span class="o">!=</span> <span class="s">&#34;POST&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusMethodNotAllowed</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// Read the body into a string for json decoding
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kd">var</span> <span class="nx">content</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">PayloadCollection</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Body</span><span class="p">,</span> <span class="nx">MaxLength</span><span class="p">)).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">content</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">w</span><span class="p">.</span><span class="nf">Header</span><span class="p">().</span><span class="nf">Set</span><span class="p">(</span><span class="s">&#34;Content-Type&#34;</span><span class="p">,</span> <span class="s">&#34;application/json; charset=UTF-8&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusBadRequest</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// Go through each payload and queue items individually to be posted to S3
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">payload</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">content</span><span class="p">.</span><span class="nx">Payloads</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="c1">// let&#39;s create a job with the payload
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">Payload</span><span class="p">:</span> <span class="nx">payload</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="c1">// Push the work onto the queue.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">w</span><span class="p">.</span><span class="nf">WriteHeader</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">StatusOK</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="14-个人理解">1.4 个人理解</h3>
 <p>这个 worker pool 第一看优点迷惑，有很多 channel，但是如果厘清里面的实现逻辑就感觉非常清晰，重点理解 Worker 这个 struct:</p>
@@ -457,7 +455,7 @@
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>

@@ -162,12 +162,12 @@
 </span><span class="lnt">5
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"># 添加路由
-route add -net 172.16.0.0/24 gw 192.168.1.168
-
-# 打开ia核心转发
-sysctl -w net.ipv4.ip_forward=1
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 添加路由
+</span></span><span class="line"><span class="cl">route add -net 172.16.0.0/24 gw 192.168.1.168
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 打开ia核心转发
+</span></span><span class="line"><span class="cl">sysctl -w net.ipv4.ip_forward=1
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="11-放行-httpd">1.1 放行 httpd</h2>
 <p>防火墙 filter 功能只能添加在 <code>INPUT FORWARD OUTPUT</code> 链上，对于网络防火墙而言，报文只会经过 <code>FORWARD</code> 链，因此网络防火墙只能配置在 <code>FORWARD</code> 链上。一次 http 事务包括请求和响应两个过程，因此我们需要在 <code>FORWARD</code> 上同时添加发送请求和接收响应两个方向的规则。下面是配置示例，我们的目的是，内网的主机能访问所有的外网主机，但外网主机仅能访问内网的 httpd,ftp 服务。</p>
@@ -186,18 +186,18 @@ sysctl -w net.ipv4.ip_forward=1
 </span><span class="lnt">11
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">modprobe nf_conntrack_ftp
-# 设置默认策略为拒绝
-$ iptables -A FORWARD -j DROP
-
-# 开放 80 端口
-$ iptables -I FORWARD -s 172.16.0.0/24 -p tcp --dport 80 -j ACCEPT
-$ iptables -I FORWARD 2 -d 172.16.0.0/24 -p tcp --sport 80 -j ACCEPT
-
-# 开放 ftp
-$ iptables -R FORWARD 3 -s 172.16.0.0/24 -p tcp -m state --stat RELATED -j ACCEPT
-$ iptables -R FORWARD 4 -p tcp -d 172.16.0.0/24 -m state --state ESTABLISHED  -j ACCEPT
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">modprobe nf_conntrack_ftp
+</span></span><span class="line"><span class="cl"># 设置默认策略为拒绝
+</span></span><span class="line"><span class="cl">$ iptables -A FORWARD -j DROP
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 开放 80 端口
+</span></span><span class="line"><span class="cl">$ iptables -I FORWARD -s 172.16.0.0/24 -p tcp --dport 80 -j ACCEPT
+</span></span><span class="line"><span class="cl">$ iptables -I FORWARD 2 -d 172.16.0.0/24 -p tcp --sport 80 -j ACCEPT
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 开放 ftp
+</span></span><span class="line"><span class="cl">$ iptables -R FORWARD 3 -s 172.16.0.0/24 -p tcp -m state --stat RELATED -j ACCEPT
+</span></span><span class="line"><span class="cl">$ iptables -R FORWARD 4 -p tcp -d 172.16.0.0/24 -m state --state ESTABLISHED  -j ACCEPT
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="12-基于连接追踪机制配置">1.2 基于连接追踪机制配置</h2>
 <p>使用连接追踪机制，可以让 iptables 规则更加简单</p>
@@ -216,18 +216,18 @@ $ iptables -R FORWARD 4 -p tcp -d 172.16.0.0/24 -m state --state ESTABLISHED  -j
 </span><span class="lnt">11
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"># 开放内网到外网的所有请求
-$ iptables -A FORWARD -j DROP
-
-# 1. 开放已经建立的连接
-$ iptables -R FORWARD 1 -p tcp -m state --state ESTABLISHED -j ACCEPT
-
-# 2. 开放由内到外的新连接,此时 ftp 也可访问，因为 RELATED 也是 NEW 连接
-$ iptables -I FORWARD 2 -p tcp -s 172.16.0.0/24 -m state --state NEW -j ACCEPT
-
-# 开放外网到内网特定主机的 80 访问
-$ iptables -I FORWARD 2 -d 172.16.0.10 -p tcp --dport 80 -m state --state NEW -j ACCEPT
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 开放内网到外网的所有请求
+</span></span><span class="line"><span class="cl">$ iptables -A FORWARD -j DROP
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 1. 开放已经建立的连接
+</span></span><span class="line"><span class="cl">$ iptables -R FORWARD 1 -p tcp -m state --state ESTABLISHED -j ACCEPT
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 2. 开放由内到外的新连接,此时 ftp 也可访问，因为 RELATED 也是 NEW 连接
+</span></span><span class="line"><span class="cl">$ iptables -I FORWARD 2 -p tcp -s 172.16.0.0/24 -m state --state NEW -j ACCEPT
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 开放外网到内网特定主机的 80 访问
+</span></span><span class="line"><span class="cl">$ iptables -I FORWARD 2 -d 172.16.0.10 -p tcp --dport 80 -m state --state NEW -j ACCEPT
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="2-利用-iptables-抵御-dos-攻击">2. 利用 iptables 抵御 DOS 攻击</h2>
 <p>利用iptables的recent模块来抵御DOS攻击:</p>
@@ -253,21 +253,21 @@ $ iptables -I FORWARD 2 -d 172.16.0.10 -p tcp --dport 80 -m state --state NEW -j
 </span><span class="lnt">14
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"># one
-&gt; iptables -I INPUT -p tcp --dport 22 -m connlimit --connlimit-above 3 -j DROP
-
-# two
-&gt; iptables -I INPUT -p tcp --dport 22 -m state --state NEW -m recent --set --name SSH
-
-# three
-&gt; iptables -I INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 300 --hitcount 3 --name SSH -j LOG --log-prefix &#34;SSH Attach: &#34;
-
-# four
-&gt; iptables -I INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 300 --hitcount 3 --name SSH -j DROP
-
-# 也可以使用下面的这句记录日志：
-&gt; iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --name SSH --second 300 --hitcount 3 -j LOG --log-prefix &#34;SSH Attack&#34;
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># one
+</span></span><span class="line"><span class="cl">&gt; iptables -I INPUT -p tcp --dport 22 -m connlimit --connlimit-above 3 -j DROP
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># two
+</span></span><span class="line"><span class="cl">&gt; iptables -I INPUT -p tcp --dport 22 -m state --state NEW -m recent --set --name SSH
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># three
+</span></span><span class="line"><span class="cl">&gt; iptables -I INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 300 --hitcount 3 --name SSH -j LOG --log-prefix &#34;SSH Attach: &#34;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># four
+</span></span><span class="line"><span class="cl">&gt; iptables -I INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 300 --hitcount 3 --name SSH -j DROP
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 也可以使用下面的这句记录日志：
+</span></span><span class="line"><span class="cl">&gt; iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --name SSH --second 300 --hitcount 3 -j LOG --log-prefix &#34;SSH Attack&#34;
+</span></span></code></pre></td></tr></table>
 </div>
 </div><ol>
 <li>one:</li>
@@ -333,7 +333,7 @@ $ iptables -I FORWARD 2 -d 172.16.0.10 -p tcp --dport 80 -m state --state NEW -j
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.92.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
