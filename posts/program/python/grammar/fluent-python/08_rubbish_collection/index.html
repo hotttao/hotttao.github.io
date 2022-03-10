@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>对象引用与垃圾回收 - LoveIt</title><meta name="Description" content="Python 的对象引用与垃圾回收"><meta property="og:title" content="对象引用与垃圾回收" />
+<meta property="og:description" content="Python 的对象引用与垃圾回收" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-01-08T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-03-10T13:09:11+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="对象引用与垃圾回收"/>
+<meta name="twitter:description" content="Python 的对象引用与垃圾回收"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/05-linux%E7%94%A8%E6%88%B7%E7%BB%84%E7%AE%A1%E7%90%86%E5%8F%8A%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90/%E7%94%A8%E6%88%B7%E4%B8%8E%E7%BB%84%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/05-linux%E7%94%A8%E6%88%B7%E7%BB%84%E7%AE%A1%E7%90%86%E5%8F%8A%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90/%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90%E7%AE%A1%E7%90%86/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "对象引用与垃圾回收",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/python\/grammar\/fluent-python\/08_rubbish_collection\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "python 进阶","wordcount":  3497 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/python\/grammar\/fluent-python\/08_rubbish_collection\/","datePublished": "2018-01-08T22:00:00+08:00","dateModified": "2022-03-10T13:09:11+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "Python 的对象引用与垃圾回收"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">对象引用与垃圾回收</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/python/"><i class="far fa-folder fa-fw"></i>Python</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-01-08">2018-01-08</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3497 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-变量与对象">1. 变量与对象</a>
+      <ul>
+        <li><a href="#11-引用式变量">1.1 引用式变量</a></li>
+        <li><a href="#12-标识-相等性和别名">1.2 标识、 相等性和别名</a></li>
+        <li><a href="#13-元组的相对不可变性">1.3 元组的相对不可变性</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-浅层与深层复制">2. 浅层与深层复制</a></li>
+    <li><a href="#3-python-传参方式">3. Python 传参方式</a>
+      <ul>
+        <li><a href="#31-共享传参">3.1 共享传参</a></li>
+        <li><a href="#32-可变值作为默认值">3.2 可变值作为默认值</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-del-和垃圾回收">4. del 和垃圾回收</a></li>
+    <li><a href="#4-弱引用">4. 弱引用</a>
+      <ul>
+        <li><a href="#41-基础概念">4.1 基础概念</a></li>
+        <li><a href="#42-weak-模块">4.2 weak 模块:</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-python对不可变类型施加的把戏">5. Python对不可变类型施加的把戏</a></li>
+    <li><a href="#延伸阅读">延伸阅读</a>
+      <ul>
+        <li><a href="#python">Python:</a></li>
+        <li><a href="#blog">blog:</a></li>
+        <li><a href="#实用工具">实用工具</a></li>
+        <li><a href="#书籍">书籍:</a></li>
+      </ul>
+    </li>
+    <li><a href="#杂谈">杂谈</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>变量保存的是引用:</p>
+<ul>
+<li>简单的赋值不创建副本</li>
+<li>对 += 或 *= 所做的增量赋值来说，如果左边的变量绑定的是不可变对象，会创建新对象；如果是可变对象，会就地修改</li>
+<li>为现有的变量赋予新值，不会修改之前绑定的变量 &ndash; 重新绑定</li>
+<li>函数的参数以别名的形式传递,函数可能会修改通过参数传入的可变对象</li>
+<li>使用可变类型作为函数参数的默认值有危险，因为如果就地修改了参数，默认值也就变了，这会影响以后使用默认值的调用</li>
+</ul>
+<h2 id="1-变量与对象">1. 变量与对象</h2>
+<h3 id="11-引用式变量">1.1 引用式变量</h3>
+<ul>
+<li>理解: 引用式变量不是存储数据的盒子，而是附加在对象上的标注</li>
+<li>a=[]:
+<ul>
+<li>Python 中赋值语句的右边先执行，对象在右边创建或获取，在此之后左边的变量才会绑定到对象上，就像为对象贴上标注</li>
+<li>说把变量分配给对象更合理，反过来说有问题，因为对象在赋值之前就创建了</li>
+</ul>
+</li>
+</ul>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/fluent_python/rubbish_var.png"
+        data-srcset="/images/fluent_python/rubbish_var.png, /images/fluent_python/rubbish_var.png 1.5x, /images/fluent_python/rubbish_var.png 2x"
+        data-sizes="auto"
+        alt="/images/fluent_python/rubbish_var.png"
+        title="引用式变量" /></p>
+<h3 id="12-标识-相等性和别名">1.2 标识、 相等性和别名</h3>
+<p>标识:</p>
+<ul>
+<li>每个变量都有标识、类型和值。对象一旦创建，它的标识绝不会变；</li>
+<li>你可以把标识理解为对象在内存中的地址。</li>
+<li>is 运算符比较两个对象的标识； id() 函数返回对象标识的整数表示</li>
+</ul>
+<p>别名: 即两个变量绑定同一个对象</p>
+<p>is 与 ==:</p>
+<ul>
+<li>== 运算符比较两个对象的值（对象中保存的数据），而 is 比较对象的标识</li>
+<li>在变量和单例值之间比较时，应该使用 is,  eg:  x is None</li>
+<li>is 运算符比 == 速度快，因为它不能重载，Python 不用寻找并调用特殊方法，而是直接比较对象 ID</li>
+<li>a == b 是语法糖，等同于 a.__eq__(b)。继承自 object 的 __eq__
+方法比较两个对象的 ID，结果与 is 一样，多数内置类型会覆盖__eq__ 方法</li>
+</ul>
+<h3 id="13-元组的相对不可变性">1.3 元组的相对不可变性</h3>
+<p>相对不可变性:</p>
+<ul>
+<li>元组(和frozenset)与多数 Python 集合（列表、字典、集，等等）一样，保存的是对象的引用</li>
+<li>元组的不可变性其实是指 tuple 数据结构的物理内容（即保存的引用）不可变，与引用的对象无关，
+即元组本身不可变，元素依然可变</li>
+<li>而 str、 bytes 和 array.array 等单一类型序列是扁平的，它们保存的不是引用，而是
+在连续的内存中保存数据本身</li>
+</ul>
+<h2 id="2-浅层与深层复制">2. 浅层与深层复制</h2>
+<p>浅复制:</p>
+<ul>
+<li>即复制了最外层容器，副本中的元素是源容器中元素的引用</li>
+<li>构造方法(list(a))或 a[: ] 都是浅复制</li>
+</ul>
+<p>copy 模块:</p>
+<ul>
+<li>文档:  <a href="http://docs.python.org/3/library/copy.html" target="_blank" rel="noopener noreffer">http://docs.python.org/3/library/copy.html</a></li>
+<li>copy.copy(): 浅层复制</li>
+<li>copy.deepcopy():
+<ul>
+<li>深层复制</li>
+<li>deepcopy 函数会记住已经复制的对象，因此能优雅地处理循环引用</li>
+</ul>
+</li>
+<li>可以实现特殊方法 __copy__() 和 __deepcopy__()，控制 copy 和 deepcopy 的行为</li>
+</ul>
+<h2 id="3-python-传参方式">3. Python 传参方式</h2>
+<h3 id="31-共享传参">3.1 共享传参</h3>
+<ul>
+<li>定义: 指函数的各个形式参数获得实参中各个 <strong>引用的副本</strong>。也就是说，函数内部的形参是实参的别名</li>
+<li>影响: 函数可能会修改作为参数传入的可变对象，但是无法修改那些对象的标识
+（即不能把一个对象替换成另一个对象）</li>
+<li>附注: 这是 Python 唯一支持的参数传递模式</li>
+</ul>
+<h3 id="32-可变值作为默认值">3.2 可变值作为默认值</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">HauntedBus</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;A bus model haunted by ghost passengers&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">passengers</span><span class="o">=</span><span class="p">[]):</span>   <span class="err">➊</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">passengers</span> <span class="o">=</span> <span class="n">passengers</span>  <span class="err">➋</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">pick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">passengers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>  <span class="err">➌</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">drop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">passengers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">bus2</span> <span class="o">=</span> <span class="n">HauntedBus</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">bus2</span><span class="o">.</span><span class="n">pick</span><span class="p">(</span><span class="s1">&#39;Carrie&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">bus3</span> <span class="o">=</span> <span class="n">HauntedBus</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">bus3</span><span class="o">.</span><span class="n">passengers</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="s1">&#39;Carrie&#39;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">bus3</span><span class="o">.</span><span class="n">pick</span><span class="p">(</span><span class="s1">&#39;Dave&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="nb">dir</span><span class="p">(</span><span class="n">HauntedBus</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span> <span class="c1"># doctest:  +ELLIPSIS</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="s1">&#39;__annotations__&#39;</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="s1">&#39;__defaults__&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">HauntedBus</span><span class="o">.</span><span class="fm">__init__</span><span class="o">.</span><span class="vm">__defaults__</span> <span class="c1"># 默认值变成了函数对象的属性</span>
+</span></span><span class="line"><span class="cl"><span class="p">([</span><span class="s1">&#39;Carrie&#39;</span><span class="p">,</span> <span class="s1">&#39;Dave&#39;</span><span class="p">],)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">HauntedBus</span><span class="o">.</span><span class="fm">__init__</span><span class="o">.</span><span class="vm">__defaults__</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">bus2</span><span class="o">.</span><span class="n">passengers</span>
+</span></span><span class="line"><span class="cl"><span class="kc">True</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>分析:</p>
+<ul>
+<li>➊ 如果没传入 passengers 参数，使用默认绑定的列表对象，一开始是空列表。</li>
+<li>➋ 这个赋值语句把 self.passengers 变成 passengers 的别名，而没有传入 passengers 参
+数时，后者又是默认列表的别名。</li>
+<li>➌ 在 self.passengers 上调用 .remove() 和 .append() 方法时，修改的其实是默认列表，
+它是函数对象的一个属性</li>
+<li>问题在于，没有指定初始乘客的 HauntedBus 实例会共享同一个乘客列表</li>
+</ul>
+<p>默认值:</p>
+<ul>
+<li>默认值在定义函数时计算（通常在加载模块时），因此默认值变成了函数对象的属性</li>
+<li>如果默认值是可变对象，而且修改了它的值，那么后续的函数调用都会受到影响</li>
+<li>通常使用 None 作为接收可变值的参数的默认值</li>
+</ul>
+<p>防御可变参数:</p>
+<ul>
+<li>除非确实想修改通过参数传入的对象，否则一定要创建参数的副本</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TwilightBus</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;A bus model that makes passengers vanish&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">passengers</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="n">passengers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="bp">self</span><span class="o">.</span><span class="n">passengers</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">        <span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="bp">self</span><span class="o">.</span><span class="n">passengers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">passengers</span><span class="p">)</span>  <span class="c1"># 创建并引用参数的副本，而不是别名</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="4-del-和垃圾回收">4. del 和垃圾回收</h2>
+<p>del:</p>
+<ul>
+<li>del 语句删除名称，而不是对象</li>
+<li>仅当删除的变量保存的是对象的最后一个引用，或者无法得到对象时,对象才会被删除</li>
+<li>重新绑定也可能会导致对象的引用数量归零，导致对象被销毁</li>
+</ul>
+<p>__del__:</p>
+<ul>
+<li>将销毁实例时， Python 解释器会调用 __del__ 方法，给实例最后的机会，释放外部资源</li>
+<li>无论程序因什么原因终止，所有对象都会被回收，定义在对象上的 __del__ 方法会被调用</li>
+<li>文档:  <a href="https://docs.python.org/3/reference/datamodel.html#object.__del" target="_blank" rel="noopener noreffer">https://docs.python.org/3/reference/datamodel.html#object.__del</a>__</li>
+<li>Jesse Jiryu Davis 写的“ PyPy, Garbage Collection, and a Deadlock”
+对 __del__ 方法的恰当用法和不当用法做了讨论 <a href="https://emptysqua.re/blog/pypy-garbage-collection-and-a-deadlock/" target="_blank" rel="noopener noreffer">https://emptysqua.re/blog/pypy-garbage-collection-and-a-deadlock/</a></li>
+</ul>
+<p>CPython对象删除:</p>
+<ul>
+<li>垃圾回收使用的主要算法是引用计数。每个对象都会统计有多少引用指向自己。当引用计数归零时，立即就被销毁</li>
+<li>CPython 会在对象上调用 __del__ 方法（如果定义了），然后释放分配给对象的内存</li>
+<li>CPython 2.0 增加了分代垃圾回收算法，用于检测引用循环中涉及的对象组</li>
+<li>CPython 3.4 改进了处理有 __del__ 方法的对象的方式， 参见 PEP 442—Safe object
+finalization（https://www.python.org/dev/peps/pep-0442/）</li>
+</ul>
+<h2 id="4-弱引用">4. 弱引用</h2>
+<h3 id="41-基础概念">4.1 基础概念</h3>
+<p>弱引用:</p>
+<ul>
+<li>定义: 弱引用不会增加对象的引用数量</li>
+<li>应用: 弱引用在缓存应用中很有用</li>
+<li>概念: 引用的目标对象称为<strong>所指对象</strong></li>
+<li>局限: 不是每个 Python 对象都可以作为弱引用的目标（或称所指对象）
+<ul>
+<li>基本的 list 和 dict 实例不能作为所指对象，但是它们的子类可以</li>
+<li>set 实例可以作为所指对象，用户定义的类型也没问题</li>
+<li>int 和 tuple 实例不能作为弱引用的目标，甚至它们的子类也不行</li>
+<li>原因: 与CPython 实现细节有关</li>
+</ul>
+</li>
+</ul>
+<h3 id="42-weak-模块">4.2 weak 模块:</h3>
+<p><strong>weak简介</strong>:</p>
+<ul>
+<li>文档:  <a href="http://docs.python.org/3/library/weakref.html" target="_blank" rel="noopener noreffer">http://docs.python.org/3/library/weakref.html</a></li>
+<li>底层接口: 供高级接口使用，不要手动创建并处理 weakref.ref 实例
+<ul>
+<li>wref = weak.ref(obj):  获取所指对象</li>
+<li>wref(): 返回被引用对象，如果所指对象不存在了，返回 None</li>
+</ul>
+</li>
+<li>高层接口: WeakKeyDictionary、 WeakValueDictionary、 WeakSet 和 finalize</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">weakref</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">a_set</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">wref</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">a_set</span><span class="p">)</span> <span class="err">➊</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">wref</span><span class="p">()</span> <span class="err">➋</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">weakref</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">s2</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="k">def</span> <span class="nf">bye</span><span class="p">():</span>  <span class="err">➋</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Gone with the wind...&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">ender</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">bye</span><span class="p">)</span> <span class="c1">#  在 s1 引用的对象上注册 bye 回调</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">ender</span><span class="o">.</span><span class="n">alive</span> <span class="err">➍</span>
+</span></span><span class="line"><span class="cl"><span class="kc">True</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">s2</span> <span class="o">=</span> <span class="s1">&#39;spam&#39;</span>  <span class="c1"># 对象被销毁了，调用了 bye 回调</span>
+</span></span><span class="line"><span class="cl"><span class="n">Gone</span> <span class="k">with</span> <span class="n">the</span> <span class="n">wind</span><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">ender</span><span class="o">.</span><span class="n">alive</span>
+</span></span><span class="line"><span class="cl"><span class="kc">False</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>WeakValueDictory</strong>:</p>
+<ul>
+<li>作用:
+<ul>
+<li>一种可变映射，里面的值是对象的弱引用</li>
+<li>被引用的对象被当作垃圾回收后，对应的键会自动从 WeakValueDictionary 中删除</li>
+<li>经常用于缓存</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">weakref</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">stock</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">WeakValueDictionary</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">catalog</span> <span class="o">=</span> <span class="p">[</span><span class="n">Cheese</span><span class="p">(</span><span class="s1">&#39;Red Leicester&#39;</span><span class="p">),</span> <span class="n">Cheese</span><span class="p">(</span><span class="s1">&#39;Tilsit&#39;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>                 <span class="n">Cheese</span><span class="p">(</span><span class="s1">&#39;Brie&#39;</span><span class="p">),</span> <span class="n">Cheese</span><span class="p">(</span><span class="s1">&#39;Parmesan&#39;</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="k">for</span> <span class="n">cheese</span> <span class="ow">in</span> <span class="n">catalog</span><span class="p">:</span>  <span class="c1"># stock 把奶酪的名称映射到 catalog 中 Cheese 实例的弱引用上</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>     <span class="n">stock</span><span class="p">[</span><span class="n">cheese</span><span class="o">.</span><span class="n">kind</span><span class="p">]</span> <span class="o">=</span> <span class="n">cheese</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">stock</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="s1">&#39;Brie&#39;</span><span class="p">,</span> <span class="s1">&#39;Parmesan&#39;</span><span class="p">,</span> <span class="s1">&#39;Red Leicester&#39;</span><span class="p">,</span> <span class="s1">&#39;Tilsit&#39;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="k">del</span> <span class="n">catalog</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">stock</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="s1">&#39;Parmesan&#39;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="k">del</span> <span class="n">cheese</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">stock</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl"><span class="p">[]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>WeakKeyDictionary</strong>:</p>
+<ul>
+<li>键是弱引用</li>
+<li>用途: 可以为应用中其他部分拥有的对象附加数据，这样就无需为对象添加属性。
+这对覆盖属性访问权限的对象尤其有用？？</li>
+<li>文档:  <a href="https://docs.python.org/3/library/weakref.html?highlight=weakref#weakref.WeakKeyDictionary" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/weakref.html?highlight=weakref#weakref.WeakKeyDictionary</a></li>
+</ul>
+<p><strong>WeakSet</strong></p>
+<ul>
+<li>作用: 保存元素弱引用的集合类。元素没有强引用时，集合会把它删除</li>
+<li>应用: 如果一个类需要知道所有实例，一种好的方案是创建一个 WeakSet 类型的类属性，保存实例的引用</li>
+<li>附注: 如果使用常规的 set，实例永远不会被垃圾回收，因为类中有实例的强引用，
+而类存在的时间与 Python 进程一样长，除非显式删除类</li>
+</ul>
+<h2 id="5-python对不可变类型施加的把戏">5. Python对不可变类型施加的把戏</h2>
+<ol>
+<li>tuple:</li>
+</ol>
+<ul>
+<li>t[: ] 不创建副本，而是返回同一个对象的引用</li>
+<li>tuple(t) 获得的也是同一个元组的引用</li>
+</ul>
+<ol start="2">
+<li>str、 bytes 和 frozenset: 与元组类似</li>
+</ol>
+<ul>
+<li>frozenset 实例不是序列，因此不能使用 fs[: ]</li>
+<li>但是， fs.copy() 具有相同的效果，返回同一个对象的引用</li>
+</ul>
+<ol start="3">
+<li>字符串字面量可能会创建共享的对象</li>
+</ol>
+<ul>
+<li>共享字符串字面量是一种优化措施，称为驻留（ interning）</li>
+<li>CPython 还会在小的整数上使用这个优化措施，防止重复创建“热门”数字，如 0、 -1 和 42</li>
+<li>注意， CPython 不会驻留所有字符串和整数，驻留的条件是实现细节，而且没有文档说明</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">t1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">t3</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="c1"># ➊</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">t3</span> <span class="ow">is</span> <span class="n">t1</span> <span class="c1"># ➋</span>
+</span></span><span class="line"><span class="cl"><span class="kc">False</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">s1</span> <span class="o">=</span> <span class="s1">&#39;ABC&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">s2</span> <span class="o">=</span> <span class="s1">&#39;ABC&#39;</span> <span class="c1"># ➌</span>
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="n">s2</span> <span class="ow">is</span> <span class="n">s1</span> <span class="c1"># ➍</span>
+</span></span><span class="line"><span class="cl"><span class="kc">True</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="延伸阅读">延伸阅读</h2>
+<h3 id="python">Python:</h3>
+<p>Python 语言参考手册:</p>
+<ul>
+<li>Data Model 一章的开头清楚解释了对象的标识和值</li>
+<li><a href="https://docs.python.org/3/reference/datamodel.html" target="_blank" rel="noopener noreffer">https://docs.python.org/3/reference/datamodel.html</a></li>
+</ul>
+<p>gc 模块</p>
+<ul>
+<li>作用: 为可选的垃圾回收程序提供接口</li>
+<li>文档: <a href="https://docs.python.org/3/library/gc.html" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/gc.html</a></li>
+</ul>
+<h3 id="blog">blog:</h3>
+<p>Wesley Chun 在 OSCON 2013 的演讲:</p>
+<ul>
+<li>PPT:  <a href="http://conferences.oreilly.com/oscon/oscon2013/public/schedule/detail/29374" target="_blank" rel="noopener noreffer">http://conferences.oreilly.com/oscon/oscon2013/public/schedule/detail/29374</a></li>
+<li>视频: <a href="https://www.youtube.com/watch?v=HHFCFJSPWrI" target="_blank" rel="noopener noreffer">https://www.youtube.com/watch?v=HHFCFJSPWrI</a></li>
+</ul>
+<p>Doug Hellmann:</p>
+<ul>
+<li>Python Module of the Week &ndash; 后来集结成书，即《 Python 标准库》</li>
+<li><a href="https://pymotw.com/3/" target="_blank" rel="noopener noreffer">https://pymotw.com/3/</a></li>
+</ul>
+<p>Fredrik Lundh:</p>
+<ul>
+<li>How Does Python Manage Memory?</li>
+<li><a href="http://effbot.org/pyfaq/how-does-python-manage-memory.htm" target="_blank" rel="noopener noreffer">http://effbot.org/pyfaq/how-does-python-manage-memory.htm</a></li>
+</ul>
+<p>字符串驻留: <a href="https://en.wikipedia.org/wiki/String_interning" target="_blank" rel="noopener noreffer">https://en.wikipedia.org/wiki/String_interning</a></p>
+<h3 id="实用工具">实用工具</h3>
+<p>Python Tutor 网站: <a href="http://www.pythontutor.com" target="_blank" rel="noopener noreffer">http://www.pythontutor.com</a></p>
+<h3 id="书籍">书籍:</h3>
+<p>《 Python 标准库》</p>
+<ul>
+<li>copy – Duplicate Objects <a href="http://pymotw.com/2/copy/" target="_blank" rel="noopener noreffer">http://pymotw.com/2/copy/</a></li>
+<li>weakref – Garbage-Collectable References to Objects <a href="http://pymotw.com/2/weakref/" target="_blank" rel="noopener noreffer">http://pymotw.com/2/weakref/</a></li>
+</ul>
+<p>《程序设计语言——实践之路（第 3版）》</p>
+<h2 id="杂谈">杂谈</h2>
+<p>__eq__ 方法:</p>
+<ul>
+<li>作用: 决定 == 如何比较实例</li>
+<li>从 object 继承的方法比较对象的 ID</li>
+</ul>
+<p>用户定义的类:</p>
+<ul>
+<li>实例默认可变</li>
+<li>如果需要不可变的对象，此时对象的每个属性都必须是不可变的</li>
+<li>可变对象还是导致多线程编程难以处理的主要原因，因为某个线程改动对象后，如果
+不正确地同步，那就会损坏数据。但是过度同步又会导致死锁</li>
+</ul>
+<p>对象析构和垃圾回收:</p>
+<ul>
+<li>Python 没有直接销毁对象的机制</li>
+<li>CPython 中的垃圾回收主要依靠引用计数</li>
+<li>这意味着，在 CPython 中，这样写是安全的（至少目前如此）:
+<code>open('test.txt', 'wt', encoding='utf-8').write('1, 2, 3')</code>
+这行代码是安全的，因为文件对象的引用数量会在 write 方法返回后归零， Python
+在销毁内存中表示文件的对象之前，会立即关闭文件，这行代码在 Jython 或IronPython 中却不安全，
+因为它们使用的是宿主运行时（ Java VM 和 .NET CLR）中的垃圾回收程序，
+那些回收程序更复杂，但是不依靠引用计数，而且销毁对象和关闭文件的时间可能更长</li>
+<li>在任何情况下，包括 CPython，最好显式关闭文件；而关闭文件的最可靠方式是使用 with 语句</li>
+</ul>
+<p>参数传递模式</p>
+<ul>
+<li>有按值传递: 函数得到参数的副本</li>
+<li>按引用传递: 函数得到参数的指针</li>
+<li>共享传参: 按值传递指针副本？？
+<ul>
+<li>函数得到参数的副本，但是参数始终是引用</li>
+<li>因为函数得到的是参数引用的副本，所以重新绑定对函数外部没有影响</li>
+</ul>
+</li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-03-10&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/30628257d547483ceb89c29b3683ac87ee0e5112" target="_blank" title="commit by tsong(tsong@example.com) 30628257d547483ceb89c29b3683ac87ee0e5112: python 语法和 wrapt的模块">
+                                    <i class="fas fa-hashtag fa-fw"></i>3062825</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/python/grammar/fluent-python/08_rubbish_collection/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" data-title="对象引用与垃圾回收" data-hashtags="python 进阶"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" data-hashtag="python 进阶"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" data-title="对象引用与垃圾回收"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" data-title="对象引用与垃圾回收"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/08_rubbish_collection/" data-title="对象引用与垃圾回收" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/python-%E8%BF%9B%E9%98%B6/">python 进阶</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/05-linux%E7%94%A8%E6%88%B7%E7%BB%84%E7%AE%A1%E7%90%86%E5%8F%8A%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90/%E7%94%A8%E6%88%B7%E4%B8%8E%E7%BB%84%E7%AE%A1%E7%90%86%E5%91%BD%E4%BB%A4/" class="prev" rel="prev" title="5.2 用户与组管理命令"><i class="fas fa-angle-left fa-fw"></i>5.2 用户与组管理命令</a>
+            <a href="/posts/linux/linux_mt/05-linux%E7%94%A8%E6%88%B7%E7%BB%84%E7%AE%A1%E7%90%86%E5%8F%8A%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90/%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90%E7%AE%A1%E7%90%86/" class="next" rel="next" title="5.3 用户权限管理">5.3 用户权限管理<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.3">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-01-08T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"对象引用与垃圾回收"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

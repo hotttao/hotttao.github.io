@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>上下文管理器和 else 块 - LoveIt</title><meta name="Description" content="上下文管理器和 else 块"><meta property="og:title" content="上下文管理器和 else 块" />
+<meta property="og:description" content="上下文管理器和 else 块" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2018-01-15T22:00:00+08:00" />
+<meta property="article:modified_time" content="2022-03-10T13:09:11+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="上下文管理器和 else 块"/>
+<meta name="twitter:description" content="上下文管理器和 else 块"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_mt/06-shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B/%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%A4%84%E7%90%86/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_mt/06-shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B/%E5%87%BD%E6%95%B0%E5%92%8C%E5%8F%82%E6%95%B0%E4%BC%A0%E9%80%92/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "上下文管理器和 else 块",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/python\/grammar\/fluent-python\/15_contextmanager\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "python 进阶","wordcount":  3086 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/python\/grammar\/fluent-python\/15_contextmanager\/","datePublished": "2018-01-15T22:00:00+08:00","dateModified": "2022-03-10T13:09:11+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "上下文管理器和 else 块"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">上下文管理器和 else 块</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/python/"><i class="far fa-folder fa-fw"></i>Python</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2018-01-15">2018-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3086 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-else-子句">1. else 子句</a></li>
+    <li><a href="#2-eafp-与-lbyl">2. EAFP 与 LBYL</a></li>
+    <li><a href="#2-上下文管理器和with">2. 上下文管理器和with</a>
+      <ul>
+        <li><a href="#21-with-语句">2.1 with 语句</a></li>
+        <li><a href="#22-上下文管理器协议">2.2 上下文管理器协议</a></li>
+        <li><a href="#23-上下文管理器的应用">2.3 上下文管理器的应用</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-contextlib模块">3. contextlib模块</a>
+      <ul>
+        <li><a href="#21-实用工具">2.1 实用工具</a></li>
+        <li><a href="#22-contextmanager">2.2 @contextmanager</a></li>
+        <li><a href="#23-原地文件重写">2.3 原地文件重写</a></li>
+      </ul>
+    </li>
+    <li><a href="#延伸阅读">延伸阅读</a>
+      <ul>
+        <li><a href="#python">Python:</a></li>
+        <li><a href="#blog">blog:</a></li>
+        <li><a href="#实用工具">实用工具</a></li>
+        <li><a href="#书籍">书籍:</a></li>
+      </ul>
+    </li>
+    <li><a href="#附注">附注</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>本章内容</p>
+<ul>
+<li>for、while 和 try 语句的 else 子句</li>
+<li>EAFP 与 LBYL</li>
+<li>上下文管理器协议</li>
+<li>with 语句和上下文管理器</li>
+<li>contextlib 模块</li>
+</ul>
+<h2 id="1-else-子句">1. else 子句</h2>
+<p>作用：</p>
+<ol>
+<li>能让代码更易于阅读</li>
+<li>不用设置控制标志或者添加额外的 if 语句</li>
+</ol>
+<p>控制逻辑：</p>
+<ul>
+<li>for ：仅当 for 循环运行完毕时（没有被 break 语句中止）才运行 else 块</li>
+<li>while：仅当 while 循环因为条件为假值而退出时（没有被 break 语句中止）才运行 else 块</li>
+<li>try：
+<ul>
+<li>仅当 try 块中没有异常抛出时才运行 else 块</li>
+<li>else 子句抛出的异常不会由前面的 except 子句处理</li>
+</ul>
+</li>
+<li>如果异常、return、break 或 continue 导致控制权跳到了复合语句的主块之外，else 子句就会被跳过</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">try</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">dangerous_call</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># after_call()   不应该放在这</span>
+</span></span><span class="line"><span class="cl"><span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;OSError...&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">after_call</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>示例分析：</p>
+<ul>
+<li>try 块中应该只捕获预期的异常</li>
+<li>这里捕获的是 dangerous_call() 可能出现的错误，而不是 after_call()</li>
+<li>只有 try 块不抛出异常，才会执行 after_call()</li>
+</ul>
+<h2 id="2-eafp-与-lbyl">2. EAFP 与 LBYL</h2>
+<p>Python 官方词汇表：https://docs.python.org/3/glossary.html#term-eafp</p>
+<p><strong>EAFP</strong>:</p>
+<ul>
+<li>取得原谅比获得许可容易（easier to ask for forgiveness than permission）。这是一
+种常见的 Python 编程风格，先假定存在有效的键或属性，如果假定不成立，那
+么捕获异常。这种风格简单明快，特点是代码中有很多 try 和 except 语句。与
+其他很多语言一样（如 C 语言），这种风格的对立面是 LBYL 风格。</li>
+</ul>
+<p><strong>LBYL</strong>:</p>
+<ul>
+<li>三思而后行（look before you leap）。这种编程风格在调用函数或查找属性或键之
+前显式测试前提条件。与 EAFP 风格相反，这种风格的特点是代码中有很多 if
+语句。在多线程环境中， LBYL 风格可能会在“检查”和“行事”的空当引入条
+件竞争。例如，对 if key in mapping: return mapping[key] 这段代码来说，如
+果在测试之后，但在查找之前，另一个线程从映射中删除了那个键，那么这段代
+码就会失败。这个问题可以使用锁或者 EAFP 风格解决</li>
+</ul>
+<h2 id="2-上下文管理器和with">2. 上下文管理器和with</h2>
+<p>上下文管理器对象存在的目的是管理 with 语句，就像迭代器的存在是为了管理 for 语句一样</p>
+<h3 id="21-with-语句">2.1 with 语句</h3>
+<ul>
+<li>作用：
+<ol>
+<li>简化 try/finally 模式</li>
+</ol>
+<ul>
+<li>这种模式用于保证一段代码运行完毕后执行某项操作，</li>
+<li>即便那段代码由于异常、return 语句或 sys.exit() 调用而中止，也会执行指定的操作</li>
+<li>finally 子句中的代码通常用于释放重要的资源，或者还原临时变更的状态</li>
+</ul>
+<ol start="2">
+<li>不仅能管理资源，还能用于去掉常规的设置和清理代码，或者在另一个过程前后执行的操作</li>
+</ol>
+</li>
+<li>特性：与函数和模块不同， with 块没有定义新的作用域</li>
+<li>原理：
+<ul>
+<li>with 语句会设置一个临时的上下文，交给上下文管理器对象控制</li>
+<li>上下文管理器对象实现了上下文管理器协议，在 with 语句执行的前后执行特定操作</li>
+</ul>
+</li>
+</ul>
+<p><strong>执行过程</strong></p>
+<ol>
+<li>执行 with 后面的表达式，得到上下文管理器对象</li>
+<li>执行上下文管理器对象的__enter__方法，返回值被绑定到目标变量上(as 子句)</li>
+<li>不管控制流程以哪种方式退出 with 块，都会在上下文管理器对象上调用 __exit__ 方法</li>
+<li>with 语句的 as 子句是可选的</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;mirror.py&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span> <span class="n">src</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>示例解析</p>
+<ul>
+<li>open() 函数返回的 TextIOWrapper 类实例是上下文管理器对象</li>
+<li>该实例的 __enter__ 方法返回 self 赋值给 as 子句中的变量 fp</li>
+<li>在 with 块的末尾，调用 TextIOWrapper.__exit__ 方法把文件关闭</li>
+<li>__enter__ 方法除了返回上下文管理器之外，还可能返回其他对象</li>
+</ul>
+<h3 id="22-上下文管理器协议">2.2 上下文管理器协议</h3>
+<p><strong>协议接口</strong></p>
+<ol>
+<li>__enter__(self)</li>
+</ol>
+<ul>
+<li>运行：with 语句开始运行时，在上下文管理器对象上调用</li>
+<li>参数：</li>
+</ul>
+<ol start="2">
+<li>__exit__ (self, exc_type, exc_value, traceback)</li>
+</ol>
+<ul>
+<li>运行：with 语句运行结束后，在上下文管理器对象上调用，扮演着 finally 子句的角色</li>
+<li>异常：返回 None，或者 True 之外的值， with 块中的任何异常都会向上冒泡</li>
+<li>参数：
+<ul>
+<li>exc_type:异常类（例如 ZeroDivisionError）</li>
+<li>exc_value 异常实例。有时会有参数传给异常构造方法，例如错误消息，这些参数可以使用 exc_value.args 获取</li>
+<li>traceback：traceback 对象</li>
+</ul>
+</li>
+<li>附注：
+<ul>
+<li>如果一切正常， Python 调用 __exit__ 方法时传入的参数是 None, None, None</li>
+<li>在finally 块中调用 sys.exc_info()，得到的就是 __exit__ 接收的这三个参数</li>
+</ul>
+</li>
+</ul>
+<h3 id="23-上下文管理器的应用">2.3 上下文管理器的应用</h3>
+<ol>
+<li>在 sqlite3 模块中用于管理事务</li>
+</ol>
+<ul>
+<li>参见“12.6.7.3. Using the connection as a context manager”
+<a href="https://docs.python.org/3/library/sqlite3.html#using-the-connection-as-a-context-manager" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/sqlite3.html#using-the-connection-as-a-context-manager</a></li>
+</ul>
+<ol start="2">
+<li>在 threading 模块中用于维护锁、条件和信号</li>
+</ol>
+<ul>
+<li>参见“17.1.10. Using locks, conditions,and semaphores in the with statement”</li>
+<li><a href="https://docs.python.org/3/library/threading.html#using-locks-conditions-and-semaphores-in-the-with-statement" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/threading.html#using-locks-conditions-and-semaphores-in-the-with-statement</a></li>
+</ul>
+<ol start="3">
+<li>为 Decimal 对象的算术运算设置环境</li>
+</ol>
+<ul>
+<li>参见 decimal.localcontext 函数的文档</li>
+<li><a href="https://docs.python.org/3/library/decimal.html#decimal.localcontext" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/decimal.html#decimal.localcontext</a></li>
+</ul>
+<ol start="4">
+<li>为了测试临时给对象打补丁</li>
+</ol>
+<ul>
+<li>参见 unittest.mock.patch 函数的文档</li>
+<li><a href="https://docs.python.org/3/library/unittest.mock.html#patch" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/unittest.mock.html#patch</a></li>
+</ul>
+<h2 id="3-contextlib模块">3. contextlib模块</h2>
+<h3 id="21-实用工具">2.1 实用工具</h3>
+<p>文档：https://docs.python.org/3/library/contextlib.html</p>
+<p>|对象|说明|
+|: &mdash;|: &mdash;|
+|redirect_stdout|只需传入类似文件的对象，用于替代 sys.stdout|
+|closing|如果对象提供了 close() 方法，但没有实现 __enter__/__exit__ 协议，<br>那么可以使用这个函数构建上下文管理器|
+|suppress|构建临时忽略指定异常的上下文管理器|
+|ContextDecorator|这是个基类，用于定义基于类的上下文管理器<br>这种上下文管理器也能用于装饰函数，在受管理的上下文中运行整个函数|
+|ExitStack|这个上下文管理器能进入多个上下文管理器<br>with 块结束时，按照后进先出的顺序调用栈中各个上下文管理器的 __exit__ 方法<br>如果事先不知道 with 块要进入多少个上下文管理器，可以使用这个类<br>例如，同时打开任意一个文件列表中的所有文件|</p>
+<h3 id="22-contextmanager">2.2 @contextmanager</h3>
+<ul>
+<li>作用：
+<ul>
+<li>把简单的生成器函数变成上下文管理器，不用创建类去实现管理器协议</li>
+</ul>
+</li>
+<li>方法：
+<ol>
+<li>只需实现有一个 yield 语句的生成器，生成想让__enter__ 方法返回的值</li>
+<li>yield 语句的作用是把函数的定义体分成两部分</li>
+</ol>
+<ul>
+<li>yield 语句前面的所有代码在 with 块开始时（即解释器调用 __enter__ 方法时）执行</li>
+<li>yield 语句后面的代码在 with 块结束时（即调用 __exit__ 方法时）执行</li>
+</ul>
+<ol start="3">
+<li>装饰器会把函数包装成实现 __enter__ 和 __exit__ 方法的类</li>
+</ol>
+<ul>
+<li>类的 __enter__ :
+<ul>
+<li>调用生成器函数，保存生成器对象（这里把它称为 gen）。</li>
+<li>调用 next(gen)，执行到 yield 关键字所在的位置。</li>
+<li>返回 next(gen) 产出的值，以便把产出的值绑定到 with/as 语句中的目标变量上</li>
+</ul>
+</li>
+<li>__exit__ 方法
+<ul>
+<li>检查有没有把异常传给 exc_type；如果有，调用 gen.throw(exception)，
+在生成器函数定义体中包含 yield 关键字的那一行抛出异常。</li>
+<li>否则，调用 next(gen)，继续执行生成器函数定义体中 yield 语句之后的代码</li>
+<li>因此使用 @contextmanager 装饰器时，要把 yield 语句放在 try/finally
+语句中（或者放在 with 语句中）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>异常管理:
+<ul>
+<li>使用 @contextmanager 装饰器时，异常的处理与上下文管理器协议是相反的</li>
+<li>装饰器提供的 __exit__ 方法假定发给生成器的所有异常都得到处理了，因此应该压制异常。</li>
+<li>如果不想让 @contextmanager 压制异常，必须在被装饰的函数中显式重新抛出异常</li>
+</ul>
+</li>
+<li>附注：
+<ul>
+<li>在 @contextmanager 装饰器装饰的生成器中， yield 与迭代没有任何关系</li>
+<li>生成器函数的作用更像是协程：执行到某一点时暂停，让客户代码运行，直到客户让协程继续做事</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">contextlib</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">looking_glass</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">    <span class="kn">import</span> <span class="nn">sys</span>
+</span></span><span class="line"><span class="cl">    <span class="n">original_write</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">reverse_write</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="n">original_write</span><span class="p">(</span><span class="n">text</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">reverse_write</span>
+</span></span><span class="line"><span class="cl">    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">try</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">yield</span> <span class="s1">&#39;JABBERWOCKY&#39;</span> <span class="err">➊</span>
+</span></span><span class="line"><span class="cl">    <span class="k">except</span> <span class="ne">ZeroDivisionError</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Please DO NOT divide by zero!&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">finally</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span> <span class="o">=</span> <span class="n">original_write</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="n">msg</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">&gt;&gt;&gt;</span> <span class="k">with</span> <span class="n">looking_glass</span><span class="p">()</span> <span class="k">as</span> <span class="n">what</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Alice, Kitty and Snowdrop&#39;</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>➊ yield &lsquo;JABBERWOCKY&rsquo;</p>
+<ul>
+<li>这个值会绑定到 with 语句中 as 子句的目标变量上</li>
+<li>执行 with 块中的代码时，这个函数会在这一点暂停</li>
+<li>控制权跳出 with 块，继续执行 yield 语句之后的代码</li>
+</ul>
+<h3 id="23-原地文件重写">2.3 原地文件重写</h3>
+<ul>
+<li><a href="http://www.zopatista.com/python/2013/11/26/inplace-file-rewriting/" target="_blank" rel="noopener noreffer">http://www.zopatista.com/python/2013/11/26/inplace-file-rewriting/</a></li>
+<li>使用  @contextmanager 实现的原地文件重写上下文管理器</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 用于原地重写文件的上下文管理器</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">csv</span>
+</span></span><span class="line"><span class="cl"><span class="k">with</span> <span class="n">inplace</span><span class="p">(</span><span class="n">csvfilename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="p">(</span><span class="n">infh</span><span class="p">,</span> <span class="n">outfh</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">infh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">outfh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">row</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;new&#39;</span><span class="p">,</span> <span class="s1">&#39;columns&#39;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>inplace 函数</p>
+<ul>
+<li>是个上下文管理器，为同一个文件提供了两个句柄（这个示例中的 infh 和outfh），以便同时读写同一个文件</li>
+</ul>
+<h2 id="延伸阅读">延伸阅读</h2>
+<h3 id="python">Python:</h3>
+<p>Compound statements</p>
+<ul>
+<li>全面说明了 if、 for、 while 和 try 语句的 else 子句</li>
+<li><a href="https://docs.python.org/3/reference/compound_stmts.html" target="_blank" rel="noopener noreffer">https://docs.python.org/3/reference/compound_stmts.html</a></li>
+</ul>
+<p>上下文管理器的类型</p>
+<ul>
+<li>
+<ol start="4">
+<li>Built-in Types</li>
+</ol>
+</li>
+<li><a href="https://docs.python.org/3/library/stdtypes.html#typecontextmanager" target="_blank" rel="noopener noreffer">https://docs.python.org/3/library/stdtypes.html#typecontextmanager</a></li>
+</ul>
+<p>上下文管里器</p>
+<ul>
+<li>PEP 343—The‘ with’ Statement”</li>
+<li><a href="https://www.python.org/dev/peps/pep-0343/" target="_blank" rel="noopener noreffer">https://www.python.org/dev/peps/pep-0343/</a></li>
+</ul>
+<p>__enter__/__exit__</p>
+<ul>
+<li>3.3.8. With Statement Context Managers</li>
+<li><a href="https://docs.python.org/3/reference/datamodel.html#with-statement-context-managers" target="_blank" rel="noopener noreffer">https://docs.python.org/3/reference/datamodel.html#with-statement-context-managers</a></li>
+</ul>
+<h3 id="blog">blog:</h3>
+<p>What Makes Python Awesome?</p>
+<ul>
+<li><a href="http://pyvideo.org/video/1669/keynote-3" target="_blank" rel="noopener noreffer">http://pyvideo.org/video/1669/keynote-3</a></li>
+</ul>
+<p>Is it a good practice to use try-except-else in Python</p>
+<ul>
+<li>讨论了 try/except 语句（有 else 子句，或者没有）是否符合 Python 风格</li>
+<li><a href="http://stackoverflow.com/questions/16138232/is-it-a-good-practice-to-use-try-except-else-in-python" target="_blank" rel="noopener noreffer">http://stackoverflow.com/questions/16138232/is-it-a-good-practice-to-use-try-except-else-in-python</a></li>
+</ul>
+<p>Transforming Code into Beautiful, Idiomatic Python</p>
+<ul>
+<li><a href="https://speakerdeck.com/pyconslides/transforming-code-into-beautiful-idiomatic-python-by-raymond-hettinger-1?slide=34" target="_blank" rel="noopener noreffer">https://speakerdeck.com/pyconslides/transforming-code-into-beautiful-idiomatic-python-by-raymond-hettinger-1?slide=34</a></li>
+</ul>
+<h3 id="实用工具">实用工具</h3>
+<p>The Python with Statement by Example</p>
+<ul>
+<li><a href="http://preshing.com/20110920/the-python-with-statement-by-example/" target="_blank" rel="noopener noreffer">http://preshing.com/20110920/the-python-with-statement-by-example/</a>），</li>
+<li>举例说明了 pycairo 图形库中的上下文管理器</li>
+</ul>
+<h3 id="书籍">书籍:</h3>
+<p>《 Python 技术手册（第 2 版）》</p>
+<ul>
+<li>有一章是关于异常的，那一章极好地讨论了 EAFP 风格</li>
+</ul>
+<p>《 Python Cookbook（第 3 版）中文版》</p>
+<ul>
+<li>8.3 让对象支持上下文管理协议</li>
+<li>9.22 以简单的方式定义上下文管理器</li>
+</ul>
+<h2 id="附注">附注</h2>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-03-10&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/30628257d547483ceb89c29b3683ac87ee0e5112" target="_blank" title="commit by tsong(tsong@example.com) 30628257d547483ceb89c29b3683ac87ee0e5112: python 语法和 wrapt的模块">
+                                    <i class="fas fa-hashtag fa-fw"></i>3062825</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/python/grammar/fluent-python/15_contextmanager/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" data-title="上下文管理器和 else 块" data-hashtags="python 进阶"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" data-hashtag="python 进阶"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" data-title="上下文管理器和 else 块"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" data-title="上下文管理器和 else 块"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/python/grammar/fluent-python/15_contextmanager/" data-title="上下文管理器和 else 块" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/python-%E8%BF%9B%E9%98%B6/">python 进阶</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_mt/06-shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B/%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%A4%84%E7%90%86/" class="prev" rel="prev" title="6.5 字符串处理"><i class="fas fa-angle-left fa-fw"></i>6.5 字符串处理</a>
+            <a href="/posts/linux/linux_mt/06-shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B/%E5%87%BD%E6%95%B0%E5%92%8C%E5%8F%82%E6%95%B0%E4%BC%A0%E9%80%92/" class="next" rel="next" title="6.6 函数和参数传递">6.6 函数和参数传递<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.93.3">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2018-01-15T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"上下文管理器和 else 块"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
