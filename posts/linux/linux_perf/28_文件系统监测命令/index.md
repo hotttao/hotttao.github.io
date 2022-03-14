@@ -1,0 +1,199 @@
+# 4.8 文件系统监测命令
+
+
+本节我们来介绍文件系统相关的监测工具。
+<!-- more -->
+
+## 1. 命令总览
+我们会介绍如下文件系统统计信息的工具
+
+|Linux|Solaris|作用|说明|
+|:---|:---|:---|:---|
+||vfsstat|文件系统统计信息，包括平均延时||
+||fsstat|文件系统统计信息||
+||kstat|各种文件系统和缓存统计信息|
+||fcachestat|各种缓存命令中率和大小||
+|free||缓存容量统计信息||
+|strace|truss|系统调用调试器||
+|slaptop|mdb:kmastat|内核 slab 分配器统计信息||
+|/proc/memeinfo|mdb:memstat|内核内存使用情况||
+|sar|sar|内存，swap使用统计信息|通用命令，位于独立的一节中|
+
+除此之外，还包括以下内容:
+1. 文件系统基准测试
+2. 文件系统调优
+
+## 2. 文件系统统计命令
+### 2.1 LatencyTop
+LatencyTop 是一个报告延时根源的工具。可以针对整个系统，也可以针对单个进程。
+
+启用 LatencyTop 需要两个内核选项的支持:
+1. CONFIG_LATENCYTOP
+2. CONFIG_HAVE_LATENCYTOP_SUPPORT
+
+```bash
+# 1. LatencyTop 启用
+> yum install latencytop
+> rpm -ql latencytop
+# 2. LatencyTop 查看
+> cat /proc/latency_stats
+```
+
+## 3. 文件系统测试
+### 3.1 dd
+可以执行文件系统连续读写负载的特定性能测试
+```bash
+> dd if=/dev/zero of=file1 bs=1024k count=1k
+> dd if=file1 of=/dev/null bs=1024
+```
+### 3.2 Bonnie
+是一个在单文件上一单线程测试集中负载的简单 C程序
+
+### 3.3 fio
+有很多高级功能的可定制文件系统基准测试工具:
+1. 非标准随机分布，可以更准确的模拟真实的访问模式
+2. 延时百分位数报告，包括 99,99.5,99.9,99.99
+
+#### 使用
+fio（Flexible I/O Tester）正是最常用的文件系统和磁盘 I/O 性能基准测试工具，并且提供了大量定制化的选项。下面是对随机读、随机写、顺序读以及顺序写的基准测试。
+```bash
+# 随机读
+fio -name=randread -direct=1 -iodepth=64 -rw=randread -ioengine=libaio -bs=4k -size=1G -numjobs=1 -runtime=1000 -group_reporting -filename=/dev/sdb
+
+# 随机写
+fio -name=randwrite -direct=1 -iodepth=64 -rw=randwrite -ioengine=libaio -bs=4k -size=1G -numjobs=1 -runtime=1000 -group_reporting -filename=/dev/sdb
+
+# 顺序读
+fio -name=read -direct=1 -iodepth=64 -rw=read -ioengine=libaio -bs=4k -size=1G -numjobs=1 -runtime=1000 -group_reporting -filename=/dev/sdb
+
+# 顺序写
+fio -name=write -direct=1 -iodepth=64 -rw=write -ioengine=libaio -bs=4k -size=1G -numjobs=1 -runtime=1000 -group_reporting -filename=/dev/sdb 
+
+# mysql IOPS innodb_io_capacity 参数确定
+fio -filename=$filename -direct=1 -iodepth 1 -thread -rw=randrw -ioengine=psync -bs=16k -size=500M -numjobs=10 -runtime=10 -group_reporting -name=mytest
+```
+
+示例命令中包含的参数的含义如下:
+1. direct，表示是否跳过系统缓存。上面示例中，我设置的 1 ，就表示跳过系统缓存。
+2. iodepth，表示使用异步 I/O（asynchronous I/O，简称 AIO）时，同时发出的 I/O 请求上限。在上面的示例中，我设置的是 64。
+3. rw，表示 I/O 模式。我的示例中， read/write 分别表示顺序读 / 写，而 randread/randwrite 则分别表示随机读 / 写。
+4. ioengine，表示 I/O 引擎，它支持同步（sync）、异步（libaio）、内存映射（mmap）、网络（net）等各种 I/O 引擎。上面示例中，我设置的 libaio 表示使用异步 I/O。bs，表示 I/O 的大小。示例中，我设置成了 4K（这也是默认值）。
+5. filename，表示文件路径，当然，它可以是磁盘路径（测试磁盘性能），也可以是文件路径（测试文件系统性能）。示例中，我把它设置成了磁盘 /dev/sdb。不过注意，用磁盘路径测试写，会破坏这个磁盘中的文件系统，所以在使用前，你一定要事先做好数据备份。
+
+#### I/O 重放
+fio 支持 I/O 的重放。借助前面提到过的 blktrace，再配合上 fio，就可以实现对应用程序 I/O 模式的基准测试。比如像下面这样:
+```bash
+# 使用blktrace跟踪磁盘I/O，注意指定应用程序正在操作的磁盘
+$ blktrace /dev/sdb
+
+# 查看blktrace记录的结果
+# ls
+sdb.blktrace.0  sdb.blktrace.1
+
+# 将结果转化为二进制文件
+$ blkparse sdb -d sdb.bin
+
+# 使用fio重放日志
+$ fio --name=replay --filename=/dev/sdb --direct=1 --read_iolog=sdb.bin 
+```
+
+#### 输出
+```bash
+
+read: (g=0): rw=read, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=libaio, iodepth=64
+fio-3.1
+Starting 1 process
+Jobs: 1 (f=1): [R(1)][100.0%][r=16.7MiB/s,w=0KiB/s][r=4280,w=0 IOPS][eta 00m:00s]
+read: (groupid=0, jobs=1): err= 0: pid=17966: Sun Dec 30 08:31:48 2018
+   read: IOPS=4257, BW=16.6MiB/s (17.4MB/s)(1024MiB/61568msec)
+    slat (usec): min=2, max=2566, avg= 4.29, stdev=21.76
+    clat (usec): min=228, max=407360, avg=15024.30, stdev=20524.39
+     lat (usec): min=243, max=407363, avg=15029.12, stdev=20524.26
+    clat percentiles (usec):
+     |  1.00th=[   498],  5.00th=[  1020], 10.00th=[  1319], 20.00th=[  1713],
+     | 30.00th=[  1991], 40.00th=[  2212], 50.00th=[  2540], 60.00th=[  2933],
+     | 70.00th=[  5407], 80.00th=[ 44303], 90.00th=[ 45351], 95.00th=[ 45876],
+     | 99.00th=[ 46924], 99.50th=[ 46924], 99.90th=[ 48497], 99.95th=[ 49021],
+     | 99.99th=[404751]
+   bw (  KiB/s): min= 8208, max=18832, per=99.85%, avg=17005.35, stdev=998.94, samples=123
+   iops        : min= 2052, max= 4708, avg=4251.30, stdev=249.74, samples=123
+  lat (usec)   : 250=0.01%, 500=1.03%, 750=1.69%, 1000=2.07%
+  lat (msec)   : 2=25.64%, 4=37.58%, 10=2.08%, 20=0.02%, 50=29.86%
+  lat (msec)   : 100=0.01%, 500=0.02%
+  cpu          : usr=1.02%, sys=2.97%, ctx=33312, majf=0, minf=75
+  IO depths    : 1=0.1%, 2=0.1%, 4=0.1%, 8=0.1%, 16=0.1%, 32=0.1%, >=64=100.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.1%, >=64=0.0%
+     issued rwt: total=262144,0,0, short=0,0,0, dropped=0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=64
+
+Run status group 0 (all jobs):
+   READ: bw=16.6MiB/s (17.4MB/s), 16.6MiB/s-16.6MiB/s (17.4MB/s-17.4MB/s), io=1024MiB (1074MB), run=61568-61568msec
+
+Disk stats (read/write):
+  sdb: ios=261897/0, merge=0/0, ticks=3912108/0, in_queue=3474336, util=90.09% 
+```
+
+这个报告中，需要我们重点关注的是， slat、clat、lat ，以及 bw 和 iops:
+1. slat ，是指从 I/O 提交到实际执行 I/O 的时长（Submission latency）；
+2. clat ，是指从 I/O 提交到 I/O 完成的时长（Completion latency）
+3. lat ，指的是从 fio 创建 I/O 到 I/O 完成的总时长。
+4. bw ，它代表吞吐量
+5. iops ，其实就是每秒 I/O 的次数
+
+对同步 I/O 来说，由于 I/O 提交和 I/O 完成是一个动作，所以 slat 实际上就是 I/O 完成的时间，而 clat 是 0。而从示例可以看到，使用异步 I/O（libaio）时，lat 近似等于 slat + clat 之和。
+
+### 3.4 SysBench
+
+### 3.5 丢弃缓存
+Linux 提供了丢弃缓存的方法，可用于缓存开始执行的基准测试
+```
+# 丢弃页缓存
+> ehco 1 > /proc/sys/vm/drop_cache
+
+# 丢弃 dentries 和 inodes 缓存
+> ehco 2 > /proc/sys/vm/drop_cache
+
+# 丢弃所有缓存
+> ehco 3 > /proc/sys/vm/drop_cache
+```
+
+## 4. 调优
+### 4.1 应用程序调优
+应用程序可以给内核提供信息，来提高缓存和预期的效率，包括:
+1. posix_fadvise()
+2. madvise()
+
+#### posix_fasvise()
+`int posix_fasvise(int fd, off_t offset, off_t len, int advice)`
+- 作用: 这个库函数调用操作文件的一个区域
+- advice: 建议标志位:
+    - POSIX_FAD_SEQUENTIAL: 指定的数据范围会被连续访问 
+    - POSIX_FAD_RANDOM: 指定的数据范围会被随机访问
+    - POSIX_FAD_NOREUSE: 数据不会被重用
+    - POSIX_FAD_WILLNEED: 数据会在不远的将来重用
+    - POSIX_FAD_DONTNEED: 数据不会在不远的将来重用
+
+#### madvise()
+`int madvise(void *addr, size_t length, int advice`
+- 作用: 库函数调用对一块内存映射进行操作
+- advice: 建议标志位
+    - MADV_RANDOM: 偏移量将以随机顺序访问
+    - MADV_SEQUENTIAL: 偏移量将以连续顺序访问
+    - MADV_WILLNEED: 数据还会再用，请缓存
+    - MADV_DONTNEED: 数据不会再用，无缓存
+
+### 4.2 文件系统调优
+#### ext 文件系统
+```bash
+# 1. 查看文件系统配置
+> tunefs -l dev_name
+> mount 
+# 2. 可以使用选项 noatime 禁用文件访问时间戳更新
+
+# 3. tunefs 提升性能的关键选项 -- 使用哈希B数提高大目录的查找速度
+> tune2fs -O dir_index /dev/hdX
+
+# 4. 重建文件系统目录的索引
+> e2fsck -D -f /dev/hdX
+```

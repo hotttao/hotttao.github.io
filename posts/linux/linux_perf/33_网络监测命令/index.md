@@ -1,0 +1,667 @@
+# 4.14 网络监测命令
+
+
+本节我们来介绍内存相关的监测工具。
+<!-- more -->
+
+## 1. 命令总览
+下面的图片摘录自[极客时间专栏-Linux性能优化实战](https://time.geekbang.org/column/intro/140)，分别从下面 3 个方面总结了网络相关的性能检测工具:
+1. 从网络的性能指标出发，根据指标找工具
+2. 从工具出发，根据工具找指标
+3. 根据工具指标之间的内在联系，掌握网络分析的套路
+
+![net_quato](/images/linux_pf/net_quato.png)
+![net_command](/images/linux_pf/net_command.png)
+![disk_relation](/images/linux_pf/disk_relation.png)
+
+我们会介绍如下网络统计信息的工具
+
+|Linux|Solaris|作用|说明|
+|:---|:---|:---|:---|
+|netstat,ss|netstat|多种网络栈和接口统计信息||
+|sar||统计信息历史||
+|ifconfig|ifconfig|接口配置||
+|ip|ip|网络配置接口统计信息||
+|nicstat|nicstat|网络接口吞吐量和使用率||
+|ethtool|ethtool|查看网络接口的带宽|
+|ping|ping|测试网络连通性||
+|traceroute|traceroute|测试网络路由||
+|pathchar|pathchar|确定网络路径特征||
+|tcpdump|tcpdump/snoop|网络数据报嗅探器||
+|nethogs|nethogs|查看进程的网络收发情况||
+|iftop|iftop|查看IP的网络收发情况||
+|conntrack|conntrack|查看和管理连接跟踪状况||
+|ts|ts|网络Qos设置||
+|Wireshark|Wireshark|图形化网络数据包检查器||
+|DTrace,perf|DTrace|TCP/IP栈跟踪: 连接、数据包、丢包、延时||
+
+除此之外，还包括以下内容:
+1. 网络基准测试
+2. 网络调优
+
+### 1.1 网络相关的理论
+阅读中遇到下面不理解的概念，记录如下:  
+1. [TCP TIME-WAIT](https://zhenbianshu.github.io/2018/12/talk_about_tcp_timewait.html)
+2. CPU 扇出
+3. 链路聚合
+
+## 2. 网络统计命令
+网络的统计信息由以下两个文件提供:
+1. /proc/net/snmp
+2. /proc/net/netstat
+
+
+### 2.1 ss
+ss options
+- 作用: 多种网络栈和接口统计信息
+- 选项:
+    - 套接字: 
+        - 默认: 列出连接的套接字
+        - -a: 列出所有套接字的信息
+        - -4：只显示ipv4的套接字；
+        - -6：只显示ipv6的套接字；
+        - -t：只显示tcp套接字；
+        - -n：不解析服务名称，以数字方式显示；
+        - -l：显示处于监听状态的套接字；
+        - -u：只显示udp套接字；
+        - -d：只显示DCCP套接字；
+        - -w：仅显示RAW套接字；
+        - -x：仅显示UNIX域套接字
+        - -S: display only SCTP sockets
+        - -f: 显示 FAMILY类型的套接字，FAMILY可选包括 inet|inet6|link|unix|netlink|vsock|help
+    - 套接字相关资源:
+        - -m：显示套接字的内存使用情况
+        - -p：显示使用套接字的进程信息
+        - -E: continually display sockets as they are destroyed
+        - -Z: display process SELinux security contexts
+        - -z: display process and socket SELinux security contexts
+        - -K: forcibly close sockets, display what was closed
+    - 统计信息:    
+        - -s: 网络栈统计信息
+        - -i: 网络接口信息
+    - 输出控制:
+        - -o: 显示计时器信息
+        - -D, --diag=FILE 将原始TCP套接字（sockets）信息转储到文件
+        - -N: switch to the specified network namespace name
+        - -e: show detailed socket information
+        - -A, --query=QUERY, --socket=QUERY，QUERY 包括:
+            - all|inet|tcp|udp|raw|unix
+            - unix_dgram|unix_stream|unix_seqpacket|packet|
+            - netlink|vsock_stream|vsock_dgram
+```bash
+ ss -s
+Total: 283 (kernel 0)
+# ss 只显示已经连接、关闭、孤儿套接字等简要统计
+TCP:   14 (estab 2, closed 1, orphaned 0, synrecv 0, timewait 0/0), ports 0
+
+Transport Total     IP        IPv6
+*         0         -         -
+RAW       0         0         0
+UDP       11        8         3
+TCP       13        8         5
+INET      24        16        8
+FRAG      0         0         0
+```
+
+### 2.2 netsat
+`netstat [-vWeenNcCF] [<Af>] -r`   
+`netstat [-vWnNcaeol] [<Socket> ...]`  
+`netstat { [-vWeenNac] -I[<Iface>] | [-veenNac] -i | [-cnNe] -M | -s [-6tuw] } [delay]`
+- 选项:
+    - 统计选项:
+        - -i: 显示网络接口信息
+        - -s: 显示网络栈统计信息 
+    - 系统信息:
+        - -p: 显示使用套接字的进程信息
+        - -r: 显示路由表
+        - -g：显示多重广播功能群组组员名单
+        - -M: 显示伪装的网络连线
+        - -F: display Forwarding Information Base (default)
+        - -C: display routing cache instead of FIB
+        - -Z: 显示套接字的 SELinux 信息
+    - 显示控制:
+        - -v, --verbose            be verbose
+        - -W, --wide               don't truncate IP addresses
+        - -n: 显示 IP 地址
+        - -N: 显示网络硬件外围设备的符号连接名称；
+        - -e: 显示扩展信息
+        - -o: 显示计时器
+        - -c: 持续输出
+    - 套接字筛选:
+        - -a: 列出所有套接字的信息
+        - -l: 显示处于监听状态的套接字
+        - -t|--tcp
+        - -u|--udp
+        - -U|--udplite
+        - -S|--sctp
+        - -w|--raw
+        - -x|--unix
+        - --ax25 
+        - --ipx 
+        - --netrom
+        - -6: inet6 (IPv6)
+        - -4: inet (IPV4)
+
+#### netstat -i
+常与 -c 一起使用，每秒输出下面的累计计数。
+```bash
+Kernel Interface table
+Iface             MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
+enp0s3           1500   140998      0      0 0         12029      0      0      0 BMRU
+lo              65536      107      0      0 0           107      0      0      0 LRU
+virbr0           1500        0      0      0 0             0      0      0      0 BMU
+virbr0-nic       1500        0      0      0 0             0      0      0      0 BMU
+```
+输出:
+1. ifcae: 网络接口
+2. MTU
+3. 一系列的接收(RX-)和传输(TX-)
+    - OK: 成功传输的数据包
+    - ERR: 错误数据包
+    - DRP: 丢包 - 网络接口是否饱和指针
+    - OVR: 超限 - 网络接口是否饱和指针
+
+#### netstat -s
+```bash
+$ netstat -s
+Ip:
+    21721 total packets received
+    0 forwarded
+    0 incoming packets discarded
+    15111 incoming packets delivered
+    10909 requests sent out
+    98 dropped because of missing route
+Icmp:
+    0 ICMP messages received
+    0 input ICMP message failed.
+    ICMP input histogram:
+    244 ICMP messages sent
+    0 ICMP messages failed
+    ICMP output histogram:
+        destination unreachable: 244
+IcmpMsg:
+        OutType3: 244
+Tcp:
+    14 active connections openings
+    17 passive connection openings
+    0 failed connection attempts
+    0 connection resets received
+    2 connections established
+    14307 segments received
+    9608 segments send out
+    4 segments retransmited
+    0 bad segments received.
+    8 resets sent
+....
+```
+
+理解上面的信息需要对 TCP行为有着深刻的理解。下面是值的查找的示例指标:
+1. 相比接收的总数据包更高速率的包转发，检查服务器是否需要转发数据包
+2. 更高的数据段重传输率
+3. 套接字缓冲超限导致的数据包从接收队列中删除
+
+重要字段:
+1. tcpListenDrops： tcp 丢包数量
+
+#### netstat -nlp
+查询套接字信息：
+```bash
+# -l 表示只显示监听套接字
+# -t 表示只显示 TCP 套接字
+# -n 表示显示数字地址和端口(而不是名字)
+# -p 表示显示进程信息
+$ ss -ltnp | head -n 3
+State    Recv-Q    Send-Q        Local Address:Port        Peer Address:Port
+LISTEN   0         128           127.0.0.53%lo:53               0.0.0.0:*        users:(("systemd-resolve",pid=840,fd=13))
+LISTEN   0         128                 0.0.0.0:22               0.0.0.0:*        users:(("sshd",pid=1459,fd=3))
+```
+
+其中，接收队列（Recv-Q）和发送队列（Send-Q）需要你特别关注，它们通常应该是 0。当你发现它们不是 0 时，说明有网络包的堆积发生。当然还要注意，在不同套接字状态下，它们的含义不同。
+
+套接字处于连接状态（Established）时:
+1. Recv-Q 表示套接字缓冲还没有被应用程序取走的字节数（即接收队列长度）。
+2. Send-Q 表示还没有被远端主机确认的字节数（即发送队列长度）。
+
+套接字处于监听状态（Listening）时
+1. Recv-Q 表示全连接队列的长度(全连接队列的长度就是上一篇文章所说的侦听积压队列的长度)
+2. Send-Q 表示全连接队列的最大长度
+
+
+### 2.3 ifconfig/ip
+```bash
+ifconfig
+ens33: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.44.128  netmask 255.255.255.0  broadcast 192.168.44.255
+        ether 00:0c:29:74:60:60  txqueuelen 1000  (Ethernet)     # txqueuelen 为接口发送队列的长度
+        RX packets 59072  bytes 32261953 (30.7 MiB)              # 同 netstat -i 的输出
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 14288  bytes 2090118 (1.9 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ip -s link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00  
+    RX: bytes  packets  errors  dropped overrun mcast           # 同 netstat -i 的输出
+    10284      108      0       0       0       0
+    TX: bytes  packets  errors  dropped carrier collsns
+    10284      108      0       0       0       0
+
+```
+
+指标含义:
+1. 网络接口的状态标志。ifconfig 输出中的 RUNNING ，或 ip 输出中的 LOWER_UP ，都表示物理网络是连通的，即网卡已经连接到了交换机或者路由器中。如果你看不到它们，通常表示网线被拔掉了。
+2. ifconfig txqueuelen:
+    - 表示接口发送队列的长度
+    - 对于速度较低的高延时设备，设置较小的值有助于预防高速的大量传输影响
+3. TX 和 RX 部分的 errors、dropped、overruns、carrier 以及 collisions 
+    - errors 表示发生错误的数据包数，比如校验错误、帧同步错误等；
+    - dropped 表示丢弃的数据包数，即数据包已经收到了 Ring Buffer，但因为内存不足等原因丢包；
+    - overruns 表示超限数据包数，即网络 I/O 速度过快，导致 Ring Buffer 中的数据包来不及处理（队列满）而导致的丢包；
+    - carrier 表示发生 carrirer 错误的数据包数，比如双工模式不匹配、物理电缆出现问题等；
+    - collisions 表示碰撞数据包数。
+
+### 2.4 pathchar
+pathchar ip:
+- 作用: 类似于 traceroute，并且包括了每一跳间的带宽
+- 缺点: 找不到可运行的版本，并且运行非常耗时
+
+### 2.5 tcpdump
+`tcpdump [选项] [过滤表达式]`
+- 作用: 捕获并分析网络数据包
+- 原理: 基于 libpcap  ，利用内核中的 AF_PACKET 套接字，抓取网络接口中传输的网络包
+- 注意: CPU 和存储而言，捕获数据包是昂贵的，应在尽可能短的时间内使用
+- 选项:
+    - -w file: 
+    - -c NUM: 限制要抓取的网络包的个数
+    - -A: 以 ASCII 格式显示网络包内容，不指定时只显示头部信息
+    - -i: 指定网络接口卡   
+    - -nn: 禁止 IP 地址反解
+    - -v: 显示数据包详细细节
+    - -e: 显示链路层报头
+    - -x: 十六进制地址转换
+    - -ttt: 时间戳显示为数据包间的时间差
+    - -tttt: 时间戳显示为第一个数据包以来的时间差
+
+![tcpdump](/images/linux_pf/tcpdump.png)
+
+```bash
+# 1. 将 eth4 接口的数据写入文件
+tcpdump -i etch4 -w /tmp/out.tcpdump
+
+# 2. 从导出的文件中检查数据包
+tcpdump -nr /tmp/out.tcpdump
+
+# 3. 监听 etho0 tcp 80 端口的网络包
+tcpdump -i eth0 -n tcp port 80
+
+# 4. 监听DNS解析
+# -nn ，表示不解析抓包中的域名（即不反向解析）、协议以及端口号。
+# udp port 53 ，表示只显示 UDP 协议的端口号 53
+# host 35.190.27.188 ，表示只显示 IP 地址（包括源地址和目的地址）为 35.190.27.188 的包。
+# 中间的“ or ”，表示或的关系
+tcpdump -nn udp port 53 or host 35.190.27.188
+```
+
+### 2.6 Wireshark
+Wireshark 也是最流行的一个网络分析工具，它最大的好处就是提供了跨平台的图形界面。跟 tcpdump 类似，Wireshark 也提供了强大的过滤规则表达式，同时，还内置了一系列的汇总分析工具。在实际分析网络性能时，先用 tcpdump 抓包，后用 Wireshark 分析，是一种常用的方法。
+
+```bash
+$ tcpdump -nn udp port 53 or host 35.190.27.188 -w ping.pcap
+$ scp host-ip/path/ping.pcap .
+# 再用 Wireshark 打开
+```
+
+
+### 2.7 ethtool
+`ethtool DEVICENAME`
+- 作用: 查看网络接口的各种信息
+
+```bash
+ethtool enp0s3
+Settings for enp0s3:
+        Supported ports: [ TP ]
+        Supported link modes:   10baseT/Half 10baseT/Full
+                                100baseT/Half 100baseT/Full
+                                1000baseT/Full
+        Supported pause frame use: No
+        Supports auto-negotiation: Yes
+        Supported FEC modes: Not reported
+        Advertised link modes:  10baseT/Half 10baseT/Full
+                                100baseT/Half 100baseT/Full
+                                1000baseT/Full
+        Advertised pause frame use: No
+        Advertised auto-negotiation: Yes
+        Advertised FEC modes: Not reported
+        Speed: 1000Mb/s                       # 网络接口的带宽
+        Duplex: Full
+        Port: Twisted Pair
+        PHYAD: 0
+        Transceiver: internal
+        Auto-negotiation: on
+        MDI-X: off (auto)
+        Supports Wake-on: umbg
+        Wake-on: d
+        Current message level: 0x00000007 (7)
+                               drv probe link
+        Link detected: yes
+```
+
+### 2.8 iftop
+
+### 2.9 nethogs
+
+
+
+## 3. 网络基准测试
+我们将从下往上，了解不同协议层的网络性能测试方法，包括:
+1. 转发性能
+2. TCP/UDP 性能
+3. HTTP 性能
+4. 应用负载性能
+
+### 3.1 转发性能
+网络接口层和网络层，主要负责网络包的封装、寻址、路由以及发送和接收。在这两个网络协议层中，每秒可处理的网络包数 PPS，就是最重要的性能指标，特别是 64B 小包的处理能力。
+
+
+hping3 和 pktgen 是网络性能测试的常用工具。
+
+#### hping3
+hping3
+- 作用: 
+    - 可以构造 TCP/IP 协议数据包的工具
+    - 可以对系统进行安全审计、防火墙测试等
+- 参数:
+    -  -S: 表示设置TCP协议的SYN（同步序列号），
+    -  -p: 表示目的端口为80
+    -  -i u100: 表示每隔100微秒发送一个网络帧
+    - --flood: 尽可能按最快速度发,不用回应
+    - --rand-source: 使用随机源地址
+
+```bash
+# 1. 通过 TCP 测量网络延时
+# -c表示发送3次请求，-S表示设置TCP SYN，-p表示端口号为80
+$ hping3 -c 3 -S -p 80 baidu.com
+
+# --tcp表示使用TCP协议，-p表示端口号，-n表示不对结果中的IP地址执行反向域名解析
+$ traceroute --tcp -p 80 -n baidu.com
+```
+
+#### pktgen
+pktgen 是一个内核线程，需要加载 pktgen 内核模块，并通过 /proc 文件系统来交互。
+
+```bash
+$ modprobe pktgen
+$ ps -ef | grep pktgen | grep -v grep
+root     26384     2  0 06:17 ?        00:00:00 [kpktgend_0]
+root     26385     2  0 06:17 ?        00:00:00 [kpktgend_1]
+$ ls /proc/net/pktgen/
+kpktgend_0  kpktgend_1  pgctrl
+```
+
+pktgen 在每个 CPU 上启动一个内核线程，并可以通过 /proc/net/pktgen 下面的同名文件，跟这些线程交互；而 pgctrl 则主要用来控制这次测试的开启和停止。
+
+在使用 pktgen 测试网络性能时，需要先给每个内核线程 kpktgend_X 以及测试网卡，配置 pktgen 选项，然后再通过 pgctrl 启动测试。
+
+### 3.2 TCP/UDP 性能
+传输层的 TCP 和 UDP，它们主要负责网络传输。对它们而言，吞吐量（BPS）、连接数以及延迟，就是最重要的性能指标。可以用 iperf 或 netperf ，来测试传输层的性能。
+
+不过要注意，网络包的大小，会直接影响这些指标的值。所以，通常，需要测试一系列不同大小网络包的性能。
+
+ #### iperf
+```bash
+# 1. 安装
+yum install iperf3
+
+# 2. 在目标机器上启动 iperf 服务端：
+# -s表示启动服务端，-i表示汇报间隔，-p表示监听端口
+$ iperf3 -s -i 1 -p 10000
+
+# 3. 运行客户端，执行测试
+# -c表示启动客户端，192.168.0.30为目标服务器的IP
+# -b表示目标带宽(单位是bits/s)
+# -t表示测试时间
+# -P表示并发数，-p表示目标服务器监听端口
+$ iperf3 -c 192.168.0.30 -b 1G -t 15 -P 2 -p 10000
+
+# 4. 服务器端输出的测试报告
+# 包括测试时间、数据传输量以及带宽等
+[ ID] Interval           Transfer     Bandwidth
+...
+[SUM]   0.00-15.04  sec  0.00 Bytes  0.00 bits/sec                  sender
+[SUM]   0.00-15.04  sec  1.51 GBytes   860 Mbits/sec                  receiver
+```
+
+### 3.3 HTTP 性能
+应用层，最需要关注的是吞吐量（BPS）、每秒请求数以及延迟等指标。ab、webbench 是常用的 HTTP 压力测试工具。
+
+
+#### ab
+```bash
+$ yum install -y httpd-tools
+
+# -c表示并发请求数为5000，
+# -n表示总的请求数为10万
+# -r表示套接字接收错误时仍然继续执行，
+# -s表示设置每个请求的超时时间为2s
+$ ab -c 5000 -n 100000 -r -s 2 http://192.168.0.30/
+
+# -c表示并发请求数为1000，-n表示总的请求数为10000
+$ ab -c 1000 -n 10000 http://192.168.0.30/
+...
+Server Software:        nginx/1.15.8
+Server Hostname:        192.168.0.30
+Server Port:            80
+
+...
+
+Requests per second:    1078.54 [#/sec] (mean)
+# 平均延迟，包括了线程运行的调度时间和网络请求响应时间
+# 所有并发用户(这里是100)都请求一次的平均时间
+Time per request:       927.183 [ms] (mean)
+# 单个用户请求一次的平均时间
+Time per request:       0.927 [ms] (mean, across all concurrent requests)
+# 吞吐量
+Transfer rate:          890.00 [Kbytes/sec] received
+
+Connection Times (ms)
+# 建立连接、请求、等待以及汇总的时间
+              min  mean[+/-sd] median   max
+Connect:        0   27 152.1      1    1038
+Processing:     9  207 843.0     22    9242
+Waiting:        8  207 843.0     22    9242
+Total:         15  233 857.7     23    9268
+
+Percentage of the requests served within a certain time (ms)
+  50%     23
+  66%     24
+  75%     24
+  80%     26
+  90%    274
+  95%   1195
+  98%   2335
+  99%   4663
+ 100%   9268 (longest request)
+```
+
+### 3.4 应用负载性能
+ iperf 或者 ab 等测试工具得到某个页面的访问性能，但是真实的用户请求时带负载的。为了得到应用程序的实际性能，就要求性能工具本身可以模拟用户的请求负载。我们还可以用 wrk、TCPCopy、Jmeter 或者 LoadRunner 等实现这个目标。
+
+#### 
+`wrk <选项> <被测HTTP服务的URL>`                            
+- Options:                                            
+    - -c, --connections `<N>`  跟服务器建立并保持的TCP连接数量  
+    - -d, --duration    `<T>`  压测时间           
+    - -t, --threads     `<N>`  使用多少个线程进行压测   
+    - -s, --script      `<S>`  指定Lua脚本路径       
+    - -H, --header      `<H>`  为每一个HTTP请求添加HTTP头      
+    - --latency          在压测结束后，打印延迟统计信息   
+    - --timeout     <T>  超时时间     
+    - -v, --version          打印正在使用的wrk的详细版本信息
+- 说明:                                                      
+    - `<N>`代表数字参数，支持国际单位 (1k, 1M, 1G)
+    - `<T>`代表时间参数，支持时间单位 (2s, 2m, 2h)
+
+
+wrk 工具本身不提供 yum 或 apt 的安装方法，需要通过源码编译来安装。
+
+```bash
+yum groupinstall 'Development Tools'
+yum install -y openssl-devel git 
+git clone https://github.com/wg/wrk.git wrk
+cd wrk
+make
+cp wrk /usr/local/bin/
+```
+
+下面是  wrk 执行类似 ab 测试的示例:
+```bash
+# -c表示并发连接数1000，-t表示线程数为2
+$ wrk -c 1000 -t 2 http://192.168.0.30/
+Running 10s test @ http://192.168.0.30/
+  2 threads and 1000 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    65.83ms  174.06ms   1.99s    95.85%  # 延迟
+    Req/Sec     4.87k   628.73     6.78k    69.00%
+  96954 requests in 10.06s, 78.59MB read
+  Socket errors: connect 0, read 0, write 0, timeout 179
+Requests/sec:   9641.31     # 每秒请求数
+Transfer/sec:      7.82MB   # 吞吐量
+```
+
+wrk 最大的优势，是其内置的 LuaJIT，可以根据实际需求，生成所需的请求负载，或者自定义响应的处理方法。wrk 在调用 Lua 脚本时，可以将 HTTP 请求分为三个阶段，即 setup、running、done，如下图所示：
+
+![wrk](/images/linux_pf/wrk.png)
+
+```bash
+# -s 指定 lua 脚本
+$ wrk -c 1000 -t 2 -s auth.lua http://192.168.0.30/
+```
+
+### 3.5 DNS 解析
+nslookup 和 dig 是DNS 解析的常用工具
+```bash
+# 执行 dns 解析
+# -debug 开启 nslookup 的调试输出
+nslookup -debug time.geekbang.org
+
+# 反向解析
+nslookup -type=PTR 35.190.27.188 8.8.8.8
+
+# +trace表示开启跟踪查询
+# +nodnssec表示禁止DNS安全扩展
+$ dig +trace +nodnssec time.geekbang.org
+
+# -n 选项禁止名称解析
+$ ping -n -c3 geektime.org
+```
+
+#### DNS 缓存
+DNS 通常使用UDP 协议，受网络抖动影响比较大。我们可以使用DNS 缓存来加速DNS解析。dnsmasq 是最常用的 DNS 缓存服务之一，还经常作为 DHCP 服务来使用。
+
+```bash
+# 启动 dnsmasq 服务
+systemctl start dnsmasq
+
+# 修改 /etc/resolv.conf，将 DNS 服务器改为 dnsmasq 的监听地址
+echo nameserver 127.0.0.1 > /etc/resolv.conf
+```
+
+## 4. 网络内核优化
+### 4.1 TCP 优化
+![tcp_core](/images/linux_pf/tcp_core.png)
+
+#### SYN FLOOD
+为了缓解 SYN FLOOD 等，利用 TCP 协议特点进行攻击而引发的性能问题，你可以考虑优化与 SYN 状态相关的内核选项:
+1. 增大 TCP 半连接的最大数量 net.ipv4.tcp_max_syn_backlog ，或者开启 TCP SYN Cookies net.ipv4.tcp_syncookies ，来绕开半连接数量限制的问题（注意，这两个选项不可同时使用）。
+2. 减少 SYN_RECV 状态的连接重传 SYN+ACK 包的次数 net.ipv4.tcp_synack_retries
+
+```bash
+# 1. 查看和就该积压队列的容量
+# 查看积压队列的容量
+sysctl net.ipv4.tcp_max_syn_backlog
+
+# 修改积压队列的容量
+sysctl -w net.ipv4.tcp_max_syn_backlog=1024
+net.ipv4.tcp_max_syn_backlog = 1024
+
+# 2. 查看和修改建立连接时，发送 SYN_RECV 失败重试次数
+sysctl -w net.ipv4.tcp_synack_retries=1
+net.ipv4.tcp_synack_retries = 1 
+
+# 3. 开启 TCP SYN cookie
+sysctl -w net.ipv4.tcp_syncookies=1
+net.ipv4.tcp_syncookies = 1
+```
+
+#### 并发请求高
+在请求数比较大的场景下，会有大量处于 TIME_WAIT 状态的连接(短连接的方式，http 会成为主动断开连接的一方)，它们会占用大量内存和端口资源。这时，我们可以优化与 TIME_WAIT 状态相关的内核选项:
+1. 增大处于 TIME_WAIT 状态的连接数量 net.ipv4.tcp_max_tw_buckets 
+2. 增大连接跟踪表的大小 net.netfilter.nf_conntrack_max。
+2. 减小 net.ipv4.tcp_fin_timeout 和 net.netfilter.nf_conntrack_tcp_timeout_time_wait ，让系统尽快释放它们所占用的资源。
+3. 开启端口复用 net.ipv4.tcp_tw_reuse。这样，被 TIME_WAIT 状态占用的端口，还能用到新建的连接中。
+4. 增大本地端口的范围 net.ipv4.ip_local_port_range 。这样就可以支持更多连接，提高整体的并发能力。
+5. 增加最大文件描述符的数量。你可以使用 fs.nr_open 和 fs.file-max ，分别增大进程和系统的最大文件描述符数；或在应用程序的 systemd 配置文件中，配置 LimitNOFILE ，设置应用程序的最大文件描述符数。
+
+
+#### 长连接
+在长连接的场景中，通常使用 Keepalive 来检测 TCP 连接的状态，以便对端连接断开后，可以自动回收。但是，系统默认的 Keepalive 探测间隔和重试次数，一般都无法满足应用程序的性能要求。所以，这时候你需要优化与 Keepalive 相关的内核选项，比如：
+1. 缩短最后一次数据包到 Keepalive 探测包的间隔时间 net.ipv4.tcp_keepalive_time；
+2. 缩短发送 Keepalive 探测包的间隔时间 net.ipv4.tcp_keepalive_intvl；
+3. 减少 Keepalive 探测失败后，一直到通知应用程序前的重试次数 net.ipv4.tcp_keepalive_probes。
+
+### 4.2 Socket 缓冲区
+为了提高网络的吞吐量，你通常需要调整这些缓冲区的大小，可调内核参数和参考值如下图所示:
+![socket_buffer_core](/images/linux_pf/socket_buffer_core.png)
+
+需要注意的是:
+- tcp_rmem 和 tcp_wmem 的三个数值分别是 min，default，max，系统会根据这些设置，自动调整 TCP 接收 / 发送缓冲区的大小。
+- udp_mem 的三个数值分别是 min，pressure，max，系统会根据这些设置，自动调整 UDP 发送缓冲区的大小。
+- 表格中的数值只提供参考价值，具体应该设置多少，还需要你根据实际的网络状况来确定。比如，发送缓冲区大小，理想数值是吞吐量 * 延迟，这样才可以达到最大网络利用率。
+
+### 4.3 网络层
+网络层，负责网络包的封装、寻址和路由，包括 IP、ICMP 等常见协议。在网络层，最主要的优化，其实就是对路由、 IP 分片以及 ICMP 等进行调优。
+#### 路由和转发
+从路由和转发的角度出发，可以调整下面的内核选项:
+1. 在需要转发的服务器中，比如用作 NAT 网关的服务器或者使用 Docker 容器时，开启 IP 转发，即设置 net.ipv4.ip_forward = 1。
+2. 调整数据包的生存周期 TTL，比如设置 net.ipv4.ip_default_ttl = 64。注意，增大该值会降低系统性能。
+3. 开启数据包的反向地址校验，比如设置 net.ipv4.conf.eth0.rp_filter = 1。这样可以防止 IP 欺骗，并减少伪造 IP 带来的 DDoS 问题。
+
+#### MTU
+从分片的角度出发，最主要的是调整 MTU（Maximum Transmission Unit）的大小。在使用 VXLAN、GRE 等叠加网络技术时，要注意，网络叠加会使原来的网络包变大，导致 MTU 也需要调整。
+
+比如，就以 VXLAN 为例，它在原来报文的基础上，增加了 14B 的以太网头部、 8B 的 VXLAN 头部、8B 的 UDP 头部以及 20B 的 IP 头部。换句话说，每个包比原来增大了 50B。所以，我们就需要把交换机、路由器等的 MTU，增大到 1550， 或者把 VXLAN 封包前（比如虚拟化环境中的虚拟网卡）的 MTU 减小为 1450。
+
+现在很多网络设备都支持巨帧，如果是这种环境，你还可以把 MTU 调大为 9000，以提高网络吞吐量。
+
+#### ICMP
+为了避免 ICMP 主机探测、ICMP Flood 等各种网络问题，你可以通过内核选项，来限制 ICMP 的行为。
+1. 可以禁止 ICMP 协议，即设置 net.ipv4.icmp_echo_ignore_all = 1。这样，外部主机就无法通过 ICMP 来探测主机
+2. 可以禁止广播 ICMP，即设置 net.ipv4.icmp_echo_ignore_broadcasts = 1。
+
+### 4.4 链路层
+链路层负责网络包在物理网络中的传输，比如 MAC 寻址、错误侦测以及通过网卡传输网络帧等。自然，链路层的优化，也是围绕这些基本功能进行的。接下来，我们从不同的几个方面分别来看。
+
+#### 网络中断负载
+网络中断会消耗大量的CPU，需要在多个CPU间平衡负载：
+1. 你可以为网卡硬中断配置 CPU 亲和性（smp_affinity），或者开启 irqbalance 服务。
+2. 再如，你可以开启 RPS（Receive Packet Steering）和 RFS（Receive Flow Steering），将应用程序和软中断的处理，调度到相同 CPU 上，这样就可以增加 CPU 缓存命中率，减少网络延迟。
+
+#### 网络功能卸载
+现在的网卡都有很丰富的功能，原来在内核中通过软件处理的功能，可以卸载到网卡中，通过硬件来执行。
+1. TSO（TCP Segmentation Offload）和 UFO（UDP Fragmentation Offload）：在 TCP/UDP 协议中直接发送大包；而 TCP 包的分段（按照 MSS 分段）和 UDP 的分片（按照 MTU 分片）功能，由网卡来完成 。
+2. GSO（Generic Segmentation Offload）：在网卡不支持 TSO/UFO 时，将 TCP/UDP 包的分段，延迟到进入网卡前再执行。这样，不仅可以减少 CPU 的消耗，还可以在发生丢包时只重传分段后的包。
+3. LRO（Large Receive Offload）：在接收 TCP 分段包时，由网卡将其组装合并后，再交给上层网络处理。不过要注意，在需要 IP 转发的情况下，不能开启 LRO，因为如果多个包的头部信息不一致，LRO 合并会导致网络包的校验错误。
+4. GRO（Generic Receive Offload）：GRO 修复了 LRO 的缺陷，并且更为通用，同时支持 TCP 和 UDP。
+5. RSS（Receive Side Scaling）：也称为多队列接收，它基于硬件的多个接收队列，来分配网络接收进程，这样可以让多个 CPU 来处理接收到的网络包。
+6. VXLAN 卸载：也就是让网卡来完成 VXLAN 的组包功能。
+
+#### 网络接口卡
+最后，对于网络接口本身，也有很多方法，可以优化网络的吞吐量。
+1. 比如，你可以开启网络接口的多队列功能。这样，每个队列就可以用不同的中断号，调度到不同 CPU 上执行，从而提升网络的吞吐量。
+2. 再如，你可以增大网络接口的缓冲区大小，以及队列长度等，提升网络传输的吞吐量（注意，这可能导致延迟增大）。
+3. 你还可以使用 Traffic Control 工具，为不同网络流量配置 QoS。
+
+#### DPDK 和 XDP
+使用 DPDK 技术，跳过内核协议栈，直接由用户态进程用轮询的方式，来处理网络请求。同时，再结合大页、CPU 绑定、内存对齐、流水线并发等多种机制，优化网络包的处理效率。
+
+使用内核自带的 XDP 技术，在网络包进入内核协议栈前，就对其进行处理，这样也可以实现很好的性能。

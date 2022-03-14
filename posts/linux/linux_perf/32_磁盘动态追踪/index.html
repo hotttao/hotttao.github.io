@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>4.12 磁盘动态追踪 - LoveIt</title><meta name="Description" content="4.12 磁盘动态追踪"><meta property="og:title" content="4.12 磁盘动态追踪" />
+<meta property="og:description" content="4.12 磁盘动态追踪" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-27T22:10:00+08:00" />
+<meta property="article:modified_time" content="2020-01-27T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="4.12 磁盘动态追踪"/>
+<meta name="twitter:description" content="4.12 磁盘动态追踪"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/31_%E7%A3%81%E7%9B%98%E7%9B%91%E6%B5%8B%E5%91%BD%E4%BB%A4/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%BD%91%E7%BB%9C/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "4.12 磁盘动态追踪",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  1070 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA\/","datePublished": "2020-01-27T22:10:00+08:00","dateModified": "2020-01-27T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "4.12 磁盘动态追踪"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">4.12 磁盘动态追踪</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-27">2020-01-27</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1070 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-systemtab-磁盘追踪">1. Systemtab 磁盘追踪</a>
+      <ul>
+        <li><a href="#11-dtrace">1.1 Dtrace</a>
+          <ul>
+            <li><a href="#io-provider">io provider</a></li>
+          </ul>
+        </li>
+        <li><a href="#12-systemtap">1.2 Systemtap</a>
+          <ul>
+            <li><a href="#ioblockrequest">ioblock.request</a></li>
+            <li><a href="#ioblockend">ioblock.end</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-磁盘跟踪示例">2. 磁盘跟踪示例</a>
+      <ul>
+        <li><a href="#21-事件跟踪">2.1 事件跟踪</a></li>
+        <li><a href="#22-按照应用程序名汇总磁盘-io-大小">2.2 按照应用程序名汇总磁盘 I/O 大小</a></li>
+        <li><a href="#23-io-寻道汇总">2.3 I/O 寻道汇总</a>
+          <ul>
+            <li><a href="#dtrace-脚本">dtrace 脚本</a></li>
+          </ul>
+        </li>
+        <li><a href="#stap-脚本">stap 脚本</a></li>
+        <li><a href="#23-io-延时汇总">2.3 I/O 延时汇总</a></li>
+      </ul>
+    </li>
+    <li><a href="#3高级工具">3.高级工具</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>本节我们来介绍磁盘的动态追踪技术</p>
+<!-- more -->
+<h2 id="1-systemtab-磁盘追踪">1. Systemtab 磁盘追踪</h2>
+<p>Dtrace/Systemtab 能从内核角度检查磁盘 I/O 时间，包括:</p>
+<ol>
+<li>块设备接口 I/O</li>
+<li>I/O 调度器事件</li>
+<li>目标驱动 I/O</li>
+<li>设备驱动 I/O</li>
+</ol>
+<h3 id="11-dtrace">1.1 Dtrace</h3>
+<p>下面列出了用来跟踪磁盘 I/O 的Dtrace provider</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">层次</th>
+<th style="text-align:left">稳定 provider</th>
+<th style="text-align:left">不稳定 provider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">应用程序</td>
+<td style="text-align:left">取决于应用</td>
+<td style="text-align:left">pid</td>
+</tr>
+<tr>
+<td style="text-align:left">系统库</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">pid</td>
+</tr>
+<tr>
+<td style="text-align:left">系统调用</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">syscall</td>
+</tr>
+<tr>
+<td style="text-align:left">VFS</td>
+<td style="text-align:left">fsinfo</td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">文件系统</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">块设备接口</td>
+<td style="text-align:left">io</td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">目标驱动</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">fbt</td>
+</tr>
+<tr>
+<td style="text-align:left">设备驱动</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">fbt</td>
+</tr>
+</tbody>
+</table>
+<h4 id="io-provider">io provider</h4>
+<p>io provider 使得外界可以从块设备几口的角度进行观察，以支持工作负载特征归纳和延时分析。其提供了如下的探测器:</p>
+<ol>
+<li>io:::start: 一个I/O请求被发到设备上</li>
+<li>io::🔚 一个 I/O请求在设备上完成(完成中断)</li>
+<li>io:::wait-start: 一个线程开始等待一个 I/O 请求</li>
+<li>io:::wait-down: 一个线程等完了一个 I/O 请求</li>
+</ol>
+<p>探测器有一些稳定的参数提供 I/O 的详细信息，如下所示:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">语法</th>
+<th style="text-align:left">作用</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">args[0]-&gt;b_count</td>
+<td style="text-align:left">I/O 大小(字节数)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;b_blkno</td>
+<td style="text-align:left">设备 I/O 偏移量(块)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;b_flags</td>
+<td style="text-align:left">位元标志位，包括表示读I/O的B_READ</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;b_error</td>
+<td style="text-align:left">错误状态</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;dev_statname</td>
+<td style="text-align:left">设备实例名+实例/小编号</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;dev_pathname</td>
+<td style="text-align:left">设备路径名</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;fi_pathname</td>
+<td style="text-align:left">文件系统名</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]-&gt;fi_fs</td>
+<td style="text-align:left">文件系统类型</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>I/O方向(读写) 可以使用表达式 <code>args[0]-&gt;b_flags &amp; B_READ ? &quot;read&quot;: &quot;write&quot;</code></p>
+<h3 id="12-systemtap">1.2 Systemtap</h3>
+<p>Systemtap 提供了用于跟踪磁盘 I/O 的 ioblock.stp tapset，其包含了下面这些探针:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">DTrace</th>
+<th style="text-align:left">Systemtap</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">io:::start</td>
+<td style="text-align:left">ioblock.request</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">io:::done</td>
+<td style="text-align:left">ioblock.end</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="ioblockrequest">ioblock.request</h4>
+<p>ioblock.request 内置了下面的变量来提供 I/O 的详细信息。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">变量</th>
+<th style="text-align:left">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">name</td>
+<td style="text-align:left">probe point 名称</td>
+</tr>
+<tr>
+<td style="text-align:left">devname</td>
+<td style="text-align:left">设备名称</td>
+</tr>
+<tr>
+<td style="text-align:left">ino</td>
+<td style="text-align:left">inode number of the mapped file</td>
+</tr>
+<tr>
+<td style="text-align:left">sector</td>
+<td style="text-align:left">beginning sector for the entire bio</td>
+</tr>
+<tr>
+<td style="text-align:left">flags</td>
+<td style="text-align:left">see below<br>BIO_UPTODATE    0       ok after I/O completion<br>BIO_RW_BLOCK    1       RW_AHEAD set, and read/write would block<br>BIO_EOF         2       out-out-bounds error<br>BIO_SEG_VALID   3       nr_hw_seg valid<br> BIO_CLONED      4       doesn&rsquo;t own data<br>BIO_BOUNCED     5       bio is a bounce bio<br>BIO_USER_MAPPED 6       contains user pages<br>BIO_EOPNOTSUPP  7       not supported</td>
+</tr>
+<tr>
+<td style="text-align:left">rw</td>
+<td style="text-align:left">binary trace for read/write request</td>
+</tr>
+<tr>
+<td style="text-align:left">vcnt</td>
+<td style="text-align:left">bio vector count which represents number of array element (page, offset, length)<br> which make up this I/O request</td>
+</tr>
+<tr>
+<td style="text-align:left">idx</td>
+<td style="text-align:left">offset into the bio vector array</td>
+</tr>
+<tr>
+<td style="text-align:left">phys_segments</td>
+<td style="text-align:left">number of segments in this bio after physical address coalescing is performed</td>
+</tr>
+<tr>
+<td style="text-align:left">hw_segments</td>
+<td style="text-align:left">number of segments after physical and DMA remapping hardware <br>coalescing is performed</td>
+</tr>
+<tr>
+<td style="text-align:left">size</td>
+<td style="text-align:left">total size in bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">bdev</td>
+<td style="text-align:left">target block device</td>
+</tr>
+<tr>
+<td style="text-align:left">bdev_contains</td>
+<td style="text-align:left">points to the device object which contains the partition <br>(when bio structure represents a partition)</td>
+</tr>
+<tr>
+<td style="text-align:left">p_start_sect</td>
+<td style="text-align:left">points to the start sector of the partition structure of the device</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ioblockend">ioblock.end</h4>
+<p>除了上面这些变量，ioblock.end 还提供了下面这些变量来提供I/O的结果</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">变量</th>
+<th style="text-align:left">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">bytes_done</td>
+<td style="text-align:left">number of bytes transferred</td>
+</tr>
+<tr>
+<td style="text-align:left">error</td>
+<td style="text-align:left">0 on succes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-磁盘跟踪示例">2. 磁盘跟踪示例</h2>
+<p>下面的 Dtrace 脚本位于 <a href="https://github.com/opendtrace/toolkit/blob/master/Disk/seeksize.d" target="_blank" rel="noopener noreffer">https://github.com/opendtrace/toolkit/blob/master/Disk/seeksize.d</a></p>
+<h3 id="21-事件跟踪">2.1 事件跟踪</h3>
+<p>以下跟踪的是每一个磁盘I/O请求</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace:</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;io:::start {printf(&#34;%d %s %d&#34;, pid, execname, args[0]-&gt;b_bcount);}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;probe ioblock.request {printf(&#34;%d %s %d\n&#34;, pid(), execname(), size)}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-按照应用程序名汇总磁盘-io-大小">2.2 按照应用程序名汇总磁盘 I/O 大小</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace:</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;io:::start {@[execname]=quantize(arg[0]-&gt;b_bcount)}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;global s;probe ioblock.request {s[execname()] &lt;&lt;&lt; size}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                     probe end {foreach (k in s){printf(&#34;%s\n&#34;, k);print(@hist_log(s[k]))};}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="23-io-寻道汇总">2.3 I/O 寻道汇总</h3>
+<p>下面的脚本跟踪同一应用程序，同一设备的连续 I/O 之间寻道距离，按照进程输出直方图。</p>
+<h4 id="dtrace-脚本">dtrace 脚本</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/usr/sbin/dtrace -s
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>dtrace:::BEGIN
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">	printf<span class="o">(</span><span class="s2">&#34;Tracing... Hit Ctrl-C to end.\n&#34;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">self int last<span class="o">[</span>dev_t<span class="o">]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/*
+</span></span><span class="line"><span class="cl"> * Process io start
+</span></span><span class="line"><span class="cl"> */
+</span></span><span class="line"><span class="cl">io:genunix::start
+</span></span><span class="line"><span class="cl">/self-&gt;last<span class="o">[</span>args<span class="o">[</span>0<span class="o">]</span>-&gt;b_edev<span class="o">]</span> !<span class="o">=</span> 0/
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">	/* calculate seek distance */
+</span></span><span class="line"><span class="cl">	this-&gt;last <span class="o">=</span> self-&gt;last<span class="o">[</span>args<span class="o">[</span>0<span class="o">]</span>-&gt;b_edev<span class="o">]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	this-&gt;dist <span class="o">=</span> <span class="o">(</span>int<span class="o">)(</span>args<span class="o">[</span>0<span class="o">]</span>-&gt;b_blkno - this-&gt;last<span class="o">)</span> &gt; <span class="m">0</span> ?
+</span></span><span class="line"><span class="cl">	    args<span class="o">[</span>0<span class="o">]</span>-&gt;b_blkno - this-&gt;last : this-&gt;last - args<span class="o">[</span>0<span class="o">]</span>-&gt;b_blkno<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	/* store details */
+</span></span><span class="line"><span class="cl">	@Size<span class="o">[</span>pid, curpsinfo-&gt;pr_psargs<span class="o">]</span> <span class="o">=</span> quantize<span class="o">(</span>this-&gt;dist<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">io:genunix::start
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">	/* save last position of disk head */
+</span></span><span class="line"><span class="cl">	self-&gt;last<span class="o">[</span>args<span class="o">[</span>0<span class="o">]</span>-&gt;b_edev<span class="o">]</span> <span class="o">=</span> args<span class="o">[</span>0<span class="o">]</span>-&gt;b_blkno +
+</span></span><span class="line"><span class="cl">	    args<span class="o">[</span>0<span class="o">]</span>-&gt;b_bcount / 512<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/*
+</span></span><span class="line"><span class="cl"> * Print final report
+</span></span><span class="line"><span class="cl"> */
+</span></span><span class="line"><span class="cl">dtrace:::END
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">	printf<span class="o">(</span><span class="s2">&#34;\n%8s  %s\n&#34;</span>, <span class="s2">&#34;PID&#34;</span>, <span class="s2">&#34;CMD&#34;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">	printa<span class="o">(</span><span class="s2">&#34;%8d  %S\n%@d\n&#34;</span>, @Size<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="stap-脚本">stap 脚本</h3>
+<p>未完成</p>
+<h3 id="23-io-延时汇总">2.3 I/O 延时汇总</h3>
+<p>下面的脚本跟踪块I/O开始和结束的时间</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;io:::start 
+</span></span></span><span class="line"><span class="cl"><span class="s1">             {start[arg0] = timestamp;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">             io:::done /start[arg0]/ 
+</span></span></span><span class="line"><span class="cl"><span class="s1">             {@[&#34;block I/O(ns)&#34;] = quantize(timestamp - start[arg0]);start[arg0] = 0}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;global t,s; 
+</span></span></span><span class="line"><span class="cl"><span class="s1">            probe ioblock.request 
+</span></span></span><span class="line"><span class="cl"><span class="s1">            {t[$bio] = gettimeofday_ns();}
+</span></span></span><span class="line"><span class="cl"><span class="s1">            probe ioblock.end
+</span></span></span><span class="line"><span class="cl"><span class="s1">            {if (t[$bio])
+</span></span></span><span class="line"><span class="cl"><span class="s1">                {s &lt;&lt;&lt; gettimeofday_ns() - t[$bio];delete t[$bio];}
+</span></span></span><span class="line"><span class="cl"><span class="s1">            }
+</span></span></span><span class="line"><span class="cl"><span class="s1">           probe end{print(@hist_log(s))}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3高级工具">3.高级工具</h2>
+<p>磁盘常用的高级跟踪脚本:</p>
+<ol>
+<li>DTrace: <a href="https://github.com/opendtrace/toolkit" target="_blank" rel="noopener noreffer">https://github.com/opendtrace/toolkit</a></li>
+<li>Systemp: <a href="https://sourceware.org/systemtap/SystemTap_Beginners_Guide/mainsect-disk.html" target="_blank" rel="noopener noreffer">https://sourceware.org/systemtap/SystemTap_Beginners_Guide/mainsect-disk.html</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-01-27</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.12 磁盘动态追踪" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.12 磁盘动态追踪"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.12 磁盘动态追踪"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/32_%E7%A3%81%E7%9B%98%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.12 磁盘动态追踪" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/31_%E7%A3%81%E7%9B%98%E7%9B%91%E6%B5%8B%E5%91%BD%E4%BB%A4/" class="prev" rel="prev" title="4.11 磁盘监测命令"><i class="fas fa-angle-left fa-fw"></i>4.11 磁盘监测命令</a>
+            <a href="/posts/linux/linux_perf/32_%E7%BD%91%E7%BB%9C/" class="next" rel="next" title="4.13 网络">4.13 网络<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-27T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"4.12 磁盘动态追踪"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

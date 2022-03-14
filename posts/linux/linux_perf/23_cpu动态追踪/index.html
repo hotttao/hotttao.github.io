@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>4.3 CPU 动态追踪 - LoveIt</title><meta name="Description" content="4.3 CPU 动态追踪"><meta property="og:title" content="4.3 CPU 动态追踪" />
+<meta property="og:description" content="4.3 CPU 动态追踪" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-18T22:10:00+08:00" />
+<meta property="article:modified_time" content="2020-01-18T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="4.3 CPU 动态追踪"/>
+<meta name="twitter:description" content="4.3 CPU 动态追踪"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/22_cpu%E7%9B%91%E6%B5%8B%E5%91%BD%E4%BB%A4/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/24.%E5%86%85%E5%AD%98/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "4.3 CPU 动态追踪",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  1141 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA\/","datePublished": "2020-01-18T22:10:00+08:00","dateModified": "2020-01-18T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "4.3 CPU 动态追踪"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">4.3 CPU 动态追踪</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-18">2020-01-18</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1141 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-systemtap-进行-cpu-分析">1. Systemtap 进行 CPU 分析</a>
+      <ul>
+        <li><a href="#11-内核剖析">1.1 内核剖析</a>
+          <ul>
+            <li><a href="#dtrace">Dtrace</a></li>
+            <li><a href="#systemtap">Systemtap</a></li>
+          </ul>
+        </li>
+        <li><a href="#2-用户剖析">2. 用户剖析</a>
+          <ul>
+            <li><a href="#dtrace-1">Dtrace</a></li>
+            <li><a href="#systemtap-1">Systemtap</a></li>
+          </ul>
+        </li>
+        <li><a href="#3-函数跟踪">3. 函数跟踪</a></li>
+        <li><a href="#4-cpu-交叉调用">4. CPU 交叉调用</a></li>
+        <li><a href="#5-中断">5. 中断</a></li>
+        <li><a href="#6-调度器跟踪">6. 调度器跟踪</a>
+          <ul>
+            <li><a href="#dtrace-2">Dtrace</a>
+              <ul>
+                <li><a href="#systemtap-2">Systemtap</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>本节我们来介绍 CPU 动态追踪技术，包括 perf，systemtap，dtrace</p>
+<!-- more -->
+<h2 id="1-systemtap-进行-cpu-分析">1. Systemtap 进行 CPU 分析</h2>
+<p>Systemtap 可以用来剖析用户级和内核级的 CPU 用量，也能跟踪</p>
+<ol>
+<li>函数执行</li>
+<li>CPU 交叉调用</li>
+<li>中断</li>
+<li>内核调度器</li>
+</ol>
+<p>这些功能支持负载特征分析、剖析、下钻分析和延时分析。</p>
+<h3 id="11-内核剖析">1.1 内核剖析</h3>
+<h4 id="dtrace">Dtrace</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># solaris</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 以 997Hz 频率取样内核栈</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr0/ { @[stack()] = count()}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 以 997Hz 频率取样内核栈，仅输出最频繁的 10 个</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr0/ { @[stack()] = count()} END { trunc(@, 10); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 以 997Hz 频率取样内核栈，每个栈只取 5 个帧</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr0/ { @[stack(5)] = count()}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 4. 以 997Hz 频率取样在 CPU 上运行的函数</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /arg0/ @[func(arg0)] = count()&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 5. 以 997Hz 频率取样在 CPU 上运行的模块</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /arg0/ @[mod(arg0)] = count()&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="systemtap">Systemtap</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1.以 997Hz 频率取样内核栈</span>
+</span></span><span class="line"><span class="cl">stap -d kernel -ve <span class="s1">&#39;global s; probe timer.profile { s[backtrace()] &lt;&lt;&lt; 1 }
+</span></span></span><span class="line"><span class="cl"><span class="s1">                     probe end {foreach (i in s+){ print_stack(i);
+</span></span></span><span class="line"><span class="cl"><span class="s1">                                                   printf(&#34;\t%d\n&#34;, @count(s[i]));}}&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 以 997Hz 频率取样内核栈，仅输出最频繁的 10 个</span>
+</span></span><span class="line"><span class="cl">stap -d kernel -ve <span class="s1">&#39;global s; probe timer.hz(997) { s[backtrace()] &lt;&lt;&lt; 1 }
+</span></span></span><span class="line"><span class="cl"><span class="s1">                    probe end { foreach (i in s- limit 10)
+</span></span></span><span class="line"><span class="cl"><span class="s1">                                {print_stack(i); printf(&#34;\t%d\n&#34;, @count([s[i]]));}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                    }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 4. 以 997Hz 频率取样在 CPU 上运行的函数 - 未确认</span>
+</span></span><span class="line"><span class="cl">stap -d kernel -ve <span class="s1">&#39;global s; probe timer.profile { s[caller()] &lt;&lt;&lt; 1 }
+</span></span></span><span class="line"><span class="cl"><span class="s1">                     probe end {foreach (i in s+){printf(&#34;\t%s - %d\n&#34;, i, @count(s[i]));}}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 5. 以 997Hz 频率取样在 CPU 上运行的模块 - 未确认</span>
+</span></span><span class="line"><span class="cl">stap -d kernel -ve <span class="s1">&#39;global s; probe timer.profile { s[module_name()] &lt;&lt;&lt; 1 }
+</span></span></span><span class="line"><span class="cl"><span class="s1">                     probe end {foreach (i in s+){printf(&#34;\t%s - %d\n&#34;, i, @count(s[i]));}}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="2-用户剖析">2. 用户剖析</h3>
+<h4 id="dtrace-1">Dtrace</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># solaris</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 以 997Hz 频率取样进程的用户栈</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr1 &amp;&amp; pid == 123/ { @[ustack()] = count()}&#39;</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr1 &amp;&amp; execname == &#34;sshd&#34;/ { @[ustack()] = count()}&#39;</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr1/ { @[execname, ustack()] = count()}&#39;</span> <span class="c1"># 取样所有进程的用户栈</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 无 arg1 筛选，此时统计将包括用户栈被冻结的时间(一般是系统调用期间)</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /pid == 123/ { @[ustack()] = count()}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 以 997Hz 频率取样用户栈，仅输出最频繁的 10 个</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr1 &amp;&amp; pid == 123/ { @[ustack()] = count()} END { trunc(@, 10); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 以 997Hz 频率取样用户栈，每个栈只取 5 个帧</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /agr1 &amp;&amp; pid == 123/ { @[ustack(5)] = count()}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 4. 以 997Hz 频率取样用户栈，仅输出在 CPU 上运行的函数名</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /arg1 &amp;&amp; pid == 123/ @[ufunc(arg1)] = count()&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 5. 以 997Hz 频率取样用户栈，仅输出在 CPU 上运行的模块名</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /arg1 &amp;&amp; pid == 123/ @[umod(arg1)] = count()&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 6.以 997Hz 频率取样用户进程的运行 CPU</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;profile-997 /pid == 123/ {@[cpu] == count()}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="systemtap-1">Systemtap</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 未确认</span>
+</span></span><span class="line"><span class="cl">stap -ve <span class="s1">&#39;global s; probe timer.hz(97) {if (execname() == &#34;mysqld&#34;) {s[ubacktrace()] &lt;&lt;&lt; 1 }}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                probe end { foreach (i in s- limit 10)
+</span></span></span><span class="line"><span class="cl"><span class="s1">                            {print_ustack(i); printf(&#34;\t%d\n&#34;, @count(s[i]));}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="3-函数跟踪">3. 函数跟踪</h3>
+<p>统计函数的 CPU 时间</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># Dtrace</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;fbt::zio_checksum_generate:entry {self-&gt;v = vtimestamp;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">           fbt::zio_checksum_generate:return /self-&gt;v/ 
+</span></span></span><span class="line"><span class="cl"><span class="s1">             {@[&#34;ns&#34;] = quantize(vtimestamp - self-&gt;v);self-&gt;v=0 }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Systemtap</span>
+</span></span><span class="line"><span class="cl">stap -ve <span class="s1">&#39;global s; probe kernel.function(&#34;sys_open&#34;).return {s &lt;&lt;&lt; gettimeofday_ns() - @entry(gettimeofday_ns());}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                    probe end {print(@hist_log(s))}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="4-cpu-交叉调用">4. CPU 交叉调用</h3>
+<p>打印CPU交叉调用以及这些调用的代码路径</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># Dtrace</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;sysinfo:::xcalls { @[stack()] = count(); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Systemtap</span>
+</span></span><span class="line"><span class="cl">stap -d kernel -ve <span class="s1">&#39;global s;probe scheduler.migrate {s[backtrace()] &lt;&lt;&lt; 1}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                    probe end { foreach (i in s- limit 10)
+</span></span></span><span class="line"><span class="cl"><span class="s1">                              {print_stack(i); printf(&#34;\t%d\n&#34;, @count([s[i]]));}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                    }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="5-中断">5. 中断</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># Dtrace 通过 intrstat 命令</span>
+</span></span><span class="line"><span class="cl">intrstat <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Systemtap</span>
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> /usr/share/systemtap/tapset/linux/
+</span></span><span class="line"><span class="cl">vim irq.stp
+</span></span><span class="line"><span class="cl">    probe irq_handler.exit <span class="o">=</span> kernel.trace<span class="o">(</span><span class="s2">&#34;irq_handler_exit&#34;</span><span class="o">)</span> ?
+</span></span><span class="line"><span class="cl">        <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nv">irq</span> <span class="o">=</span> <span class="nv">$irq</span>
+</span></span><span class="line"><span class="cl">                // the tracepoint doesn<span class="s1">&#39;t have the struct definition, so we must @cast
+</span></span></span><span class="line"><span class="cl"><span class="s1">                action = &amp; @cast($action, &#34;irqaction&#34;, &#34;kernel&lt;linux/interrupt.h&gt;&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="s1">                ret = $ret
+</span></span></span><span class="line"><span class="cl"><span class="s1">                handler = action-&gt;handler
+</span></span></span><span class="line"><span class="cl"><span class="s1">                flags = action-&gt;flags
+</span></span></span><span class="line"><span class="cl"><span class="s1">                flags_str = irqflags_str(flags)
+</span></span></span><span class="line"><span class="cl"><span class="s1">                dev_name = action-&gt;name
+</span></span></span><span class="line"><span class="cl"><span class="s1">                dev_id = action-&gt;dev_id
+</span></span></span><span class="line"><span class="cl"><span class="s1">                next_irqaction = action-&gt;next
+</span></span></span><span class="line"><span class="cl"><span class="s1">                dir = action-&gt;dir
+</span></span></span><span class="line"><span class="cl"><span class="s1">                thread_fn = action-&gt;thread_fn
+</span></span></span><span class="line"><span class="cl"><span class="s1">                thread = action-&gt;thread
+</span></span></span><span class="line"><span class="cl"><span class="s1">                thread_flags = action-&gt;thread_flags
+</span></span></span><span class="line"><span class="cl"><span class="s1">        }
+</span></span></span><span class="line"><span class="cl"><span class="s1">
+</span></span></span><span class="line"><span class="cl"><span class="s1">stap -ve &#39;</span>global s<span class="p">;</span> probe irq_handler.exit <span class="o">{</span> s<span class="o">[</span>dev_id<span class="o">]</span> <span class="o">&lt;&lt;&lt;</span> 1<span class="o">}</span>
+</span></span><span class="line"><span class="cl">                    probe end <span class="o">{</span> foreach <span class="o">(</span>i in s+<span class="o">)</span> <span class="o">{</span>printf<span class="o">(</span><span class="s2">&#34;%s: %d\n&#34;</span>, i, s<span class="o">[</span>i<span class="o">])}}</span><span class="err">&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="6-调度器跟踪">6. 调度器跟踪</h3>
+<h4 id="dtrace-2">Dtrace</h4>
+<p>sched provider 提供了对内核 CPU 调度器的跟踪操作。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 跟踪 sshd 在 CPU 上的运行时间</span>
+</span></span><span class="line"><span class="cl">dtrace -n <span class="s1">&#39;sched::on-cpu /execname == &#34;sshd&#34;/ {self-&gt;ts = timestamp;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">           sched::off-cpu / self-&gt;ts / { @[&#34;ns&#34;] = quantize(timestamp - self-&gt;ts);
+</span></span></span><span class="line"><span class="cl"><span class="s1">               self-&gt;ts = 0;
+</span></span></span><span class="line"><span class="cl"><span class="s1">           }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="systemtap-2">Systemtap</h5>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 跟踪 sshd 在 CPU 上的运行时间</span>
+</span></span><span class="line"><span class="cl">stap -ve <span class="s1">&#39;global s, t; probe scheduler.cpu_on { if (execname() == &#34;sshd&#34;) { t[tid()] = gettimeofday_ns(); }}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                       probe scheduler.cpu_off { if (t[tid()]) {s &lt;&lt;&lt; gettimeofday_ns() - t[tid()];delete t[tid()]}}
+</span></span></span><span class="line"><span class="cl"><span class="s1">                       probe end{print(@hist_log(s))}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-01-18</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.3 CPU 动态追踪" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.3 CPU 动态追踪"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.3 CPU 动态追踪"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/23_cpu%E5%8A%A8%E6%80%81%E8%BF%BD%E8%B8%AA/" data-title="4.3 CPU 动态追踪" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/22_cpu%E7%9B%91%E6%B5%8B%E5%91%BD%E4%BB%A4/" class="prev" rel="prev" title="4.2 CPU 监测工具"><i class="fas fa-angle-left fa-fw"></i>4.2 CPU 监测工具</a>
+            <a href="/posts/linux/linux_perf/24.%E5%86%85%E5%AD%98/" class="next" rel="next" title="4.4 内存">4.4 内存<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-18T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"4.3 CPU 动态追踪"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

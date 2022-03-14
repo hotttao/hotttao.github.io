@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>3.6 Systemtap 与 Dtrace 的语法比较 - LoveIt</title><meta name="Description" content="3.6 Systemtap 与 Dtrace 的语法比较"><meta property="og:title" content="3.6 Systemtap 与 Dtrace 的语法比较" />
+<meta property="og:description" content="3.6 Systemtap 与 Dtrace 的语法比较" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-13T22:10:00+08:00" />
+<meta property="article:modified_time" content="2022-03-14T11:18:09+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="3.6 Systemtap 与 Dtrace 的语法比较"/>
+<meta name="twitter:description" content="3.6 Systemtap 与 Dtrace 的语法比较"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/15_stap_python/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/20_%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "3.6 Systemtap 与 Dtrace 的语法比较",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/16_dtrace_stap\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  1211 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/16_dtrace_stap\/","datePublished": "2020-01-13T22:10:00+08:00","dateModified": "2022-03-14T11:18:09+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "3.6 Systemtap 与 Dtrace 的语法比较"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">3.6 Systemtap 与 Dtrace 的语法比较</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-13">2020-01-13</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1211 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-dtrace-to-systemtap">1. DTrace To Systemtap</a></li>
+    <li><a href="#2-语法">2. 语法</a></li>
+    <li><a href="#3-探针">3. 探针</a></li>
+    <li><a href="#4-内置变量">4. 内置变量</a></li>
+    <li><a href="#5-函数">5. 函数</a></li>
+    <li><a href="#6-转换示例">6. 转换示例</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#列出系统调用入口探针">列出系统调用入口探针</a></li>
+            <li><a href="#统计-read-返回大小">统计 read() 返回大小</a></li>
+            <li><a href="#根据进程名统计系统调用">根据进程名统计系统调用</a></li>
+            <li><a href="#对-pid-为-123-的进程根据系统调用名统计系统调用次数">对 PID 为 123 的进程，根据系统调用名统计系统调用次数</a></li>
+            <li><a href="#对-httpd-进程根据系统调用名统计系统调用次数">对 httpd 进程，根据系统调用名统计系统调用次数</a></li>
+            <li><a href="#用进程名和路径名跟踪文件的open">用进程名和路径名跟踪文件的open()</a></li>
+            <li><a href="#对-mysqld-进程统计-read-延时">对 mysqld 进程统计 read() 延时</a></li>
+            <li><a href="#根据进程名和参数跟踪新进程">根据进程名和参数跟踪新进程</a></li>
+            <li><a href="#以100hz对内核栈采样">以100Hz对内核栈采样</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>《性能之巅》内对 Dtrace 和 Systemtap 的语法做了一个对比，对于学习二者是一个不错的资源，现整理如下。</p>
+<!-- more -->
+<h2 id="1-dtrace-to-systemtap">1. DTrace To Systemtap</h2>
+<p>下面是一份 DTrace 转换成 Systemtap 的简易指南，包括如下几个部分</p>
+<ol>
+<li>语法</li>
+<li>探针</li>
+<li>内置变量</li>
+<li>函数</li>
+<li>转换示例</li>
+</ol>
+<h2 id="2-语法">2. 语法</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">DTrace</th>
+<th style="text-align:left">Systemtap</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">探针名</td>
+<td style="text-align:left">probe 探针名</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">探针名 {var[a] = }</td>
+<td style="text-align:left">global var;<br> probe 探针名 {var[a]=}</td>
+<td style="text-align:left">systemtap 的全局变量必须事先声明</td>
+</tr>
+<tr>
+<td style="text-align:left">/predicate/</td>
+<td style="text-align:left">{if (test) {}}</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">@a = count(x)<br>printa(@a)</td>
+<td style="text-align:left">a &laquo;&lt; x<br>print(count(a))</td>
+<td style="text-align:left">聚合变量使用</td>
+</tr>
+<tr>
+<td style="text-align:left">arg0 &hellip;. agrN<br>args[0] &hellip; args[N]</td>
+<td style="text-align:left">目标变量 $var<br>全局变量 @var(&ldquo;file_stat@fs/file_table.c&rdquo;)</td>
+<td style="text-align:left">如何获取探针中的变量</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-探针">3. 探针</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">DTrace</th>
+<th style="text-align:left">Systemtap</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">BEGIN<br>dtrace:::BEGIN</td>
+<td style="text-align:left">begin<br>probe begin</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">END<br>dtrace:::END</td>
+<td style="text-align:left">end<br>probe end</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">syscall:::entry</td>
+<td style="text-align:left">syscall.*</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">syscall:::return</td>
+<td style="text-align:left">syscall.*.return</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">syscall::read:entry</td>
+<td style="text-align:left">syscall.read</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">syscall::read:return</td>
+<td style="text-align:left">syscall.read.return</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">sched:::on-cpu</td>
+<td style="text-align:left">scheduler.cup_on</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">sched:::off-cpu</td>
+<td style="text-align:left">scheduler.cpu_off</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">profile:::profile-100</td>
+<td style="text-align:left">timer.profile</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">profile:::tick-10s</td>
+<td style="text-align:left">timer.s(10)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">fbt::foo:entry</td>
+<td style="text-align:left">kernel.function(&ldquo;foo&rdquo;)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">fbt::foo:return</td>
+<td style="text-align:left">kernel.function(&ldquo;foo&rdquo;).return</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">io:::start</td>
+<td style="text-align:left">ioblock.request</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">io:::done</td>
+<td style="text-align:left">ioblock.end</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-内置变量">4. 内置变量</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">DTrace</th>
+<th style="text-align:left">Systemtap</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">execname</td>
+<td style="text-align:left">execname()</td>
+<td style="text-align:left">执行在CPU上的进程名</td>
+</tr>
+<tr>
+<td style="text-align:left">uid</td>
+<td style="text-align:left">uid()</td>
+<td style="text-align:left">执行在CPU上的用户ID</td>
+</tr>
+<tr>
+<td style="text-align:left">pid</td>
+<td style="text-align:left">pid()</td>
+<td style="text-align:left">执行在CPU上的进程PID</td>
+</tr>
+<tr>
+<td style="text-align:left">cpu</td>
+<td style="text-align:left">cpu()</td>
+<td style="text-align:left">进程当前所在的 CPU</td>
+</tr>
+<tr>
+<td style="text-align:left">timestamp</td>
+<td style="text-align:left">gettimeofday_s()</td>
+<td style="text-align:left">自启动以来的纳秒数</td>
+</tr>
+<tr>
+<td style="text-align:left">vtimestamp</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">CPU上的线程时间，单位是纳秒</td>
+</tr>
+<tr>
+<td style="text-align:left">arg0..N</td>
+<td style="text-align:left">目标变量</td>
+<td style="text-align:left">探针参数(uint64_t)</td>
+</tr>
+<tr>
+<td style="text-align:left">args[0]&hellip;[N]</td>
+<td style="text-align:left">目标变量</td>
+<td style="text-align:left">探针参数(类型化的)</td>
+</tr>
+<tr>
+<td style="text-align:left">curthread</td>
+<td style="text-align:left">task_current()</td>
+<td style="text-align:left">指向当前线程内核结构的指针</td>
+</tr>
+<tr>
+<td style="text-align:left">probefunc</td>
+<td style="text-align:left">probefunc()</td>
+<td style="text-align:left">打印探针所在位置的内核函数名称</td>
+</tr>
+<tr>
+<td style="text-align:left">probename</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">当前探针名称</td>
+</tr>
+<tr>
+<td style="text-align:left">curpsinfo</td>
+<td style="text-align:left"></td>
+<td style="text-align:left">当前进程信息</td>
+</tr>
+<tr>
+<td style="text-align:left">curpsinfo-&gt;pr_psargs</td>
+<td style="text-align:left">cmdline_str()</td>
+<td style="text-align:left">进程启动的命令</td>
+</tr>
+<tr>
+<td style="text-align:left">$target</td>
+<td style="text-align:left">target()</td>
+<td style="text-align:left">返回stap,dtrace 通过命令行设置的进程 pid</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-函数">5. 函数</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Dtrace</th>
+<th style="text-align:left">Systemtap</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">stringof(addr)</td>
+<td style="text-align:left">kernel_string()</td>
+<td style="text-align:left">返回来自内核空间的字符串</td>
+</tr>
+<tr>
+<td style="text-align:left">copyinstr(addr)</td>
+<td style="text-align:left">user_tring()</td>
+<td style="text-align:left">返回用户空间地址的字符串<br>内核会执行一次从用户空间到内核空间的复制</td>
+</tr>
+<tr>
+<td style="text-align:left">stack(count)</td>
+<td style="text-align:left">print_backtrace()</td>
+<td style="text-align:left">打印内核级别栈追踪</td>
+</tr>
+<tr>
+<td style="text-align:left">ustack(count)</td>
+<td style="text-align:left">print_ubacktrace()</td>
+<td style="text-align:left">打印用户级别栈追踪</td>
+</tr>
+<tr>
+<td style="text-align:left">exit(status)</td>
+<td style="text-align:left">exit()</td>
+<td style="text-align:left">退出DTrace并返回状态</td>
+</tr>
+<tr>
+<td style="text-align:left">quantize(value)</td>
+<td style="text-align:left">@hist_log()</td>
+<td style="text-align:left">用 2 的幂次方直方图统计 value</td>
+</tr>
+<tr>
+<td style="text-align:left">lquantize(value,min,max,step)</td>
+<td style="text-align:left">@hist_linear()</td>
+<td style="text-align:left">用给定最下值，最大值和步进值做线性直方图记录 value</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-转换示例">6. 转换示例</h2>
+<h4 id="列出系统调用入口探针">列出系统调用入口探针</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; dtrace  -ln syscall:::entry
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; stap -l <span class="s1">&#39;syscall.*&#39;</span>
+</span></span><span class="line"><span class="cl">syscall.accept
+</span></span><span class="line"><span class="cl">syscall.accept4
+</span></span><span class="line"><span class="cl">syscall.access
+</span></span><span class="line"><span class="cl">.....
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="统计-read-返回大小">统计 read() 返回大小</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrae1: arg1 作为系统调用 read() 的返回</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;syscall::read:return { @bytes = quantize(arg1); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap1: 查看 stap 目标变量，$return 是read() 的返回</span>
+</span></span><span class="line"><span class="cl">&gt;  stap -L <span class="s1">&#39;syscall.read.return&#39;</span>
+</span></span><span class="line"><span class="cl">syscall.read.return name:string retval:long retstr:string 
+</span></span><span class="line"><span class="cl"><span class="nv">$return</span>:long int <span class="nv">$fd</span>:long int <span class="nv">$buf</span>:long int <span class="nv">$count</span>:long int <span class="nv">$ret</span>:long int
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap2: </span>
+</span></span><span class="line"><span class="cl">&gt; stap -e <span class="s1">&#39;global bytes;probe syscall.read.return { bytes &lt;&lt;&lt; $return } 
+</span></span></span><span class="line"><span class="cl"><span class="s1">    probe end { print(@hist_log(bytes)); }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="根据进程名统计系统调用">根据进程名统计系统调用</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace1:</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;syscall:::entry { @x[execname] = count(); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap1: 不便阅读</span>
+</span></span><span class="line"><span class="cl">&gt; stap -e <span class="s1">&#39;global x; probe syscall.* { x[execname()] &lt;&lt;&lt; 1 } &#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap2: 格式化输出</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;global x; probe syscall.* { x[execname()] &lt;&lt;&lt; 1 }
+</span></span></span><span class="line"><span class="cl"><span class="s1">    probe end { foreach (k in x+) {printf(&#34;%-36s %8d\n&#34;, k, @count(x[k])); } }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="对-pid-为-123-的进程根据系统调用名统计系统调用次数">对 PID 为 123 的进程，根据系统调用名统计系统调用次数</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace1: pid</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;syscall:::entry /pid == 123/ { @x[probefunc] == count(); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap1:</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;global x; probe syscall.* { if (pid() == 123) { x[probefunc()] &lt;&lt;&lt; 1 }; } 
+</span></span></span><span class="line"><span class="cl"><span class="s1">    probe end { foreach (k in x+) {printf(&#34;%-36s %8d\n&#34;, k, @count(x[k])); } }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="对-httpd-进程根据系统调用名统计系统调用次数">对 httpd 进程，根据系统调用名统计系统调用次数</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace1: execname</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;syscall:::entry /execname == &#34;httpd&#34;/ { @x[probefunc] == count(); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap1:</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;global x; probe syscall.* { if (execname() == &#34;httpd&#34;) { x[probefunc()] &lt;&lt;&lt; 1 }; }
+</span></span></span><span class="line"><span class="cl"><span class="s1">    probe end { foreach (k in x+) {printf(&#34;%-36s %8d\n&#34;, k, @count(x[k])); } }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="用进程名和路径名跟踪文件的open">用进程名和路径名跟踪文件的open()</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -l <span class="s1">&#39;syscall::open.entry { printf(&#34;%s, %s&#34;, execname, copyinstr(arg0)); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;probe syscall.open { filename = user_string_quoted($filename);
+</span></span></span><span class="line"><span class="cl"><span class="s1">        printf(&#34;%s %s\n&#34;, execname(), filename); }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="对-mysqld-进程统计-read-延时">对 mysqld 进程统计 read() 延时</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace1:</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;syscall::read:entry /execname == &#34;mysqld&#34;/ {self-&gt;ts = timestamp;} 
+</span></span></span><span class="line"><span class="cl"><span class="s1">             syscall::read:return /self-&gt;ts/ { @[&#34;ns&#34;] =  quantize(timestamp - self-&gt;ts);self-&gt;ts=0}&#39;</span>
+</span></span><span class="line"><span class="cl">&gt; stap1: 
+</span></span><span class="line"><span class="cl">gobal t,s<span class="p">;</span> 
+</span></span><span class="line"><span class="cl">probe syscall.read <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="o">(</span>execname<span class="o">()</span> <span class="o">==</span> <span class="s2">&#34;mysqld&#34;</span><span class="o">){</span>
+</span></span><span class="line"><span class="cl">        t<span class="o">[</span>tid<span class="o">()]</span> <span class="o">=</span> gettimeofday_ns<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span> 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">probe syscall.read.return <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="o">(</span>t<span class="o">[</span>tid<span class="o">()]){</span>
+</span></span><span class="line"><span class="cl">        s <span class="o">&lt;&lt;&lt;</span> gettimeofday_ns<span class="o">()</span> - t<span class="o">[</span>tid<span class="o">()]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        delete t<span class="o">[</span>tid<span class="o">()]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">probe end <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    printf<span class="o">(</span><span class="s2">&#34;ns\n&#34;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    print<span class="o">(</span>@hist_log<span class="o">(</span>s<span class="o">))</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; stap2: 在.return探针中，有一个特殊的操作符@entry，用于存储该探针的入口处的表达式的值
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;global s; probe syscall.read.return {if (execname() == &#34;mysqld&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="s1">           {s  &lt;&lt;&lt; gettimeofday_ns() - @entry(gettimeofday_ns());}}
+</span></span></span><span class="line"><span class="cl"><span class="s1">           probe end{print(@hist_log(s))}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="根据进程名和参数跟踪新进程">根据进程名和参数跟踪新进程</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace: </span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;proc::exec-success { trace(curpsinfo-&gt;pr_psargs) }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap</span>
+</span></span><span class="line"><span class="cl">&gt; stap -ve <span class="s1">&#39;probe process.begin { printf(&#34;%s\n&#34;, cmdline_str()) }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="以100hz对内核栈采样">以100Hz对内核栈采样</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># dtrace</span>
+</span></span><span class="line"><span class="cl">&gt; dtrace -n <span class="s1">&#39;profile-100 { @[stack()]=count() }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># stap</span>
+</span></span><span class="line"><span class="cl">&gt; stap -e <span class="s1">&#39;global s; probe timer.profile { s[backtrace()] &lt;&lt;&lt; 1 }
+</span></span></span><span class="line"><span class="cl"><span class="s1">                     probe end {foreach (i in s+){ print_stack(i);
+</span></span></span><span class="line"><span class="cl"><span class="s1">                                                   printf(&#34;\t%d\n&#34;, @count(s[i]));}}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-03-14&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/9f7d652e9e23f2d556f506f043f502e3a794737a" target="_blank" title="commit by tsong(tsong@example.com) 9f7d652e9e23f2d556f506f043f502e3a794737a: linux 性能优化">
+                                    <i class="fas fa-hashtag fa-fw"></i>9f7d652</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/16_dtrace_stap/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" data-title="3.6 Systemtap 与 Dtrace 的语法比较" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" data-title="3.6 Systemtap 与 Dtrace 的语法比较"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" data-title="3.6 Systemtap 与 Dtrace 的语法比较"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/16_dtrace_stap/" data-title="3.6 Systemtap 与 Dtrace 的语法比较" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/15_stap_python/" class="prev" rel="prev" title="3.5 Systemtap Python"><i class="fas fa-angle-left fa-fw"></i>3.5 Systemtap Python</a>
+            <a href="/posts/linux/linux_perf/20_%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" class="next" rel="next" title="4. 操作系统">4. 操作系统<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-13T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"3.6 Systemtap 与 Dtrace 的语法比较"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>2.4 perf 的使用 - LoveIt</title><meta name="Description" content="2.4 perf 的使用"><meta property="og:title" content="2.4 perf 的使用" />
+<meta property="og:description" content="2.4 perf 的使用" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-05T22:10:00+08:00" />
+<meta property="article:modified_time" content="2022-03-14T11:18:09+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="2.4 perf 的使用"/>
+<meta name="twitter:description" content="2.4 perf 的使用"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/04_perf/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/07.dtrace/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "2.4 perf 的使用",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/06_perf_use\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  8049 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/06_perf_use\/","datePublished": "2020-01-05T22:10:00+08:00","dateModified": "2022-03-14T11:18:09+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "2.4 perf 的使用"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">2.4 perf 的使用</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-05">2020-01-05</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 8049 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 17 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-perf-命令概览">1. perf 命令概览</a></li>
+    <li><a href="#1-perf-辅助性命令">1. perf 辅助性命令</a>
+      <ul>
+        <li><a href="#11-perf-list">1.1 perf list</a></li>
+        <li><a href="#12-perf-probe">1.2 perf probe</a>
+          <ul>
+            <li><a href="#命令使用">命令使用</a></li>
+            <li><a href="#添加动态探针">添加动态探针</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-perf-stat计数模式">2. perf stat(计数模式)</a>
+      <ul>
+        <li><a href="#21-perf-stat-默认输出">2.1 perf stat 默认输出</a>
+          <ul>
+            <li><a href="#详细模式">详细模式</a></li>
+          </ul>
+        </li>
+        <li><a href="#22-指定-hardware-events-计数器">2.2 指定 Hardware Events 计数器</a></li>
+        <li><a href="#23-通过静态探针统计系统调用">2.3 通过静态探针统计系统调用</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-采样事件">3. 采样事件</a>
+      <ul>
+        <li><a href="#31-perf-recordreport-命令">3.1 perf record/report 命令</a></li>
+        <li><a href="#32-timed-profiling">3.2 Timed Profiling</a></li>
+        <li><a href="#33-event-profiling">3.3 Event Profiling</a></li>
+        <li><a href="#34-static-kernel-tracing">3.4 Static Kernel Tracing</a>
+          <ul>
+            <li><a href="#跟踪新进程的创建">跟踪新进程的创建</a></li>
+            <li><a href="#跟踪出站连接">跟踪出站连接</a></li>
+            <li><a href="#跟踪套接字缓冲区消耗">跟踪套接字缓冲区消耗</a></li>
+          </ul>
+        </li>
+        <li><a href="#34-static-user-tracing">3.4 Static User Tracing</a></li>
+        <li><a href="#35-dynamic-tracing">3.5 Dynamic Tracing</a>
+          <ul>
+            <li><a href="#检测内核tcp_sendmsg函数">检测内核tcp_sendmsg()函数</a></li>
+            <li><a href="#跟踪-malloc-函数调用">跟踪 malloc 函数调用</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#4-perf-ebpf">4. perf eBPF</a></li>
+    <li><a href="#5-perf-特殊功能子命令">5. perf 特殊功能子命令</a>
+      <ul>
+        <li><a href="#51-perf-trace">5.1 perf trace</a></li>
+        <li><a href="#51-perf-top">5.1 perf top</a></li>
+        <li><a href="#52-perf-sched">5.2 perf sched</a>
+          <ul>
+            <li><a href="#perf-sched-record">perf sched record</a></li>
+            <li><a href="#perf-sched-latency">perf sched latency</a></li>
+            <li><a href="#perf-sched-map">perf sched map</a></li>
+            <li><a href="#perf-sched-replay">perf sched replay</a></li>
+            <li><a href="#perf-sched-script">perf sched script</a></li>
+            <li><a href="#perf-sched-timehist">perf sched timehist</a></li>
+          </ul>
+        </li>
+        <li><a href="#53-perf-mem">5.3 perf mem</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-perfdata-处理">6. perf.data 处理</a>
+      <ul>
+        <li><a href="#61-perf-diff">6.1 perf diff</a></li>
+        <li><a href="#62-perf-script">6.2 perf script</a></li>
+      </ul>
+    </li>
+    <li><a href="#7-perf-数据可视化">7. perf 数据可视化</a>
+      <ul>
+        <li><a href="#71-perf-chart">7.1 perf chart</a></li>
+        <li><a href="#72-火焰图">7.2 火焰图</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>上一节我们学习了 perf 的基本原理，对 perf 有了一个整体上的认识，本节我们来学如何使用 perf 进行性能分析。</p>
+<!-- more -->
+<p>我们将按照如下几个部分来介绍 perf 的使用:</p>
+<ol>
+<li>perf 的辅助性命令，包括 perf list，perf probe 等</li>
+<li>perf 的三种使用方式，计数模式，采样事件，以及事件上的 bp 程序</li>
+<li>perf 提供的特殊用途的子命令，包括 perf sched，perf mem 等等</li>
+<li>perf.data 的处理，这一部分命令用于格式化输出 perf.data 的内容便于生成类似火焰图等更复杂的图表</li>
+</ol>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/perf_events_flow.png"
+        data-srcset="/images/linux_pf/perf_events_flow.png, /images/linux_pf/perf_events_flow.png 1.5x, /images/linux_pf/perf_events_flow.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/perf_events_flow.png"
+        title="perf_events_flow" /></p>
+<h2 id="1-perf-命令概览">1. perf 命令概览</h2>
+<p>作为开始，我们先来回顾一下 perf 命令的一个概览</p>
+<p><code>perf [--version] [--help] [OPTIONS] COMMAND [ARGS]</code></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">子命令</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">list</td>
+<td style="text-align:left">List all symbolic event types<br>列出当前系统支持的所有事件名,可分为三类：硬件事件、软件事件，检查点</td>
+</tr>
+<tr>
+<td style="text-align:left">probe</td>
+<td style="text-align:left">Define new dynamic tracepoints<br>用于定义动态检查点</td>
+</tr>
+<tr>
+<td style="text-align:left">stat</td>
+<td style="text-align:left">Run a command and gather performance counter statistics<br>对程序运行过程中的性能计数器进行统计</td>
+</tr>
+<tr>
+<td style="text-align:left">record</td>
+<td style="text-align:left">Run a command and record its profile into perf.data<br>	对程序运行过程中的事件进行分析和记录，并写入perf.data</td>
+</tr>
+<tr>
+<td style="text-align:left">report</td>
+<td style="text-align:left">Read perf.data (created by perf record) and display the profile<br>读取perf.data(由perf record生成) 并显示分析结果</td>
+</tr>
+<tr>
+<td style="text-align:left">top</td>
+<td style="text-align:left">System profiling tool.<br>对系统的性能进行分析，类似top命令</td>
+</tr>
+<tr>
+<td style="text-align:left">sched</td>
+<td style="text-align:left">Tool to trace/measure scheduler properties (latencies)<br>针对调度器子系统的分析工具</td>
+</tr>
+<tr>
+<td style="text-align:left">lock</td>
+<td style="text-align:left">Analyze lock events<br>分析内核中的锁信息，包括锁的争用情况，等待延迟等</td>
+</tr>
+<tr>
+<td style="text-align:left">mem</td>
+<td style="text-align:left">Profile memory accesses<br>分析内存访问</td>
+</tr>
+<tr>
+<td style="text-align:left">kmem</td>
+<td style="text-align:left">Tool to trace/measure kernel memory properties<br>分析内核内存的使用</td>
+</tr>
+<tr>
+<td style="text-align:left">kvm</td>
+<td style="text-align:left">Tool to trace/measure kvm guest os<br>分析kvm虚拟机上的guest os</td>
+</tr>
+<tr>
+<td style="text-align:left">timechart</td>
+<td style="text-align:left">Tool to visualize total system behavior during a workload<br>对record结果进行可视化分析输出，record命令需要加上timechart记录</td>
+</tr>
+<tr>
+<td style="text-align:left">script</td>
+<td style="text-align:left">Read perf.data (created by perf record) and display trace output<br>读取perf.data(由perf record生成)，生成trace记录，供其他分析工具使用</td>
+</tr>
+<tr>
+<td style="text-align:left">data</td>
+<td style="text-align:left">Data file related processing<br>把perf.data文件转换成其他格式</td>
+</tr>
+<tr>
+<td style="text-align:left">diff</td>
+<td style="text-align:left">Read perf.data files and display the differential profile<br>读取多个perf.data文件，并给出差异分析</td>
+</tr>
+<tr>
+<td style="text-align:left">evlist</td>
+<td style="text-align:left">List the event names in a perf.data file<br>列出perf.data中采集的事件列表</td>
+</tr>
+<tr>
+<td style="text-align:left">bench</td>
+<td style="text-align:left">General framework for benchmark suites<br>perf提供的基准套件的通用框架，可以对当前系统的调度，IPC，内存访问进行性能评估</td>
+</tr>
+<tr>
+<td style="text-align:left">test</td>
+<td style="text-align:left">Runs sanity tests.<br>	perf对当前软硬件平台进行健全性测试，可用此工具测试当前的软硬件平台是否能支持perf的所有功能</td>
+</tr>
+<tr>
+<td style="text-align:left">trace</td>
+<td style="text-align:left">strace inspired tool<br>类似于strace，跟踪目标的系统调用，但开销比strace小</td>
+</tr>
+<tr>
+<td style="text-align:left">ftrace</td>
+<td style="text-align:left">simple wrapper for kernel ftrace functionality<br></td>
+</tr>
+<tr>
+<td style="text-align:left">annotate</td>
+<td style="text-align:left">Read perf.data (created by perf record) and display annotated code<br>读取perf.data(由perf record生成)显示反汇编后的代码</td>
+</tr>
+<tr>
+<td style="text-align:left">archive</td>
+<td style="text-align:left">Create archive with object files with build-ids found in perf.data file<br>根据perf.data(由perf record生成)文件中的build-id将相关的目标文件打包</td>
+</tr>
+<tr>
+<td style="text-align:left">buildid-cache</td>
+<td style="text-align:left">Manage build-id cache.<br></td>
+</tr>
+<tr>
+<td style="text-align:left">buildid-list</td>
+<td style="text-align:left">List the buildids in a perf.data file<br></td>
+</tr>
+<tr>
+<td style="text-align:left">c2c</td>
+<td style="text-align:left">Shared Data C2C/HITM Analyzer.<br></td>
+</tr>
+<tr>
+<td style="text-align:left">config</td>
+<td style="text-align:left">Get and set variables in a configuration file.<br></td>
+</tr>
+<tr>
+<td style="text-align:left">inject</td>
+<td style="text-align:left">Filter to augment the events stream with additional information<br></td>
+</tr>
+<tr>
+<td style="text-align:left">kallsyms</td>
+<td style="text-align:left">Searches running kernel for symbols<br></td>
+</tr>
+<tr>
+<td style="text-align:left">version</td>
+<td style="text-align:left">display the version of perf binary<br></td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-perf-辅助性命令">1. perf 辅助性命令</h2>
+<h3 id="11-perf-list">1.1 perf list</h3>
+<p><code>perf list [--no-desc] [--long-desc] [event_class]</code></p>
+<ul>
+<li>作用: 列出perf可以支持的所有事件</li>
+<li>event_class: 事件的分类，包括:
+<ul>
+<li><code>hw|sw|cache|pmu|sdt|metric|metricgroup</code></li>
+<li><code>tracepoint</code>: 静态探针</li>
+<li><code>event_glob</code>: 事件的通配符</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">perf list
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">List of pre-defined events <span class="o">(</span>to be used in -e<span class="o">)</span>:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  alignment-faults                                   <span class="o">[</span>Software event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  bpf-output                                         <span class="o">[</span>Software event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  context-switches OR cs                             <span class="o">[</span>Software event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  cpu-clock                                          <span class="o">[</span>Software event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  cpu-migrations OR migrations                       <span class="o">[</span>Software event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  ..........
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>perf list给出的事件是厂家上传上去给Linux社区的，但有些厂家会有自己的事件统计，没有上传出去，这需要从厂家的用户手册中获得，这种事件称为原始事件，可以直接用编号表示，格式为:rUUEE，其中UU == umask, EE ==事件编号。比如在我们的芯片里面，0x13号表示跨芯片内存访问，你就可以用<code>-e r0013</code>来跟踪软件的跨片访问次数。</p>
+<h3 id="12-perf-probe">1.2 perf probe</h3>
+<p>perf probe 用来定义一个动态探针，定义的方式有如下几种:</p>
+<ol>
+<li>用户空间: 通过 -x 指定二进制文件的路径，可以为该二进制程序添加库函数的动态探针</li>
+<li>内核:</li>
+</ol>
+<ul>
+<li>通过符号表和寄存器来添加，这种方式不需要内核调试信息(即 kernel-debuginfo)</li>
+<li>通过 C 函数，C 函数中的特定行，并且可以附加函数上下文中的变量，这种方式需要内核调试信息。</li>
+</ul>
+<h4 id="命令使用">命令使用</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">Usage: perf probe <span class="o">[</span>&lt;options&gt;<span class="o">]</span> <span class="s1">&#39;PROBEDEF&#39;</span> <span class="o">[</span><span class="s1">&#39;PROBEDEF&#39;</span> ...<span class="o">]</span>
+</span></span><span class="line"><span class="cl">    or: perf probe <span class="o">[</span>&lt;options&gt;<span class="o">]</span> --add <span class="s1">&#39;PROBEDEF&#39;</span> <span class="o">[</span>--add <span class="s1">&#39;PROBEDEF&#39;</span> ...<span class="o">]</span>
+</span></span><span class="line"><span class="cl">    or: perf probe <span class="o">[</span>&lt;options&gt;<span class="o">]</span> --del <span class="s1">&#39;[GROUP:]EVENT&#39;</span> ...
+</span></span><span class="line"><span class="cl">    or: perf probe --list <span class="o">[</span>GROUP:<span class="o">]</span>EVENT ...
+</span></span><span class="line"><span class="cl">    or: perf probe <span class="o">[</span>&lt;options&gt;<span class="o">]</span> --line <span class="s1">&#39;LINEDESC&#39;</span>
+</span></span><span class="line"><span class="cl">    or: perf probe <span class="o">[</span>&lt;options&gt;<span class="o">]</span> --vars <span class="s1">&#39;PROBEPOINT&#39;</span>
+</span></span><span class="line"><span class="cl">    or: perf probe <span class="o">[</span>&lt;options&gt;<span class="o">]</span> --funcs
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    -a, --add &lt;<span class="o">[</span><span class="nv">EVENT</span><span class="o">=]</span>FUNC<span class="o">[</span>@SRC<span class="o">][</span>+OFF<span class="p">|</span>%return<span class="p">|</span>:RL<span class="p">|;</span>PT<span class="o">]</span><span class="p">|</span>SRC:AL<span class="p">|</span>SRC<span class="p">;</span>PT <span class="o">[[</span><span class="nv">NAME</span><span class="o">=]</span>ARG ...<span class="o">]</span>&gt;
+</span></span><span class="line"><span class="cl">                          probe point definition, where
+</span></span><span class="line"><span class="cl">                GROUP:  Group name <span class="o">(</span>optional<span class="o">)</span>
+</span></span><span class="line"><span class="cl">                EVENT:  Event name
+</span></span><span class="line"><span class="cl">                FUNC:   Function name
+</span></span><span class="line"><span class="cl">                OFF:    Offset from <span class="k">function</span> entry <span class="o">(</span>in byte<span class="o">)</span>
+</span></span><span class="line"><span class="cl">                %return:        Put the probe at <span class="k">function</span> <span class="k">return</span>
+</span></span><span class="line"><span class="cl">                SRC:    Source code path
+</span></span><span class="line"><span class="cl">                RL:     Relative line number from <span class="k">function</span> entry.
+</span></span><span class="line"><span class="cl">                AL:     Absolute line number in file.
+</span></span><span class="line"><span class="cl">                PT:     Lazy expression of line code.
+</span></span><span class="line"><span class="cl">                ARG:    Probe argument <span class="o">(</span><span class="nb">local</span> variable name or
+</span></span><span class="line"><span class="cl">                        kprobe-tracer argument format.<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    -D, --definition &lt;<span class="o">[</span><span class="nv">EVENT</span><span class="o">=]</span>FUNC<span class="o">[</span>@SRC<span class="o">][</span>+OFF<span class="p">|</span>%return<span class="p">|</span>:RL<span class="p">|;</span>PT<span class="o">]</span><span class="p">|</span>SRC:AL<span class="p">|</span>SRC<span class="p">;</span>PT <span class="o">[[</span><span class="nv">NAME</span><span class="o">=]</span>ARG ...<span class="o">]</span>&gt;
+</span></span><span class="line"><span class="cl">                          Show trace event definition of given traceevent <span class="k">for</span> k/uprobe_events.
+</span></span><span class="line"><span class="cl">    -d, --del &lt;<span class="o">[</span>GROUP:<span class="o">]</span>EVENT&gt;
+</span></span><span class="line"><span class="cl">                          delete a probe event.
+</span></span><span class="line"><span class="cl">    -f, --force           forcibly add events with existing name
+</span></span><span class="line"><span class="cl">    -F, --funcs &lt;<span class="o">[</span>FILTER<span class="o">]</span>&gt;
+</span></span><span class="line"><span class="cl">                          Show potential probe-able functions.
+</span></span><span class="line"><span class="cl">    -L, --line &lt;FUNC<span class="o">[</span>:RLN<span class="o">[</span>+NUM<span class="p">|</span>-RLN2<span class="o">]]</span><span class="p">|</span>SRC:ALN<span class="o">[</span>+NUM<span class="p">|</span>-ALN2<span class="o">]</span>&gt;
+</span></span><span class="line"><span class="cl">    -V, --vars &lt;FUNC<span class="o">[</span>@SRC<span class="o">][</span>+OFF<span class="p">|</span>%return<span class="p">|</span>:RL<span class="p">|;</span>PT<span class="o">]</span><span class="p">|</span>SRC:AL<span class="p">|</span>SRC<span class="p">;</span>PT&gt;
+</span></span><span class="line"><span class="cl">                        Show accessible variables on PROBEDEF
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="添加动态探针">添加动态探针</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span><span class="lnt">87
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 一: 基于 uprobes ，为用户空间库函数添加动态探针</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 想要查看普通应用的函数名称和参数，那么在应用程序的二进制文件中，同样需要包含调试信息。</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 为/bin/bash添加readline探针，获取其返回值，并作为 string 类型返回</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /bin/bash <span class="s1">&#39;readline&#39;</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /bin/bash <span class="s1">&#39;readline%return +0($retval):string&#39;</span>
+</span></span><span class="line"><span class="cl">Added new event:
+</span></span><span class="line"><span class="cl">  probe_bash:readline__return <span class="o">(</span>on readline%return in /usr/bin/bash with +0<span class="o">(</span><span class="nv">$retval</span><span class="o">)</span>:string<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">You can now use it in all perf tools, such as:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        perf record -e probe_bash:readline__return -aR sleep <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 查询所有的函数</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /bin/bash --funcs
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 查询函数的参数</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /bin/bash -V readline
+</span></span><span class="line"><span class="cl">Available variables at readline
+</span></span><span class="line"><span class="cl">        @&lt;readline+0&gt;
+</span></span><span class="line"><span class="cl">                char*   prompt
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 二: 基于 kprobes，为内核函数添加动态探针</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 通过符号表和寄存器添加 malloc 探针</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /lib64/libc-2.17.so <span class="s1">&#39;--add=malloc&#39;</span>
+</span></span><span class="line"><span class="cl">$ perf probe --del <span class="s2">&#34;malloc&#34;</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /lib64/libc-2.17.so <span class="s1">&#39;--add=malloc size=%di&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 通过 C 扩展</span>
+</span></span><span class="line"><span class="cl">$ yum --enablerepo<span class="o">=</span>base-debuginfo install -y kernel-debuginfo-<span class="k">$(</span>uname -r<span class="k">)</span>
+</span></span><span class="line"><span class="cl">$ perf probe --add tcp_sendmsg
+</span></span><span class="line"><span class="cl">Added new event:
+</span></span><span class="line"><span class="cl">  probe:tcp_sendmsg    <span class="o">(</span>on tcp_sendmsg<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">You can now use it in all perf tools, such as:
+</span></span><span class="line"><span class="cl">        <span class="c1"># 自动显示使用方式</span>
+</span></span><span class="line"><span class="cl">        perf record -e probe:tcp_sendmsg -aR sleep <span class="m">1</span>  
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 获取 tcp_sendmsg 的返回值</span>
+</span></span><span class="line"><span class="cl">$ perf probe <span class="s1">&#39;tcp_sendmsg%return $retval&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2.1 列出tcp_sendmsg()可用的变量</span>
+</span></span><span class="line"><span class="cl">$ perf probe -V tcp_sendmsg
+</span></span><span class="line"><span class="cl">Available variables at tcp_sendmsg
+</span></span><span class="line"><span class="cl">        @&lt;tcp_sendmsg+0&gt;
+</span></span><span class="line"><span class="cl">                size_t  size
+</span></span><span class="line"><span class="cl">                struct kiocb*   iocb
+</span></span><span class="line"><span class="cl">                struct msghdr*  msg
+</span></span><span class="line"><span class="cl">                struct sock*    sk
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2.2 添加带参数的探针</span>
+</span></span><span class="line"><span class="cl">$ perf probe --add <span class="s1">&#39;tcp_sendmsg size&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2.3 列出tcp_sendmsg()可用的行探测:</span>
+</span></span><span class="line"><span class="cl">$ perf probe -L tcp_sendmsg
+</span></span><span class="line"><span class="cl">&lt;tcp_sendmsg@/mnt/src/linux-3.14.5/net/ipv4/tcp.c:0&gt;
+</span></span><span class="line"><span class="cl">      <span class="m">0</span>  int tcp_sendmsg<span class="o">(</span>struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+</span></span><span class="line"><span class="cl">                        size_t size<span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="m">2</span>  <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                struct iovec *iov<span class="p">;</span>
+</span></span><span class="line"><span class="cl">                struct tcp_sock *tp <span class="o">=</span> tcp_sk<span class="o">(</span>sk<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                struct sk_buff *skb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="m">6</span>         int iovlen, flags, err, <span class="nv">copied</span> <span class="o">=</span> 0<span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="m">7</span>         int <span class="nv">mss_now</span> <span class="o">=</span> 0, size_goal, <span class="nv">copied_syn</span> <span class="o">=</span> 0, <span class="nv">offset</span> <span class="o">=</span> 0<span class="p">;</span>
+</span></span><span class="line"><span class="cl">                bool sg<span class="p">;</span>
+</span></span><span class="line"><span class="cl">                long timeo<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>...<span class="o">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2.4 检查在第81行有哪些变量可用</span>
+</span></span><span class="line"><span class="cl">$ perf probe -V tcp_sendmsg:81
+</span></span><span class="line"><span class="cl">Available variables at tcp_sendmsg:81
+</span></span><span class="line"><span class="cl">        @&lt;tcp_sendmsg+537&gt;
+</span></span><span class="line"><span class="cl">                bool    sg
+</span></span><span class="line"><span class="cl">                int     copied
+</span></span><span class="line"><span class="cl">                int     copied_syn
+</span></span><span class="line"><span class="cl">                int     flags
+</span></span><span class="line"><span class="cl">                int     mss_now
+</span></span><span class="line"><span class="cl">                int     offset
+</span></span><span class="line"><span class="cl">                int     size_goal
+</span></span><span class="line"><span class="cl">                long int        timeo
+</span></span><span class="line"><span class="cl">                size_t  seglen
+</span></span><span class="line"><span class="cl">                struct iovec*   iov
+</span></span><span class="line"><span class="cl">                struct sock*    sk
+</span></span><span class="line"><span class="cl">                unsigned char*  from
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2.5. 跟踪第81行，并使用循环中的seglen变量</span>
+</span></span><span class="line"><span class="cl">$ perf probe --add <span class="s1">&#39;tcp_sendmsg:81 seglen&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="2-perf-stat计数模式">2. perf stat(计数模式)</h2>
+<p>perf stat 是 perf 三种使用模式中的第一种模式计数模式。</p>
+<p>perf stat:</p>
+<ul>
+<li>命令格式:
+<ul>
+<li><code>perf stat [-e &lt;EVENT&gt; | --event=EVENT] [-a] &lt;command&gt;</code></li>
+<li><code>perf stat [-e &lt;EVENT&gt; | --event=EVENT] [-a] — &lt;command&gt; [&lt;options&gt;]</code></li>
+<li><code>perf stat [-e &lt;EVENT&gt; | --event=EVENT] [-a] record [-o file] — &lt;command&gt; [&lt;options&gt;]</code></li>
+<li><code>perf stat report [-i file]</code></li>
+</ul>
+</li>
+<li>作用: 可以对程序运行过程中的性能计数器(包括Hardware，software counters)进行统计，分析程序的整体消耗情况</li>
+<li>参数:
+<ul>
+<li><code>-d, -dd, -ddd</code> 输出更详细的信息</li>
+</ul>
+</li>
+</ul>
+<h3 id="21-perf-stat-默认输出">2.1 perf stat 默认输出</h3>
+<p>默认情况 perf stat 只会对 Software Events 和 Hardware Events 进行计数分析。下面是 perf stat 的使用示例</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf stat ls
+</span></span><span class="line"><span class="cl">Performance counter stats <span class="k">for</span> <span class="s1">&#39;ls&#39;</span>:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">          2.164836      task-clock <span class="o">(</span>msec<span class="o">)</span>         <span class="c1">#    0.808 CPUs utilized</span>
+</span></span><span class="line"><span class="cl">                <span class="m">51</span>      context-switches          <span class="c1">#    0.024 M/sec</span>
+</span></span><span class="line"><span class="cl">                 <span class="m">4</span>      cpu-migrations            <span class="c1">#    0.002 M/sec</span>
+</span></span><span class="line"><span class="cl">               <span class="m">333</span>      page-faults               <span class="c1">#    0.154 M/sec</span>
+</span></span><span class="line"><span class="cl">           <span class="m">5506056</span>                                <span class="c1">#    2.543 GHz</span>
+</span></span><span class="line"><span class="cl">                 <span class="m">0</span>      stalled-cycles-frontend   <span class="c1">#    0.00% frontend cycles idle</span>
+</span></span><span class="line"><span class="cl">                 <span class="m">0</span>      stalled-cycles-backend    <span class="c1">#    0.00% backend  cycles idle</span>
+</span></span><span class="line"><span class="cl">           <span class="m">6100570</span>      instructions              <span class="c1">#    1.11  insns per cycle</span>
+</span></span><span class="line"><span class="cl">           <span class="m">1298744</span>      branches                  <span class="c1">#  599.927 M/sec</span>
+</span></span><span class="line"><span class="cl">             <span class="m">18509</span>      branch-misses             <span class="c1">#    1.43% of all branches</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       0.002679758 seconds <span class="nb">time</span> elapsed
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>指标含义:</p>
+<ol>
+<li>task-clock (msec):</li>
+</ol>
+<ul>
+<li>cpu处理task所消耗的时间，单位ms</li>
+<li>0.808 CPUs utilized的表示cpu使用率为80.8%，该值越高代表程序是CPU bound而非IO bound 类型</li>
+</ul>
+<ol start="2">
+<li>instructions：</li>
+</ol>
+<ul>
+<li>执行的指令条数，</li>
+<li>insns per cycle: 即IPC，每个cpu周期执行的指令条数，IPC比上面的CPU使用率更能说明CPU的使用情况</li>
+<li>更高的IPC值意味着更高的指令吞吐量，更低的值表示更多的停顿周期。</li>
+<li>一般来说，我认为IPC值越高(例如，超过1.0)就越好，表示工作的最佳处理。但是，需要检查执行指令是什么，以防这是一个旋转循环: 指令率高，但实际完成的工作率低。</li>
+</ul>
+<ol start="3">
+<li>stalled-cycles-frontend和stalled-cycles-backend: 表示CPU停滞统计</li>
+</ol>
+<ul>
+<li>前端和后端指标指的是CPU管道，统计的是它们的停顿次数</li>
+<li>前端按顺序处理CPU指令。它包括指令获取，以及分支预测和解码。</li>
+<li>解码后的指令成为后端处理的微操作(uops)，并且可能会乱序地执行。</li>
+<li>每条指令的停滞周期类似于IPC(反向)，但是，只计算停滞周期，这将用于内存或资源总线访问。</li>
+</ul>
+<ol start="4">
+<li>branches：这段时间内发生分支预测的次数。现代的CPU都有分支预测方面的优化。</li>
+<li>branches-misses：这段时间内分支预测失败的次数，这个值越小越好。</li>
+</ol>
+<h4 id="详细模式">详细模式</h4>
+<p>可以使用 -d 选项输出更详细的信息，带 <code>-d</code> 选项的输出会包含用于一级数据缓存事件和最后一级缓存(LLC)事件的额外计数器。<code>-dd,-ddd</code>可输出更加详细的信息。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf stat -d gzip file1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> Performance counter stats <span class="k">for</span> <span class="s1">&#39;gzip file1&#39;</span>:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       1610.719530 task-clock                <span class="c1">#    0.998 CPUs utilized          </span>
+</span></span><span class="line"><span class="cl">                <span class="m">20</span> context-switches          <span class="c1">#    0.012 K/sec                  </span>
+</span></span><span class="line"><span class="cl">                 <span class="m">0</span> CPU-migrations            <span class="c1">#    0.000 K/sec                  </span>
+</span></span><span class="line"><span class="cl">               <span class="m">258</span> page-faults               <span class="c1">#    0.160 K/sec                  </span>
+</span></span><span class="line"><span class="cl">     5,491,605,997 cycles                    <span class="c1">#    3.409 GHz                     [40.18%]</span>
+</span></span><span class="line"><span class="cl">     1,654,551,151 stalled-cycles-frontend   <span class="c1">#   30.13% frontend cycles idle    [40.80%]</span>
+</span></span><span class="line"><span class="cl">     1,025,280,350 stalled-cycles-backend    <span class="c1">#   18.67% backend  cycles idle    [40.34%]</span>
+</span></span><span class="line"><span class="cl">     8,644,643,951 instructions              <span class="c1">#    1.57  insns per cycle        </span>
+</span></span><span class="line"><span class="cl">                                             <span class="c1">#    0.19  stalled cycles per insn [50.89%]</span>
+</span></span><span class="line"><span class="cl">     1,492,911,665 branches                  <span class="c1">#  926.860 M/sec                   [50.69%]</span>
+</span></span><span class="line"><span class="cl">        53,471,580 branch-misses             <span class="c1">#    3.58% of all branches         [51.21%]</span>
+</span></span><span class="line"><span class="cl">     1,938,889,736 L1-dcache-loads           <span class="c1"># 1203.741 M/sec                   [49.68%]</span>
+</span></span><span class="line"><span class="cl">       154,380,395 L1-dcache-load-misses     <span class="c1">#    7.96% of all L1-dcache hits   [49.66%]</span>
+</span></span><span class="line"><span class="cl">                 <span class="m">0</span> LLC-loads                 <span class="c1">#    0.000 K/sec                   [39.27%]</span>
+</span></span><span class="line"><span class="cl">                 <span class="m">0</span> LLC-load-misses           <span class="c1">#    0.00% of all LL-cache hits    [39.61%]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       1.614165346 seconds <span class="nb">time</span> elapsed
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-指定-hardware-events-计数器">2.2 指定 Hardware Events 计数器</h3>
+<p>下面是对 Hardware Events 指定计数的示例。如果 -e 指定的硬件事件包含“ cycle ”和“ instructions ”计数器，那么 perf 的输出中将包含 IPC。硬件事件通常是特定于处理器模型的，许多可能无法从虚拟化环境中获得。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 指定硬件计数器</span>
+</span></span><span class="line"><span class="cl">$ perf stat -e L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores gzip file1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> Performance counter stats <span class="k">for</span> <span class="s1">&#39;gzip file1&#39;</span>:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     1,947,551,657 L1-dcache-loads
+</span></span><span class="line"><span class="cl">                                            
+</span></span><span class="line"><span class="cl">       153,829,652 L1-dcache-misses
+</span></span><span class="line"><span class="cl">         <span class="c1">#    7.90% of all L1-dcache hits  </span>
+</span></span><span class="line"><span class="cl">     1,171,475,286 L1-dcache-stores
+</span></span><span class="line"><span class="cl">                                           
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       1.538038091 seconds <span class="nb">time</span> elapsed
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 使用原始事件</span>
+</span></span><span class="line"><span class="cl">$ perf stat -e cycles,instructions,r80a2,r2b1 gzip file1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> Performance counter stats <span class="k">for</span> <span class="s1">&#39;gzip file1&#39;</span>:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     5,586,963,328 cycles                    <span class="c1">#    0.000 GHz                    </span>
+</span></span><span class="line"><span class="cl">     8,608,237,932 instructions              <span class="c1">#    1.54  insns per cycle        </span>
+</span></span><span class="line"><span class="cl">         9,448,159 raw 0x80a2                                                  
+</span></span><span class="line"><span class="cl">    11,855,777,803 raw 0x2b1                                                   
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       1.588618969 seconds <span class="nb">time</span> elapsed
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># PMCs: counting cycles and frontend stalls via raw specification:</span>
+</span></span><span class="line"><span class="cl">$ perf stat -e cycles -e cpu/event<span class="o">=</span>0x0e,umask<span class="o">=</span>0x01,inv,cmask<span class="o">=</span>0x01/ -a sleep <span class="m">5</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="23-通过静态探针统计系统调用">2.3 通过静态探针统计系统调用</h3>
+<p>通过 -e 指定 Kernel Tracepoint Events，perf stat 可以统计程序执行的系统调用:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 统计系统调用统计系统调用并打印摘要(非零计数)
+</span></span><span class="line"><span class="cl">$ perf stat -e &#39;syscalls:sys_enter_*&#39; gzip file1 2&gt;&amp;1 | awk &#39;$1 != 0&#39;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Performance counter stats for &#39;gzip file1&#39;:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                 1 syscalls:sys_enter_utimensat               
+</span></span><span class="line"><span class="cl">                 1 syscalls:sys_enter_unlink                  
+</span></span><span class="line"><span class="cl">                 5 syscalls:sys_enter_newfstat                
+</span></span><span class="line"><span class="cl">             1,603 syscalls:sys_enter_read                    
+</span></span><span class="line"><span class="cl">             3,201 syscalls:sys_enter_write      
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用系统调用跟踪程序<code>strace -c</code>可以看到类似的报告，但是它可能导致比perf高得多的开销，因为perf在内核中缓冲数据。strace的当前实现使用ptrace(2)附加到目标进程并在系统调用期间停止它，就像调试器一样。这是暴力的，并可能导致严重的开销。</p>
+<p>perf trace 子命令提供与 strace 类似的功能，但开销要低得多。perf trace 还可以进行系统级的系统调用跟踪（即跟踪所有进程），而 strace 只能跟踪特定的进程。</p>
+<h2 id="3-采样事件">3. 采样事件</h2>
+<p>perf record 是perf 的第二种使用方式，采样事件，他包含如下几种模式:</p>
+<ol>
+<li>Timed Profiling，以固定间隔采样，使用 -F 选项</li>
+<li>Event Profiling，基于事件采样(通常是硬件事件，软件事件较少)，使用 -e 指定采样事件</li>
+<li>Static Kernel Tracing: 基于内核的静态探针，使用 -e 指定静态探针类型。</li>
+</ol>
+<p>perf-record用来启动一次跟踪:</p>
+<ol>
+<li>perf record在当前目录产生一个perf.data文件，用来记录过程数据</li>
+<li>如果这个文件已经存在，旧的文件会被改名为perf.data.old</li>
+<li>perf.data只包含原始数据，perf report 需要访问本地的符号表，pid和进程的对应关系等信息来生成报告。</li>
+<li>所以perf.data不能直接拷贝，可以通过perf-archive命令把所有这些数据打包，然后复制</li>
+</ol>
+<h3 id="31-perf-recordreport-命令">3.1 perf record/report 命令</h3>
+<p><code>perf record</code></p>
+<ul>
+<li>命令格式:
+<ul>
+<li><code>perf record [-e &lt;EVENT&gt; | --event=EVENT] [-a] &lt;command&gt;</code></li>
+<li><code>perf record [-e &lt;EVENT&gt; | --event=EVENT] [-a] — &lt;command&gt; [&lt;options&gt;]</code></li>
+</ul>
+</li>
+<li>参数:
+<ul>
+<li><code>-p, --pid &lt;pid&gt;</code>: 指定跟踪固定的一组进程，即仅仅跟踪发生在特定pid的事件</li>
+<li><code>-a, --all-cpus</code>: 跟踪整个系统的性能，常用选项</li>
+<li><code>-c, --count &lt;n&gt;</code>: 累计多少个事件记录一次</li>
+<li><code>-g</code>: 开启堆栈追踪，通常无需使用</li>
+<li><code>-F</code>: 事件采样的频率, 单位HZ, 更高的频率会获得更细的统计，但会带来更多的开销</li>
+<li><code>sleep</code>: 采样的时间</li>
+</ul>
+</li>
+</ul>
+<p>perf.data 文件可以用多种方法处理。perf report命令启动ncurses导航器来检查调用图。或者使用 &ndash;stdio 选项将调用图打印成树状，并标注百分比:</p>
+<p><code>perf report [-i &lt;file&gt; | --input=file]</code></p>
+<ul>
+<li>使用: 显示的是一个菜单项，回车可以查看折叠的代码，esc 或者 q 可以退出返回上一级</li>
+<li>参数:
+<ul>
+<li><code>--pid=</code>: 指定 pid</li>
+<li><code>--tid=</code>: 指定 tid</li>
+<li><code>-S, --symbols</code>=: Only consider these symbols.</li>
+<li><code>--stdio</code>: 在终端将调用图以树状图打印</li>
+</ul>
+</li>
+</ul>
+<h3 id="32-timed-profiling">3.2 Timed Profiling</h3>
+<p>perf 可以基于对指令指针或堆栈跟踪的固定间隔采样(定时分析)来分析CPU使用情况。入下例所示以99赫兹(-F 99)，对整个系统(-a，对所有CPU)采样CPU堆栈，采样10秒，并记录堆栈(-g，调用图):</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf record -F <span class="m">99</span> -a -g -- sleep <span class="m">30</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>选择99赫兹而不是100赫兹，是为了避免偶然地与某些周期性活动同步采样，以免产生扭曲的结果。这也是粗糙的:你可能想要增加到更高的速率(例如，高达997赫兹)以获得更好的分辨率，请记住，更高的频率意味着更高的开销。</p>
+<h3 id="33-event-profiling">3.3 Event Profiling</h3>
+<p>除了按时间间隔采样外，由CPU硬件计数器触发的采样是CPU分析的另一种形式。某些事件发生的频率非常高，在每次出现时都收集堆栈会导致过多的开销并降低系统速度并改变目标的性能特征。通常，只测量它们出现的一小部分，而不是全部，就足够了。这可以通过使用“-c” 指定触发事件收集的阈值来实现。“-c count”机制是由处理器实现的，它只在达到阈值时中断内核。</p>
+<p>例如，下面的一行程序统计 1级数据缓存加载失败次数，每10000次失败收集一次堆栈跟踪:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 每 1000 次收集一次堆栈跟踪</span>
+</span></span><span class="line"><span class="cl">perf record -e L1-dcache-load-misses -c <span class="m">10000</span> -ag -- sleep <span class="m">5</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="34-static-kernel-tracing">3.4 Static Kernel Tracing</h3>
+<p>通过内核静态探针，可以跟踪内核的系统调用。</p>
+<h4 id="跟踪新进程的创建">跟踪新进程的创建</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># perf record -e sched:sched_process_exec -a</span>
+</span></span><span class="line"><span class="cl">^C<span class="o">[</span> perf record: Woken up <span class="m">1</span> <span class="nb">times</span> to write data <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> perf record: Captured and wrote 0.064 MB perf.data <span class="o">(</span>~2788 samples<span class="o">)</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># perf report -n --sort comm --stdio</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>...<span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># Overhead       Samples  Command</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># ........  ............  .......</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#</span>
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>    troff
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>      tbl
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>  preconv
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>    pager
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>    nroff
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>      man
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>   locale
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>   grotty
+</span></span><span class="line"><span class="cl">    11.11%             <span class="m">1</span>    groff
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="跟踪出站连接">跟踪出站连接</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf record -e syscalls:sys_enter_connect -a
+</span></span><span class="line"><span class="cl">^C<span class="o">[</span> perf record: Woken up <span class="m">1</span> <span class="nb">times</span> to write data <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> perf record: Captured and wrote 0.057 MB perf.data <span class="o">(</span>~2489 samples<span class="o">)</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># perf report --stdio</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># ========</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># Samples: 21  of event &#39;syscalls:sys_enter_connect&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># Event count (approx.): 21</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#</span>
+</span></span><span class="line"><span class="cl"> Overhead  Command       Shared Object                       Symbol
+</span></span><span class="line"><span class="cl"> ........  .......  ..................  ...........................
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    52.38%     sshd  libc-2.15.so        <span class="o">[</span>.<span class="o">]</span> __GI___connect_internal
+</span></span><span class="line"><span class="cl">    19.05%   groups  libc-2.15.so        <span class="o">[</span>.<span class="o">]</span> __GI___connect_internal
+</span></span><span class="line"><span class="cl">     9.52%     sshd  libpthread-2.15.so  <span class="o">[</span>.<span class="o">]</span> __connect_internal     
+</span></span><span class="line"><span class="cl">     9.52%     mesg  libc-2.15.so        <span class="o">[</span>.<span class="o">]</span> __GI___connect_internal
+</span></span><span class="line"><span class="cl">     9.52%     bash  libc-2.15.so        <span class="o">[</span>.<span class="o">]</span> __GI___connect_internal
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>记录connect()的堆栈跟踪可以解释为什么会出现这些出站连接:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf record -e syscalls:sys_enter_connect -ag
+</span></span><span class="line"><span class="cl">^C<span class="o">[</span> perf record: Woken up <span class="m">1</span> <span class="nb">times</span> to write data <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> perf record: Captured and wrote 0.057 MB perf.data <span class="o">(</span>~2499 samples<span class="o">)</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl">$ perf report --stdio
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="跟踪套接字缓冲区消耗">跟踪套接字缓冲区消耗</h4>
+<p>跟踪套接字缓冲区的消耗和堆栈跟踪是识别导致套接字或网络I/O的原因的一种方法。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf record -e <span class="s1">&#39;skb:consume_skb&#39;</span> -ag
+</span></span><span class="line"><span class="cl">^C<span class="o">[</span> perf record: Woken up <span class="m">1</span> <span class="nb">times</span> to write data <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> perf record: Captured and wrote 0.065 MB perf.data <span class="o">(</span>~2851 samples<span class="o">)</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl">$ perf report
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="34-static-user-tracing">3.4 Static User Tracing</h3>
+<p>在4.x 的内核中，添加了用户态静态追踪机制。下面演示了Linux 4.10(附加了一个补丁集)，如何跟踪Node.js 的USDT探针:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># perf buildid-cache --add `which node`</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># perf list | grep sdt_node</span>
+</span></span><span class="line"><span class="cl">  sdt_node:gc__done                                  <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:gc__start                                 <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:http__client__request                     <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:http__client__response                    <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:http__server__request                     <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:http__server__response                    <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:net__server__connection                   <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl">  sdt_node:net__stream__end                          <span class="o">[</span>SDT event<span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># perf record -e sdt_node:http__server__request -a</span>
+</span></span><span class="line"><span class="cl">^C<span class="o">[</span> perf record: Woken up <span class="m">1</span> <span class="nb">times</span> to write data <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span> perf record: Captured and wrote 0.446 MB perf.data <span class="o">(</span><span class="m">3</span> samples<span class="o">)</span> <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># perf script</span>
+</span></span><span class="line"><span class="cl">            node  <span class="m">7646</span> <span class="o">[</span>002<span class="o">]</span>   361.012364: sdt_node:http__server__request: <span class="o">(</span>dc2e69<span class="o">)</span>
+</span></span><span class="line"><span class="cl">            node  <span class="m">7646</span> <span class="o">[</span>002<span class="o">]</span>   361.204718: sdt_node:http__server__request: <span class="o">(</span>dc2e69<span class="o">)</span>
+</span></span><span class="line"><span class="cl">            node  <span class="m">7646</span> <span class="o">[</span>002<span class="o">]</span>   361.363043: sdt_node:http__server__request: <span class="o">(</span>dc2e69<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="35-dynamic-tracing">3.5 Dynamic Tracing</h3>
+<p>使用动态追踪需要启用如下的内核参数:</p>
+<ol>
+<li>内核动态跟踪需要启用CONFIG_KPROBES=y和CONFIG_KPROBE_EVENTS=y</li>
+<li>用户级动态跟踪需要启用 CONFIG_UPROBES=y和CONFIG_UPROBE_EVENTS=y</li>
+<li>为避免内核栈指针优化，需要启用 CONFIG_FRAME_POINTER=y</li>
+</ol>
+<p>下面是几个在 Linux 使用 perf 进行动态追踪的示例</p>
+<h4 id="检测内核tcp_sendmsg函数">检测内核tcp_sendmsg()函数</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 添加动态探针</span>
+</span></span><span class="line"><span class="cl">$ perf probe --add tcp_sendmsg
+</span></span><span class="line"><span class="cl">Failed to find path of kernel module.
+</span></span><span class="line"><span class="cl">Added new event:
+</span></span><span class="line"><span class="cl">  probe:tcp_sendmsg    <span class="o">(</span>on tcp_sendmsg<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">You can now use it in all perf tools, such as:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	perf record -e probe:tcp_sendmsg -aR sleep <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 使用动态探针</span>
+</span></span><span class="line"><span class="cl">$  perf record -e probe:tcp_sendmsg -a -g -- sleep <span class="m">5</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 输出追踪报告</span>
+</span></span><span class="line"><span class="cl">$ perf report --stdio
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 如果内核有debuginfo (CONFIG_DEBUG_INFO=y)，那么可以从函数中提取内核变量。</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 这是在Linux 3.13.1上检查size_t(整数)的一个简单示例。</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 5.列出tcp_sendmsg()可用的变量</span>
+</span></span><span class="line"><span class="cl">$  perf probe -V tcp_sendmsg
+</span></span><span class="line"><span class="cl">Available variables at tcp_sendmsg
+</span></span><span class="line"><span class="cl">        @&lt;tcp_sendmsg+0&gt;
+</span></span><span class="line"><span class="cl">                size_t  size
+</span></span><span class="line"><span class="cl">                struct kiocb*   iocb
+</span></span><span class="line"><span class="cl">                struct msghdr*  msg
+</span></span><span class="line"><span class="cl">                struct sock*    sk
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 6. 使用变量“size”为tcp_sendmsg()创建一个探针:</span>
+</span></span><span class="line"><span class="cl">$ perf probe --add <span class="s1">&#39;tcp_sendmsg size&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 7. 跟踪此探针</span>
+</span></span><span class="line"><span class="cl">$ perf record -e probe:tcp_sendmsg -a
+</span></span><span class="line"><span class="cl">$ perf script
+</span></span><span class="line"><span class="cl"><span class="c1"># 内核:将显示 tcp_sendmsg()行号和本地变量值</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># ========</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#</span>
+</span></span><span class="line"><span class="cl">            sshd  <span class="m">1301</span> <span class="o">[</span>001<span class="o">]</span>   502.424719: probe:tcp_sendmsg: <span class="o">(</span>ffffffff81505d80<span class="o">)</span> <span class="nv">size</span><span class="o">=</span>b0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 使用debuginfo, perf_events可以为内核函数中的行创建跟踪点。</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 必须安装 kernel-debuginfo 包，或者启用CONFIG_DEBUG_INFO=y</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 8. 列出tcp_sendmsg()可用的行探测:</span>
+</span></span><span class="line"><span class="cl">$ perf probe -L tcp_sendmsg
+</span></span><span class="line"><span class="cl">&lt;tcp_sendmsg@/mnt/src/linux-3.14.5/net/ipv4/tcp.c:0&gt;
+</span></span><span class="line"><span class="cl">      <span class="m">0</span>  int tcp_sendmsg<span class="o">(</span>struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+</span></span><span class="line"><span class="cl">                        size_t size<span class="o">)</span>
+</span></span><span class="line"><span class="cl">      <span class="m">2</span>  <span class="o">{</span>
+</span></span><span class="line"><span class="cl">                struct iovec *iov<span class="p">;</span>
+</span></span><span class="line"><span class="cl">                struct tcp_sock *tp <span class="o">=</span> tcp_sk<span class="o">(</span>sk<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                struct sk_buff *skb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="m">6</span>         int iovlen, flags, err, <span class="nv">copied</span> <span class="o">=</span> 0<span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="m">7</span>         int <span class="nv">mss_now</span> <span class="o">=</span> 0, size_goal, <span class="nv">copied_syn</span> <span class="o">=</span> 0, <span class="nv">offset</span> <span class="o">=</span> 0<span class="p">;</span>
+</span></span><span class="line"><span class="cl">                bool sg<span class="p">;</span>
+</span></span><span class="line"><span class="cl">                long timeo<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>...<span class="o">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 9. 检查在第81行有哪些变量可用</span>
+</span></span><span class="line"><span class="cl">$ perf probe -V tcp_sendmsg:81
+</span></span><span class="line"><span class="cl">Available variables at tcp_sendmsg:81
+</span></span><span class="line"><span class="cl">        @&lt;tcp_sendmsg+537&gt;
+</span></span><span class="line"><span class="cl">                bool    sg
+</span></span><span class="line"><span class="cl">                int     copied
+</span></span><span class="line"><span class="cl">                int     copied_syn
+</span></span><span class="line"><span class="cl">                int     flags
+</span></span><span class="line"><span class="cl">                int     mss_now
+</span></span><span class="line"><span class="cl">                int     offset
+</span></span><span class="line"><span class="cl">                int     size_goal
+</span></span><span class="line"><span class="cl">                long int        timeo
+</span></span><span class="line"><span class="cl">                size_t  seglen
+</span></span><span class="line"><span class="cl">                struct iovec*   iov
+</span></span><span class="line"><span class="cl">                struct sock*    sk
+</span></span><span class="line"><span class="cl">                unsigned char*  from
+</span></span><span class="line"><span class="cl"><span class="c1"># 10. 跟踪第81行，并使用循环中的seglen变量</span>
+</span></span><span class="line"><span class="cl">$ perf probe --add <span class="s1">&#39;tcp_sendmsg:81 seglen&#39;</span>
+</span></span><span class="line"><span class="cl">$ perf record -e probe:tcp_sendmsg -a
+</span></span><span class="line"><span class="cl">$ perf script
+</span></span><span class="line"><span class="cl">            sshd  <span class="m">4652</span> <span class="o">[</span>001<span class="o">]</span> 2082360.931086: probe:tcp_sendmsg: <span class="o">(</span>ffffffff81642ca9<span class="o">)</span> <span class="nv">seglen</span><span class="o">=</span>0x80
+</span></span><span class="line"><span class="cl">   app_plugin.pl  <span class="m">2400</span> <span class="o">[</span>001<span class="o">]</span> 2082360.970489: probe:tcp_sendmsg: <span class="o">(</span>ffffffff81642ca9<span class="o">)</span> <span class="nv">seglen</span><span class="o">=</span>0x20
+</span></span><span class="line"><span class="cl">        postgres  <span class="m">2422</span> <span class="o">[</span>000<span class="o">]</span> 2082360.970703: probe:tcp_sendmsg: <span class="o">(</span>ffffffff81642ca9<span class="o">)</span> <span class="nv">seglen</span><span class="o">=</span>0x52
+</span></span><span class="line"><span class="cl"><span class="o">[</span>...<span class="o">]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="跟踪-malloc-函数调用">跟踪 malloc 函数调用</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 添加 malloc 探针</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /lib64/libc-2.17.so <span class="s1">&#39;--add=malloc&#39;</span>
+</span></span><span class="line"><span class="cl">$ perf record -e probe_libc:malloc -a
+</span></span><span class="line"><span class="cl">$ perf report -n
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 添加带 size 参数的 malloc 探针</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># size 保存的寄存器信息，依赖于你的处理器架构</span>
+</span></span><span class="line"><span class="cl">$ perf probe -x /lib64/libc-2.17.so <span class="s1">&#39;--add=malloc size=%di&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>malloc()调用非常频繁，因此需要考虑跟踪这样的调用的开销。</p>
+<h2 id="4-perf-ebpf">4. perf eBPF</h2>
+<h2 id="5-perf-特殊功能子命令">5. perf 特殊功能子命令</h2>
+<p>说完了 perf 的三种基础使用方式，我们来看perf 提供特殊功能的子命令。</p>
+<h3 id="51-perf-trace">5.1 perf trace</h3>
+<p>perf trace 类似于 strace 用于跟踪进程的系统调用，前面我们也提到了，相对于 strace 使用的 ptrace 机制来说，perf trace 基于内核事件，比进程跟踪的性能好很多。perf trace 还可以进行系统级的系统调用跟踪（即跟踪所有进程），而 strace 只能跟踪特定的进程。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">Usage: perf trace <span class="o">[</span>&lt;options&gt;<span class="o">]</span> <span class="o">[</span>&lt;command&gt;<span class="o">]</span>
+</span></span><span class="line"><span class="cl">    or: perf trace <span class="o">[</span>&lt;options&gt;<span class="o">]</span> -- &lt;command&gt; <span class="o">[</span>&lt;options&gt;<span class="o">]</span>
+</span></span><span class="line"><span class="cl">    or: perf trace record <span class="o">[</span>&lt;options&gt;<span class="o">]</span> <span class="o">[</span>&lt;command&gt;<span class="o">]</span>
+</span></span><span class="line"><span class="cl">    or: perf trace record <span class="o">[</span>&lt;options&gt;<span class="o">]</span> -- &lt;command&gt; <span class="o">[</span>&lt;options&gt;<span class="o">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    -a, --all-cpus        system-wide collection from all CPUs
+</span></span><span class="line"><span class="cl">    -C, --cpu &lt;cpu&gt;       list of cpus to monitor
+</span></span><span class="line"><span class="cl">    -D, --delay &lt;n&gt;       ms to <span class="nb">wait</span> before starting measurement after program start
+</span></span><span class="line"><span class="cl">    -e, --event &lt;event&gt;   event/syscall selector. use <span class="s1">&#39;perf list&#39;</span> to list available events
+</span></span><span class="line"><span class="cl">    -f, --force           don<span class="err">&#39;</span>t complain, <span class="k">do</span> it
+</span></span><span class="line"><span class="cl">    -F, --pf &lt;all<span class="p">|</span>maj<span class="p">|</span>min&gt;
+</span></span><span class="line"><span class="cl">                          Trace pagefaults
+</span></span><span class="line"><span class="cl">    -G, --cgroup &lt;name&gt;   monitor event in cgroup name only
+</span></span><span class="line"><span class="cl">    -i, --input &lt;file&gt;    Analyze events in file
+</span></span><span class="line"><span class="cl">    -m, --mmap-pages &lt;pages&gt;
+</span></span><span class="line"><span class="cl">                          number of mmap data pages
+</span></span><span class="line"><span class="cl">    -o, --output &lt;file&gt;   output file name
+</span></span><span class="line"><span class="cl">    -p, --pid &lt;pid&gt;       trace events on existing process id
+</span></span><span class="line"><span class="cl">    --sched           show blocking scheduler events
+</span></span><span class="line"><span class="cl">    --syscalls        Trace syscalls
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面是 perf trace 的使用示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ perf trace --syscalls ls
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="51-perf-top">5.1 perf top</h3>
+<p><code>perf top [-e &lt;EVENT&gt; | --event=EVENT] [&lt;options&gt;]</code></p>
+<ul>
+<li>作用: 可以动态收集和更新统计列表</li>
+<li>options:
+<ul>
+<li>-e:
+<ul>
+<li>指定跟踪的事件，包括 perf list提供的所有事件以及 tracepoint</li>
+<li>可以多次使用，也可以一次指定多个事件，事件使用逗号分隔</li>
+<li>对于厂家为上传的事件可以直接是用编号，eg: <code>-e r0013</code></li>
+<li>事件可以指定后缀，用于限定跟踪范围</li>
+</ul>
+</li>
+<li>-s:
+<ul>
+<li>指定按什么参数来进行分类</li>
+<li>默认会按函数进行分类，按照 pid 分类需要指定 -s pid</li>
+<li>-s也可以指定多个域（用逗号隔开）</li>
+<li>可选值包括:
+<ul>
+<li>pid, comm, dso, symbol, parent, srcline, weight,</li>
+<li>local_weight, abort, in_tx, transaction, overhead, sample, period</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>-a：显示在所有CPU上的性能统计信息</li>
+<li>-p：指定进程PID</li>
+<li>-t：指定线程TID</li>
+<li>-K：隐藏内核统计信息</li>
+<li>-U：隐藏用户空间的统计信息</li>
+<li>-S, &ndash;symbols: Only consider these symbols</li>
+<li>-g, &ndash;call-graph: 得到函数的调用关系图
+<ul>
+<li>格式: <code>&lt;print_type,threshold[,print_limit],order,sort_key[,branch],value&gt;</code></li>
+<li>print_type:
+<ul>
+<li>flat: single column, linear exposure of call chains.</li>
+<li>graph: use a graph tree, displaying absolute overhead rates. (default)</li>
+<li>fractal: like graph, but displays relative rates. Each branch of the tree is considered as a new profiled object.</li>
+<li>folded: call chains are displayed in a line, separated by semicolons</li>
+<li>none: disable call chain display.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. -e 指定多个事件</span>
+</span></span><span class="line"><span class="cl">&gt; sudo perf top -e branch-misses,cycles
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 指定后缀，只跟踪用户态发生的分支预测失败</span>
+</span></span><span class="line"><span class="cl">&gt; sudo perf top -e branch-misses:u,cycles
+</span></span><span class="line"><span class="cl">&gt; sudo perf top -e <span class="s1">&#39;{branch-misses,cycles}:u&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 指定分类</span>
+</span></span><span class="line"><span class="cl">&gt; sudo perf top -e <span class="s1">&#39;cycle&#39;</span> -s comm,pid,dso
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="52-perf-sched">5.2 perf sched</h3>
+<p>perf sched子命令提供了许多用于分析内核CPU调度器行为的工具。您可以使用它来识别和量化调度器延迟的问题。</p>
+<p>这个命令的开销很大。如果开销是一个问题，可以使用<a href="http://www.brendangregg.com/ebpf.html#bcc" target="_blank" rel="noopener noreffer">eBPF/bcc工具</a>。其中runqlat和runqlen，只记录内核内的调度器事件摘要，进一步减少开销。perf sched转储所有事件的一个优点是不局限于摘要，对于分析问题而言可以获取更全面的信息。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># perf sched -h</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> Usage: perf sched <span class="o">[]</span> <span class="o">{</span>record<span class="p">|</span>latency<span class="p">|</span>map<span class="p">|</span>replay<span class="p">|</span>script<span class="p">|</span>timehist<span class="o">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    -D, --dump-raw-trace  dump raw trace in ASCII
+</span></span><span class="line"><span class="cl">    -f, --force           don<span class="err">&#39;</span>t complain, <span class="k">do</span> it
+</span></span><span class="line"><span class="cl">    -i, --input     input file name
+</span></span><span class="line"><span class="cl">    -v, --verbose         be more verbose <span class="o">(</span>show symbol address, etc<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>perf sched 有<code>{record|latency|map|replay|script|timehist}</code>使用模式，我们来一一介绍。</p>
+<h4 id="perf-sched-record">perf sched record</h4>
+<h4 id="perf-sched-latency">perf sched latency</h4>
+<p>perf sched latency  将按任务统计调度程序延迟，包括平均延迟和最大延迟:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># perf sched latency</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> -----------------------------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">  Task                  <span class="p">|</span>   Runtime ms  <span class="p">|</span> Switches <span class="p">|</span> Average delay ms <span class="p">|</span> Maximum delay ms <span class="p">|</span> Maximum delay at       <span class="p">|</span>
+</span></span><span class="line"><span class="cl"> -----------------------------------------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">  cat:<span class="o">(</span>6<span class="o">)</span>               <span class="p">|</span>     12.002 ms <span class="p">|</span>        <span class="m">6</span> <span class="p">|</span> avg:   17.541 ms <span class="p">|</span> max:   29.702 ms <span class="p">|</span> max at: 991962.948070 s
+</span></span><span class="line"><span class="cl">  ar:17043              <span class="p">|</span>      3.191 ms <span class="p">|</span>        <span class="m">1</span> <span class="p">|</span> avg:   13.638 ms <span class="p">|</span> max:   13.638 ms <span class="p">|</span> max at: 991963.048070 s
+</span></span><span class="line"><span class="cl">  rm:<span class="o">(</span>10<span class="o">)</span>               <span class="p">|</span>     20.955 ms <span class="p">|</span>       <span class="m">10</span> <span class="p">|</span> avg:   11.212 ms <span class="p">|</span> max:   19.598 ms <span class="p">|</span> max at: 991963.404069 s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="perf-sched-map">perf sched map</h4>
+<p>perf sched map 显示所有CPU和上下文切换事件，其中的列表示每个CPU正在做什么以及何时做。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># perf sched map</span>
+</span></span><span class="line"><span class="cl">                      *A0           991962.879971 secs <span class="nv">A0</span> <span class="o">=</span>&gt; perf:16999
+</span></span><span class="line"><span class="cl">                       A0     *B0   991962.880070 secs <span class="nv">B0</span> <span class="o">=</span>&gt; cc1:16863
+</span></span><span class="line"><span class="cl">          *C0          A0      B0   991962.880070 secs <span class="nv">C0</span> <span class="o">=</span>&gt; :17023:17023
+</span></span><span class="line"><span class="cl">  *D0      C0          A0      B0   991962.880078 secs <span class="nv">D0</span> <span class="o">=</span>&gt; ksoftirqd/0:6
+</span></span><span class="line"><span class="cl">   D0      C0 *E0      A0      B0   991962.880081 secs <span class="nv">E0</span> <span class="o">=</span>&gt; ksoftirqd/3:28
+</span></span><span class="line"><span class="cl">   D0      C0 *F0      A0      B0   991962.880093 secs <span class="nv">F0</span> <span class="o">=</span>&gt; :17022:17022
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="perf-sched-replay">perf sched replay</h4>
+<h4 id="perf-sched-script">perf sched script</h4>
+<h4 id="perf-sched-timehist">perf sched timehist</h4>
+<h3 id="53-perf-mem">5.3 perf mem</h3>
+<h2 id="6-perfdata-处理">6. perf.data 处理</h2>
+<h3 id="61-perf-diff">6.1 perf diff</h3>
+<p><code>perf diff [baseline file] [data file1] [[data file2] ... ]</code></p>
+<ul>
+<li>作用: 比较两次运行的区别</li>
+<li>场景: 可以用不同参数运行程序，看看两次运行的差别</li>
+</ul>
+<h3 id="62-perf-script">6.2 perf script</h3>
+<p><code>perf script [&lt;options&gt;]</code></p>
+<ul>
+<li>作用: 对 perf.data 数据做格式转换</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 导出原始分析数据</span>
+</span></span><span class="line"><span class="cl">&gt; perf record
+</span></span><span class="line"><span class="cl">&gt; perf script <span class="c1"># 导出 perf record 中记录的原始数据</span>
+</span></span><span class="line"><span class="cl">&gt; perf script <span class="p">|</span> ./stackcollapse-perf.pl <span class="p">|</span> ./flamegraph.pl &gt; perf-kernel.svg
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># List all perf.data events, with customized fields (&lt; Linux 4.1):</span>
+</span></span><span class="line"><span class="cl">perf script -f time,event,trace
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># List all perf.data events, with customized fields (&gt;= Linux 4.1):</span>
+</span></span><span class="line"><span class="cl">perf script -F time,event,trace
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># List all perf.data events, with my recommended fields (needs record -a; newer kernels):</span>
+</span></span><span class="line"><span class="cl">perf script --header -F comm,pid,tid,cpu,time,event,ip,sym,dso 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># List all perf.data events, with my recommended fields (needs record -a; older kernels):</span>
+</span></span><span class="line"><span class="cl">perf script -f comm,pid,tid,cpu,time,event,ip,sym,dso
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Dump raw contents from perf.data as hex (for debugging):</span>
+</span></span><span class="line"><span class="cl">perf script -D
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="7-perf-数据可视化">7. perf 数据可视化</h2>
+<h3 id="71-perf-chart">7.1 perf chart</h3>
+<p>perf timechart输出的是进程运行过程中系统调度的情况，无法对程序的具体代码段进行性能分析，但可以看出总结运行情况：running，idle，I/O等，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">perf timechart record ./a.out     <span class="c1"># 记录数据</span>
+</span></span><span class="line"><span class="cl">perf timechart                    <span class="c1"># 生成 output.svg</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="72-火焰图">7.2 火焰图</h3>
+<p>Brendangregg写了两款对perf采样结果进行可视化分析的开源工具：</p>
+<ol>
+<li>FlameGraphs即所谓的火焰图，能清晰的展示程序各个函数的性能消耗</li>
+<li>HeatMap可以从采样数据中的延迟数据来进行消耗展示</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 生成火焰图</span>
+</span></span><span class="line"><span class="cl">git clone https://github.com/brendangregg/FlameGraph  <span class="c1"># or download it from github</span>
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> FlameGraph
+</span></span><span class="line"><span class="cl">perf record -F <span class="m">99</span> -ag -- sleep <span class="m">60</span>
+</span></span><span class="line"><span class="cl">perf script <span class="p">|</span> ./stackcollapse-perf.pl &gt; out.perf-folded
+</span></span><span class="line"><span class="cl">cat out.perf-folded <span class="p">|</span> ./flamegraph.pl &gt; perf-kernel.svg
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="参考">参考</h2>
+<ul>
+<li><a href="http://www.brendangregg.com/perf.html" target="_blank" rel="noopener noreffer">brendangregg-perf</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/22194920" target="_blank" rel="noopener noreffer">在Linux下做性能分析3：perf</a></li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-03-14&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/9f7d652e9e23f2d556f506f043f502e3a794737a" target="_blank" title="commit by tsong(tsong@example.com) 9f7d652e9e23f2d556f506f043f502e3a794737a: linux 性能优化">
+                                    <i class="fas fa-hashtag fa-fw"></i>9f7d652</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/06_perf_use/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" data-title="2.4 perf 的使用" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" data-title="2.4 perf 的使用"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" data-title="2.4 perf 的使用"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/06_perf_use/" data-title="2.4 perf 的使用" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/04_perf/" class="prev" rel="prev" title="2.2 perf 的原理"><i class="fas fa-angle-left fa-fw"></i>2.2 perf 的原理</a>
+            <a href="/posts/linux/linux_perf/07.dtrace/" class="next" rel="next" title="2.5 Dtrace">2.5 Dtrace<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-05T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"2.4 perf 的使用"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

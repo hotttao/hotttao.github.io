@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>1.2 Linux 性能调优概览 - LoveIt</title><meta name="Description" content="1.2 Linux 性能调优概览"><meta property="og:title" content="1.2 Linux 性能调优概览" />
+<meta property="og:description" content="1.2 Linux 性能调优概览" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-02T22:10:00+08:00" />
+<meta property="article:modified_time" content="2020-01-02T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="1.2 Linux 性能调优概览"/>
+<meta name="twitter:description" content="1.2 Linux 性能调优概览"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/01_linux%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E6%A6%82%E8%A7%88/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "1.2 Linux 性能调优概览",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  4536 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88\/","datePublished": "2020-01-02T22:10:00+08:00","dateModified": "2020-01-02T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "1.2 Linux 性能调优概览"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">1.2 Linux 性能调优概览</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-02">2020-01-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4536 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 10 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-我们到底要优化什么">1. 我们到底要优化什么</a></li>
+    <li><a href="#2-观测源">2. 观测源</a>
+      <ul>
+        <li><a href="#21-pmcs">2.1 PMCs</a></li>
+        <li><a href="#22-software-events">2.2 Software Events</a></li>
+        <li><a href="#23-kernel-tracepoints">2.3 Kernel Tracepoints</a></li>
+        <li><a href="#24-user-level-statically-defined-tracing-usdt">2.4 User-Level Statically Defined Tracing (USDT)</a></li>
+        <li><a href="#25-dynamic-tracing">2.5 Dynamic Tracing</a>
+          <ul>
+            <li><a href="#kprobes-和-uprobes">kprobes 和 uprobes</a></li>
+            <li><a href="#内核参数">内核参数</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#3-观测工具">3. 观测工具</a>
+      <ul>
+        <li><a href="#31-计数器类">3.1 计数器类</a></li>
+        <li><a href="#32-跟踪">3.2 跟踪</a></li>
+        <li><a href="#33-剖析">3.3 剖析</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-动态追踪技术">4. 动态追踪技术</a>
+      <ul>
+        <li><a href="#41-ftrace">4.1 ftrace</a></li>
+        <li><a href="#42-perf">4.2 perf</a></li>
+        <li><a href="#43-dtrace">4.3 Dtrace</a></li>
+        <li><a href="#44-systemtap">4.4 Systemtap</a></li>
+        <li><a href="#43-ebpf">4.3 eBPF</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>为了调试和追踪程序的运行过程，Linux 提供了众多的分析工具，本节我们先对它们做一个宏观概览。</p>
+<!-- more -->
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/linux-tracing-1.png"
+        data-srcset="/images/linux_pf/linux-tracing-1.png, /images/linux_pf/linux-tracing-1.png 1.5x, /images/linux_pf/linux-tracing-1.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/linux-tracing-1.png"
+        title="linux-tracing-1.png" /></p>
+<h2 id="1-我们到底要优化什么">1. 我们到底要优化什么</h2>
+<p>在我们了解接下来的各种工具之前，我们首先应该问自己，我们要追踪或者说我们要优化什么。我们都知道程序的运行会占用包括 CPU，内存，文件描述符，锁，磁盘，网络等等在内的各种操作系统资源。根据2/8定律，当其中的某一个或多个资源出现瓶颈的时候，我们需要找到程序中耗费资源最大的地方，并对其优化。</p>
+<p>那么我们可能需要做如下这些事情:</p>
+<ol>
+<li>对系统资源持续进行观测以及时发现哪些资源出现了瓶颈</li>
+<li>统计各个程序(进程)，确定哪个或哪些进程占用了过多的资源</li>
+<li>分析问题进程，找出其占用过量资源的原因。</li>
+</ol>
+<p>所谓追踪技术本质上就是获取<strong>操作系统记录</strong>中程序运行的各种信息，所以尽管工具多种多样，但本质上都是查询操作系统&quot;数据&quot;的工具。在了解这些工具之前，我们非常有必要先去看看操作系统都提供了哪些数据查询接口，即操作系统提供给我们的观测来源。</p>
+<h2 id="2-观测源">2. 观测源</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/perf_events_map.png"
+        data-srcset="/images/linux_pf/perf_events_map.png, /images/linux_pf/perf_events_map.png 1.5x, /images/linux_pf/perf_events_map.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/perf_events_map.png"
+        title="perf_events_map" />
+Linux 中的观测源被称为 event ，它是不同内核工具框架的统一接口，上面的图片说明了 event 来源:</p>
+<ol>
+<li>Hardware Events: CPU性能监视计数器 PMCs</li>
+<li>Software Events: 这些是基于内核计数器的低级事件。例如，CPU迁移、主次缺页异常等等。</li>
+<li>Kernel Tracepoint Events: 硬编码在内核中的静态内核级的检测点，即静态探针</li>
+<li>User Statically-Defined Tracing (USDT): 这些是用户级程序和应用程序的静态跟踪点。</li>
+<li>Dynamic Tracing: 可以被放置在任何地方的动态探针。对于内核软件，它使用kprobes框架。对于用户级软件，uprobes。</li>
+<li>Timed Profiling: 以指定频率收集的快照。这通常用于CPU使用情况分析，其工作原理是周期性的产生时钟中断事件。</li>
+</ol>
+<p>内核维护了部分事件的计数器，通过 /proc 和 /sys 文件系统对外输出。</p>
+<ul>
+<li>/proc 是一个提供内核统计信息的文件系统接口，将内核和进程的统计数据用目录树的形式暴露给用户空间。</li>
+<li>/sys 最初设计用于提供设备驱动的统计信息，不过现在已经扩展到了提供所有信息的统计，/sys 同时也是调整内核参数的入口。</li>
+</ul>
+<p>我们也可以各种分析工具，使用抽样的方式收集这些事件发生时内核的上下文信息。</p>
+<h3 id="21-pmcs">2.1 PMCs</h3>
+<p>PMCs 又称 PMU 全称为硬件计数器，也叫做性能监视计数器(pmmc)或性能仪表计数器(PICs)。它监测低层次的处理器活动，例如，CPU周期，指令退役，内存失速周期，二级缓存丢失，等等。其中一些将作为硬件缓存事件列出。</p>
+<p>PMU计数器大部分CPU都有的功能。它可以在这些计数器的计数超过一个特定的值的时候产生一个中断，这个中断，我们可以用和时钟一样的方法，来抽样判断系统中哪个函数发生了最多的Cache失效，分支预测失效等。</p>
+<p>典型的处理器将以以下方式实现pmc:在可用的数千个pmc中，只能同时记录几个pmc。这是因为它们是处理器上的固定硬件资源(寄存器的有限数量)，并且被编程为开始计算所选事件。</p>
+<h3 id="22-software-events">2.2 Software Events</h3>
+<p>除了 PMU 外，内核也维护了各种统计数据，称为计数器，包括 CPU migrations(处理器迁移次数), minor faults(soft page faults), major faults(hard page faults) 等等。这些数据一般都通过 /proc 文件系统对外输出。</p>
+<p>如果开启了Linux 的CONFIG_TASK_DELAY_ACCT 选项，Linux 会跟踪每个任务的延时包括:</p>
+<ol>
+<li>调度器延时: 等待 CPU 的延时</li>
+<li>块 I/O: 等待块 I/O 的延时</li>
+<li>交换: 等待换页的延时</li>
+<li>内存回收: 等待内存回收的延时</li>
+</ol>
+<p>用户空间的工具通过 taskstats 可以读取这些统计数据，部分统计数据也会通过 /proc 对外提供。</p>
+<h3 id="23-kernel-tracepoints">2.3 Kernel Tracepoints</h3>
+<p>静态探针 tracepoints ，是散落在内核源代码中的一些 hook，开启后，它们便可以在特定的代码被运行到时被触发。可以用来跟踪特定的事件。</p>
+<p>如果你看过内核源码，经常会看到下面这种 trace_开头的函数调用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">likely</span><span class="p">(</span><span class="n">prev</span> <span class="o">!=</span> <span class="n">next</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">rq</span><span class="o">-&gt;</span><span class="n">nr_switches</span><span class="o">++</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">rq</span><span class="o">-&gt;</span><span class="n">curr</span> <span class="o">=</span> <span class="n">next</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="o">++*</span><span class="n">switch_count</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                <span class="n">trace_sched_switch</span><span class="p">(</span><span class="n">preempt</span><span class="p">,</span> <span class="n">prev</span><span class="p">,</span> <span class="n">next</span><span class="p">);</span>  <span class="err">#</span> <span class="n">trace_</span> <span class="err">开头的函数调用</span>
+</span></span><span class="line"><span class="cl">                <span class="n">rq</span> <span class="o">=</span> <span class="n">context_switch</span><span class="p">(</span><span class="n">rq</span><span class="p">,</span> <span class="n">prev</span><span class="p">,</span> <span class="n">next</span><span class="p">,</span> <span class="n">cookie</span><span class="p">);</span> <span class="cm">/* unlocks the rq */</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">lockdep_unpin_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rq</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">,</span> <span class="n">cookie</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                <span class="n">raw_spin_unlock_irq</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rq</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>trace_sched_switch 就是一个事件，程序执行到这个地方就会把这个点（就是一个整数，而不是函数名），加上后面的三个参数（preempt, prev, next)都写到缓冲区中。ftrace 可以读取并保存这些信息，perf 可以在事件被触发时收到通知，dtrace 和 systemtap 可以在事件触发时执行指定的 &ldquo;action&rdquo;。</p>
+<p>这些跟踪点被硬编码在内核的有用的位置上，以便更高层次的行为可以很容易地被跟踪。例如，系统调用、TCP事件、文件系统I/O、磁盘I/O等等。它们被分组到跟踪点库中;例如，“sock:”表示套接字事件，“sched:”表示CPU调度器事件。跟踪点的一个关键价值是它们应该有一个稳定的API，因此如果您编写的工具在一个内核版本上使用它们，那么它们也应该适用于以后的版本。</p>
+<p>Tracepoints 通常通过放置在 include/trace/events/*.XXX 中的宏添加到内核代码中来实现。</p>
+<p>下面是 Linux4.10 系统上对 tracepoint 库和数量的统计。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; perf list <span class="p">|</span> awk -F: <span class="s1">&#39;/Tracepoint event/ { lib[$1]++ } END {
+</span></span></span><span class="line"><span class="cl"><span class="s1">    for (l in lib) { printf &#34;  %-16.16s %d\n&#34;, l, lib[l] } }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> column
+</span></span><span class="line"><span class="cl">    alarmtimer     4	    i2c            8	    page_isolation 1	    swiotlb        <span class="m">1</span>
+</span></span><span class="line"><span class="cl">    block          19	    iommu          7	    pagemap        2	    syscalls       <span class="m">614</span>
+</span></span><span class="line"><span class="cl">    btrfs          51	    irq            5	    power          22	    task           <span class="m">2</span>
+</span></span><span class="line"><span class="cl">    cgroup         9	    irq_vectors    22	    printk         1	    thermal        <span class="m">7</span>
+</span></span><span class="line"><span class="cl">    clk            14	    jbd2           16	    random         15	    thermal_power_ <span class="m">2</span>
+</span></span><span class="line"><span class="cl">    cma            2	    kmem           12	    ras            4	    timer          <span class="m">13</span>
+</span></span><span class="line"><span class="cl">    compaction     14	    libata         6	    raw_syscalls   2	    tlb            <span class="m">1</span>
+</span></span><span class="line"><span class="cl">    cpuhp          3	    mce            1	    rcu            1	    udp            <span class="m">1</span>
+</span></span><span class="line"><span class="cl">    dma_fence      8	    mdio           1	    regmap         15	    vmscan         <span class="m">15</span>
+</span></span><span class="line"><span class="cl">    exceptions     2	    migrate        2	    regulator      7	    vsyscall       <span class="m">1</span>
+</span></span><span class="line"><span class="cl">    ext4           95	    mmc            2	    rpm            4	    workqueue      <span class="m">4</span>
+</span></span><span class="line"><span class="cl">    fib            3	    module         5	    sched          24	    writeback      <span class="m">30</span>
+</span></span><span class="line"><span class="cl">    fib6           1	    mpx            5	    scsi           5	    x86_fpu        <span class="m">14</span>
+</span></span><span class="line"><span class="cl">    filelock       10	    msr            3	    sdt_node       1	    xen            <span class="m">35</span>
+</span></span><span class="line"><span class="cl">    filemap        2	    napi           1	    signal         2	    xfs            <span class="m">495</span>
+</span></span><span class="line"><span class="cl">    ftrace         1	    net            10	    skb            3	    xhci-hcd       <span class="m">9</span>
+</span></span><span class="line"><span class="cl">    gpio           2	    nmi            1	    sock           <span class="m">2</span>
+</span></span><span class="line"><span class="cl">    huge_memory    4	    oom            1	    spi            <span class="m">7</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这些包括:</p>
+<ol>
+<li>block: 块设备I/O</li>
+<li>ext4: 文件系统操作</li>
+<li>kmem: 内核内存分配事件</li>
+<li>random: 内核随机数生成器事件</li>
+<li>sched: CPU调度器事件</li>
+<li>random: 系统调用的进入和返回</li>
+<li>task: 任务事件</li>
+</ol>
+<p>在每次内核升级之后，都有必要检查跟踪点列表，看看是否有新的跟踪点。添加它们是经过充分考虑的，包括评估有多少人会使用它们。需要实现一个平衡:我将包括尽可能少的探测，以充分满足常见需求，任何不寻常或不常见的情况都可以留给动态跟踪。</p>
+<p>有关使用跟踪点的示例，请参见<a href="http://www.brendangregg.com/perf.html#StaticKernelTracing" target="_blank" rel="noopener noreffer">静态内核跟踪</a>。</p>
+<h3 id="24-user-level-statically-defined-tracing-usdt">2.4 User-Level Statically Defined Tracing (USDT)</h3>
+<p>与内核跟踪点类似，这些跟踪点是硬编码的(通常通过将宏放置在应用程序源代码中)，并作为稳定的API呈现(事件名称和参数)。许多应用程序已经包括跟踪点，这些跟踪点是为了支持DTrace而添加的。然而，许多这些应用程序在Linux上默认情况下并不编译它们。通常需要使用—with-dtrace标志自己编译应用程序。</p>
+<p>例如，用这个版本的Node.js编译USDT事件:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sudo apt-get install systemtap-sdt-dev       <span class="c1"># adds &#34;dtrace&#34;, used by node build</span>
+</span></span><span class="line"><span class="cl">$ wget https://nodejs.org/dist/v4.4.1/node-v4.4.1.tar.gz
+</span></span><span class="line"><span class="cl">$ tar xvf node-v4.4.1.tar.gz 
+</span></span><span class="line"><span class="cl">$ <span class="nb">cd</span> node-v4.4.1
+</span></span><span class="line"><span class="cl">$ ./configure --with-dtrace
+</span></span><span class="line"><span class="cl">$ make -j <span class="m">8</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>检查产生的二进制程序是否包含了 USDT 探测点:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ readelf -n node
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>有关使用USDT事件的示例，请参见<a href="http://www.brendangregg.com/perf.html#StaticUserTracing" target="_blank" rel="noopener noreffer">静态用户跟踪</a>。</p>
+<h3 id="25-dynamic-tracing">2.5 Dynamic Tracing</h3>
+<p>静态探针跟动态探针之间的区别在于: 静态探针是在编译之前就已经存在代码中的。动态探针是在编译之后软件运行时才加入的，本质上是<strong>内核地址空间的现场修改(live patching)</strong>，所采用的的技术会因处理器类型的不同而有所不同。它们覆盖的范围如下图所示:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/perf_tracepoints_1700.png"
+        data-srcset="/images/linux_pf/perf_tracepoints_1700.png, /images/linux_pf/perf_tracepoints_1700.png 1.5x, /images/linux_pf/perf_tracepoints_1700.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/perf_tracepoints_1700.png"
+        title="perf_tracepoints_1700" /></p>
+<p>虽然动态跟踪可以看到所有东西，但它也是一个不稳定的接口，因为它检测的是原始代码。这意味着您开发的任何动态跟踪工具在内核补丁或更新之后可能会中断。首先尝试使用静态跟踪点，因为它们的接口应该更加稳定。它们也更容易使用和理解，因为它们是为跟踪最终用户而设计的。</p>
+<p>动态跟踪的一个好处是，它可以在活动的系统上启用，而不需要重新启动任何东西。您可以使用一个已经运行的内核或应用程序，然后开始动态检测，它(安全地)在内存中修补指令以添加检测。这意味着在您开始使用此功能之前，此功能的开销或税收为零。这一刻，您的二进制文件还在以全速运行，而下一刻，它又在运行一些您动态添加的额外的检测指令。当您使用完动态跟踪会话后，这些指令最终应该被删除。</p>
+<p>在使用动态跟踪和执行额外指令时的开销，与插装事件的频率乘以在每个插装上所做的工作有关。</p>
+<h4 id="kprobes-和-uprobes">kprobes 和 uprobes</h4>
+<p>kprobes 和 uprobes 机制就是我们所说的动态探针。它们可以在指定的探测点(比如函数的某行, 函数的入口地址和出口地址, 或者内核的指定地址处)插入一组处理程序。kprobes 主要用于调试内核，uprobes 类似 kprobes, 不过主要用于用户空间的追踪调试。它们作用的位置如下图所示:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/linux-probes.png"
+        data-srcset="/images/linux_pf/linux-probes.png, /images/linux_pf/linux-probes.png 1.5x, /images/linux_pf/linux-probes.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/linux-probes.png"
+        title="probes" /></p>
+<h4 id="内核参数">内核参数</h4>
+<p>使用动态追踪需要启用如下的内核参数:</p>
+<ol>
+<li>内核动态跟踪需要启用CONFIG_KPROBES=y和CONFIG_KPROBE_EVENTS=y</li>
+<li>用户级动态跟踪需要启用 CONFIG_UPROBES=y和CONFIG_UPROBE_EVENTS=y</li>
+<li>为避免内核栈指针优化，需要启用 CONFIG_FRAME_POINTER=y</li>
+</ol>
+<h2 id="3-观测工具">3. 观测工具</h2>
+<p>按照使用的观测源的不同，我们可以将调优工具分为以下三种:</p>
+<ol>
+<li>计数器类</li>
+<li>跟踪</li>
+<li>剖析</li>
+</ol>
+<h3 id="31-计数器类">3.1 计数器类</h3>
+<p>计数器类工具读取并展示内核和进程各种统计信息，包括 top，vmstat，mpstat，iostat 等绝大多数我们常用的系统命令。它们的使用可以认为是无成本，因为计数器由内核维护的。</p>
+<h3 id="32-跟踪">3.2 跟踪</h3>
+<p>跟踪指的是跟踪每一个事件的详细数据，相关的工具包括:</p>
+<ol>
+<li>tcpdump: 网络报跟踪</li>
+<li>blktrace: 块 I/O 跟踪</li>
+<li>execsnoop: 跟踪新进程(位于后面要讲的高级工具中)</li>
+</ol>
+<p>跟踪捕获数据会有 CPU 开销，还需要存储空间存放数据，会拖慢跟踪对象，因此在使用时需要注意工具自身对观测对象的影响。</p>
+<h3 id="33-剖析">3.3 剖析</h3>
+<p>剖析通过对目标收集采样或快照来归纳目标特征。跟踪是查看事件的详细数据，剖析可以理解为对事件的统计，以了解系统和程序当前运行的全貌。各种静态和动态追踪技术是完成跟踪和剖析的主要工具。也是我们接下来要介绍的难点内容。</p>
+<h2 id="4-动态追踪技术">4. 动态追踪技术</h2>
+<p>下面是一个追踪技术的不完全列表。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">工具</th>
+<th style="text-align:left">使用的 event</th>
+<th style="text-align:left">特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">ftrace</td>
+<td style="text-align:left">静态探针<br>内核的动态探针</td>
+<td style="text-align:left">1.总体跟踪法，统计了一个事件到下一个事件所有的时间长度<br>2.可以知道整个系统运行在时间轴上的分布<br>3.方法很准确，但跟踪成本很高，只能跟踪内核程序</td>
+</tr>
+<tr>
+<td style="text-align:left">perf</td>
+<td style="text-align:left">全部的 event</td>
+<td style="text-align:left">1.抽样跟踪，需要注意抽样导致的结果是否准确<br>2.直接跟踪到整个系统的所有程序<br>perf通常是我们分析系统性能的第一步</td>
+</tr>
+<tr>
+<td style="text-align:left">Dtrace</td>
+<td style="text-align:left">Solaris 的动态追踪技术</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">Systemtap</td>
+<td style="text-align:left">Linux 的动态追踪技术</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">eBPF</td>
+<td style="text-align:left">Linux 4.x 以上版本的动态追踪技术</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在介绍这些工具之前，需要强调的是，无论什么动态追踪技术依赖的都是上面所说的<strong>内核工具框架的统一接口-events</strong>。它们都需要通过 event 去采集内核或者应用程序的运行信息。</p>
+<h3 id="41-ftrace">4.1 ftrace</h3>
+<p>ftrace 最早用于函数跟踪，后来又扩展支持了各种事件跟踪功能。ftrace 的使用接口跟我们之前提到的 procfs 类似，它通过 debugfs（4.1 以后也支持 tracefs），以普通文件的形式，向用户空间提供访问接口。</p>
+<h3 id="42-perf">4.2 perf</h3>
+<p>perf 主要功能是事件记录和分析，这实际上只是一种最简单的静态跟踪机制。你也可以通过 perf ，来自定义动态事件（perf probe），只关注真正感兴趣的事件。</p>
+<h3 id="43-dtrace">4.3 Dtrace</h3>
+<p>Solaris 系统的 DTrace 是动态追踪技术的鼻祖，它提供了一个通用的观测框架，并可以使用 D 语言进行自由扩展。</p>
+<h3 id="44-systemtap">4.4 Systemtap</h3>
+<p>DTrace 本身依然无法在 Linux 中运行。很多工程师都尝试过把 DTrace 移植到 Linux 中，这其中，最著名的就是 RedHat 主推的 SystemTap。</p>
+<p>同 DTrace 一样，SystemTap 也定义了一种类似的脚本语言，方便用户根据需要自由扩展。不过，不同于 DTrace，SystemTap 并没有常驻内核的运行时，它需要先把脚本编译为内核模块，然后再插入到内核中执行。这也导致 SystemTap 启动比较缓慢，并且依赖于完整的调试符号表。</p>
+<p>为了追踪内核或用户空间的事件，Dtrace 和 SystemTap 都会把用户传入的追踪处理函数（一般称为 Action），关联到被称为探针的检测点上。这些探针的检测点就是各种 events。</p>
+<h3 id="43-ebpf">4.3 eBPF</h3>
+<p>eBPF 则在 BPF（Berkeley Packet Filter）的基础上扩展而来，不仅支持事件跟踪机制，还可以通过自定义的 BPF 代码（使用 C 语言）来自由扩展。所以，eBPF 实际上就是常驻于内核的运行时，可以说就是 Linux 版的 DTrace。</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a href="https://blog.arstercz.com/introduction_to_linux_dynamic_tracing/" target="_blank" rel="noopener noreffer">Linux 系统动态追踪技术介绍</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/22130013" target="_blank" rel="noopener noreffer">在Linux下做性能分析2：ftrace</a></li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-01-02</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" data-title="1.2 Linux 性能调优概览" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" data-title="1.2 Linux 性能调优概览"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" data-title="1.2 Linux 性能调优概览"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" data-title="1.2 Linux 性能调优概览" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/01_linux%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E6%A6%82%E8%A7%88/" class="prev" rel="prev" title="1.1 Linux 性能调优入门指南"><i class="fas fa-angle-left fa-fw"></i>1.1 Linux 性能调优入门指南</a>
+            <a href="/posts/linux/linux_perf/03_ftrace/" class="next" rel="next" title="2.1 ftrace 的原理与使用">2.1 ftrace 的原理与使用<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-02T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"1.2 Linux 性能调优概览"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

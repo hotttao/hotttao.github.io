@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>3.1 Systemp 简介 - LoveIt</title><meta name="Description" content="3.1 Systemp 简介"><meta property="og:title" content="3.1 Systemp 简介" />
+<meta property="og:description" content="3.1 Systemp 简介" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-08T22:10:00+08:00" />
+<meta property="article:modified_time" content="2020-01-08T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="3.1 Systemp 简介"/>
+<meta name="twitter:description" content="3.1 Systemp 简介"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/08.ebpf/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/12_stap%E8%84%9A%E6%9C%AC/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "3.1 Systemp 简介",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/11_stap%E7%AE%80%E4%BB%8B\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  2212 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/11_stap%E7%AE%80%E4%BB%8B\/","datePublished": "2020-01-08T22:10:00+08:00","dateModified": "2020-01-08T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "3.1 Systemp 简介"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">3.1 Systemp 简介</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-08">2020-01-08</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2212 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-systemtap-简介">1. Systemtap 简介</a>
+      <ul>
+        <li><a href="#11-systemtap-框架">1.1 Systemtap 框架</a></li>
+        <li><a href="#12-systemtap-的优缺点">1.2 Systemtap 的优缺点</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-stap-安装">2. stap 安装</a>
+      <ul>
+        <li><a href="#21-为其他计算机生成检测模块">2.1 为其他计算机生成检测模块</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-stap">3. stap</a>
+      <ul>
+        <li><a href="#31-stap-飞行记录模式">3.1 stap 飞行记录模式</a>
+          <ul>
+            <li><a href="#内存型">内存型:</a></li>
+            <li><a href="#文件型">文件型</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>从今天开始我们将学习第一个可编程的动态追踪工具 Systemtap。本节是 Systemtap 的一个基本介绍。</p>
+<!-- more -->
+<h2 id="1-systemtap-简介">1. Systemtap 简介</h2>
+<p>动态追踪技术起源于 Solaris 系统的 DTrace。Dtrace 有 Linux  Mac OS X 等系统的移植版，但是实现的都差强人意，不支持很多高级特性。Systemtap 是 Redhat 开源的 Linux 上的动态追踪工具，是 Linux 上目前最成熟的动态追踪框架。</p>
+<h3 id="11-systemtap-框架">1.1 Systemtap 框架</h3>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/how-systemtap-works.webp"
+        data-srcset="/images/linux_pf/how-systemtap-works.webp, /images/linux_pf/how-systemtap-works.webp 1.5x, /images/linux_pf/how-systemtap-works.webp 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/how-systemtap-works.webp"
+        title="systemtap-works" /></p>
+<p>Systemtap 的框架如上图所示:</p>
+<ol>
+<li>Systemtap 并不是 Linux 内核的一部分，因此第一步需要把 Systemtap 自己的“小语言”脚本（有点像 D 语言）动态编译成一个 Linux 内核模块的 C 源码，并加载到内核才能运行</li>
+<li>Systemtap 使用的我们前面介绍的内核工具框架</li>
+<li>DWARF 是Linux的调试符号表格式</li>
+</ol>
+<p>整个SystemTap脚本所做的，无非就是声明感兴趣的事件，然后添加对应的处理程序。当SystemTap脚本运行时，SystemTap会监控声明的事件；一旦事件发生，Linux内核会临时切换到对应的处理程序，完成后再重拾原先的工作。</p>
+<p>可供监控的事件种类繁多：进入/退出某个函数，定时器到期，会话终止，等等。处理程序由一组SystemTap语句构成，指明事件发生后要做的工作。其中包括从事件上下文中提取数据，存储到内部变量中，输出结果。</p>
+<h3 id="12-systemtap-的优缺点">1.2 Systemtap 的优缺点</h3>
+<p>Systemtap 有如下的优缺点:</p>
+<ol>
+<li>首先，它并不是 Linux 内核的一部分，就是说它并没有与内核紧密集成，所以它需要一直不停地追赶主线内核的变化。</li>
+<li>另一个缺点是，它需要动态编译，因此经常需要在线部署 C 编译器工具链和 Linux 内核的头文件。出于这些原因，SystemTap 脚本的启动相比 DTrace 要慢得多</li>
+<li>无论是 DTrace 还是 SystemTap，其实都不支持编写完整的调试工具，因为它们都缺少方便的命令行交互的原语。所以我们才看到现实世界中许多基于它们的工具，其实最外面都有一个 Perl、Python 或者 Shell 脚本编写的包裹。比如 <a href="https://github.com/openresty/stapxx" target="_blank" rel="noopener noreffer">stap++</a></li>
+<li>SystemTap 的优点是它有非常成熟的用户态调试符号的自动加载，同时也有循环这样的语言结构可以去编写比较复杂的探针处理程序，可以支持很多很复杂的分析处理。</li>
+</ol>
+<p>GitHub 上面，有很多针对像 Nginx、LuaJIT 和操作系统内核这样的系统软件，也有一些是针对更高层面的像 OpenResty 这样的 Web 框架。有兴趣的朋友可以查看 GitHub 上面的 <a href="https://github.com/openresty/nginx-systemtap-toolkit" target="_blank" rel="noopener noreffer">nginx-systemtap-toolkit</a>、<a href="https://github.com/agentzh/perl-systemtap-toolkit" target="_blank" rel="noopener noreffer">perl-systemtap-toolkit</a> 和 <a href="https://github.com/openresty/stapxx" target="_blank" rel="noopener noreffer">stappxx</a> 这几个代码仓库。</p>
+<h2 id="2-stap-安装">2. stap 安装</h2>
+<p>SystemTap需要内核信息，这样才能注入指令。此外，这些信息还能帮助SystemTap生成合适的检测代码。
+这些必要的内核信息分别包括在特定内核版本所对应的-devel，-debuginfo和-debuginfo-common包中。对于“标准版”内核（指按照常规配置编译的内核），所需的-devel和-debuginfo等包命名为：</p>
+<ul>
+<li>kernel-debuginfo</li>
+<li>kernel-debuginfo-common</li>
+<li>kernel-devel: 通常已经安装</li>
+</ul>
+<p>下面是Centos7 安装过程的示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 方法一，直接执行 stap-prep，如果不起作用，需要手动安装方法二中的包</span>
+</span></span><span class="line"><span class="cl">stap-prep
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">## 方法二</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 配置yum 源</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>debug<span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="nv">name</span><span class="o">=</span>CentOS-<span class="nv">$releasever</span> - DebugInfo
+</span></span><span class="line"><span class="cl"><span class="nv">baseurl</span><span class="o">=</span>http://debuginfo.centos.org/<span class="nv">$releasever</span>/<span class="nv">$basearch</span>/
+</span></span><span class="line"><span class="cl"><span class="nv">gpgcheck</span><span class="o">=</span><span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="nv">enabled</span><span class="o">=</span><span class="m">1</span>
+</span></span><span class="line"><span class="cl"><span class="nv">protect</span><span class="o">=</span><span class="m">1</span>
+</span></span><span class="line"><span class="cl"><span class="nv">priority</span><span class="o">=</span><span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2.安装 kernel-debuginfo</span>
+</span></span><span class="line"><span class="cl">yum --enablerepo<span class="o">=</span>debug install -y kernel-debuginfo-<span class="k">$(</span>uname -r<span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. rpm 包位置，可直接下载手动 yum install </span>
+</span></span><span class="line"><span class="cl">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-957.el7.x86_64.rpm
+</span></span><span class="line"><span class="cl">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-957.el7.x86_64.rpm
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-common-x86_64-3.10.0-1062.el7.x86_64.rpm
+</span></span><span class="line"><span class="cl">http://debuginfo.centos.org/7/x86_64/kernel-debuginfo-3.10.0-1062.el7.x86_64.rpm
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">## 4. 运行下面命令开始检查，显示 pass 5 表示运行成功</span>
+</span></span><span class="line"><span class="cl">stab-prep
+</span></span><span class="line"><span class="cl">stap -v -e <span class="s1">&#39;probe vfs.read {printf(&#34;read performed\n&#34;); exit()}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Pass 1: parsed user script and <span class="m">474</span> library scripts using 251936virt/49240res/3488shr/45992data kb, in 80usr/330sys/411real ms.
+</span></span><span class="line"><span class="cl">Pass 2: analyzed script: <span class="m">1</span> probe, <span class="m">1</span> <span class="k">function</span>, <span class="m">7</span> embeds, <span class="m">0</span> globals using 416832virt/210188res/4872shr/210888data kb, in 1100usr/960sys/2058real ms.
+</span></span><span class="line"><span class="cl">Pass 3: translated to C into <span class="s2">&#34;/tmp/stapdYWPVH/stap_5e2f013414e74a4de164b8e5c7459ef6_2765_src.c&#34;</span> using 416832virt/210444res/5128shr/210888data kb, in 10usr/70sys/85real ms.
+</span></span><span class="line"><span class="cl">Pass 4: compiled C into <span class="s2">&#34;stap_5e2f013414e74a4de164b8e5c7459ef6_2765.ko&#34;</span> in 1090usr/660sys/1643real ms.
+</span></span><span class="line"><span class="cl">Pass 5: starting run.
+</span></span><span class="line"><span class="cl"><span class="nb">read</span> performance
+</span></span><span class="line"><span class="cl">Pass 5: run completed in 10usr/70sys/373real ms.
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="21-为其他计算机生成检测模块">2.1 为其他计算机生成检测模块</h3>
+<p>为了避免为所有带监测机器配置 Systemtap 环境的问题，SystemTap提供了交叉检测（cross-instrumentaion）的功能:</p>
+<ol>
+<li>在一台计算机上运行SystemTap脚本，生成在另一台机器上可用的SystemTap检测模块</li>
+<li>目标机器仅需安装 systemtap-runtime 来使用生成的SystemTap检测模块</li>
+</ol>
+<p>创建和分发的过程如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 创建检测模块</span>
+</span></span><span class="line"><span class="cl">stap -r kernel_version script -m module_name
+</span></span><span class="line"><span class="cl">&gt; stap -r <span class="sb">`</span>uname -r<span class="sb">`</span> -e <span class="s1">&#39;probe vfs.read {printf(&#34;read performance\n&#34;); exit()}&#39;</span> -m <span class="nb">test</span>
+</span></span><span class="line"><span class="cl">&gt; ll test.ko
+</span></span><span class="line"><span class="cl">-rw-r--r-- <span class="m">1</span> root root <span class="m">97392</span> 4月   <span class="m">9</span> 10:23 test.ko
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 分发运行检测模块</span>
+</span></span><span class="line"><span class="cl">&gt; staprun test.ko
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3-stap">3. stap</h2>
+<p>stap</p>
+<ul>
+<li>作用: 从SystemTap脚本中读取探测指令，把它们转化为C代码，构建一个内核模块，并加载到当前的Linux内核中运行</li>
+<li>参数:
+<ul>
+<li><code>-v</code> 让SystemTap会话输出更加详细的信息.重复该选项多次来提高执行信息的详尽程度</li>
+<li><code>-o file_name</code>: 将输出重定向到file_name</li>
+<li><code>-S size[,count]</code>: 将输出文件的最大大小限制成sizeMB，存储文件的最大数目为count</li>
+<li><code>-x process_id</code>: 设置SystemTap处理函数target()为指定PID，target() 是 systemtap 脚本的内置函数</li>
+<li><code>-c 'command'</code>: 运行command，并在command结束时退出。同时会把target()设置成command运行时的PID</li>
+<li><code>-e script</code>: 直接执行给定的脚本</li>
+<li><code>-F</code>: 进入SystemTap的飞行记录仪模式，并在后台运行该脚本</li>
+</ul>
+</li>
+<li>man: <code>man probe::ioblock.request</code></li>
+</ul>
+<h3 id="31-stap-飞行记录模式">3.1 stap 飞行记录模式</h3>
+<p>SystemTap的飞行记录仪模式允许你长时间运行一个SystemTap脚本，并关注最新的输出。飞行记录仪模式会限制输出的生成量。</p>
+<p>飞行记录仪模式还可以分成两种：内存型（in-memory）和文件型（file）。无论哪一种 SystemTap脚本都是作为后台进程运行。</p>
+<h4 id="内存型">内存型:</h4>
+<p>有 <code>-F</code> 选项，但没有指定 <code>-o</code> 选项时启用，SystemTap会把脚本输出结果存储在内核内存的缓冲区内。默认情况下，缓冲区大小为1MB.你可以使用-s(小s)来调整这个值</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; stap -F iotime.stp
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Disconnecting from systemtap module.
+</span></span><span class="line"><span class="cl">To reconnect, <span class="nb">type</span> <span class="s2">&#34;staprun -A stap_5dd0073edcb1f13f7565d8c343063e68_19556&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 重连，得到输出结果</span>
+</span></span><span class="line"><span class="cl">&gt; staprun -A stap_5dd0073edcb1f13f7565d8c343063e68_19556
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="文件型">文件型</h4>
+<p>同时指定 <code>-F</code>,<code>-o</code> 选项时启用，-S选项来控制输出文件的大小和数目-S选项来控制输出文件的大小和数目。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; stap -F -o /tmp/pfaults.log -S 1,2  pfaults.stp
+</span></span><span class="line"><span class="cl"><span class="m">7590</span>  <span class="c1"># stap 进程的 PID</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 终止 stap 进程</span>
+</span></span><span class="line"><span class="cl">&gt; <span class="nb">kill</span> -s SIGTERM <span class="m">7590</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-01-08</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" data-title="3.1 Systemp 简介" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" data-title="3.1 Systemp 简介"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" data-title="3.1 Systemp 简介"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/11_stap%E7%AE%80%E4%BB%8B/" data-title="3.1 Systemp 简介" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/08.ebpf/" class="prev" rel="prev" title="2.6 eBPF"><i class="fas fa-angle-left fa-fw"></i>2.6 eBPF</a>
+            <a href="/posts/linux/linux_perf/12_stap%E8%84%9A%E6%9C%AC/" class="next" rel="next" title="3.2 stap 脚本">3.2 stap 脚本<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-08T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"3.1 Systemp 简介"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

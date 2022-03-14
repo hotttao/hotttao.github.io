@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>3.3 Systemtap 内核空间探测 - LoveIt</title><meta name="Description" content="3.3 Systemtap 内核空间探测"><meta property="og:title" content="3.3 Systemtap 内核空间探测" />
+<meta property="og:description" content="3.3 Systemtap 内核空间探测" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-10T22:10:00+08:00" />
+<meta property="article:modified_time" content="2020-01-10T22:10:00+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="3.3 Systemtap 内核空间探测"/>
+<meta name="twitter:description" content="3.3 Systemtap 内核空间探测"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/12_stap%E8%84%9A%E6%9C%AC/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/14_stap%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "3.3 Systemtap 内核空间探测",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  1739 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B\/","datePublished": "2020-01-10T22:10:00+08:00","dateModified": "2020-01-10T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "3.3 Systemtap 内核空间探测"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">3.3 Systemtap 内核空间探测</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-10">2020-01-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1739 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-内核变量的获取">1. 内核变量的获取</a></li>
+    <li><a href="#2-内核变量获取">2. 内核变量获取</a></li>
+    <li><a href="#2全局变量获取">2.全局变量获取</a></li>
+    <li><a href="#3-内置变量">3. 内置变量</a></li>
+    <li><a href="#4-如何使用-tapset">4. 如何使用 tapset</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>本节我们继续来学习 Systemtap 的使用 &ndash; 内核的动态追踪</p>
+<!-- more -->
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/stap_flow_diagram.png"
+        data-srcset="/images/linux_pf/stap_flow_diagram.png, /images/linux_pf/stap_flow_diagram.png 1.5x, /images/linux_pf/stap_flow_diagram.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/stap_flow_diagram.png"
+        title="stap_flow_diagram" /></p>
+<h2 id="1-内核变量的获取">1. 内核变量的获取</h2>
+<p>本节我们来看如何获取内核空间中的变量，包括:</p>
+<ol>
+<li>目标变量获取</li>
+<li>全局以及静态变量获取</li>
+<li>内置的便捷变量</li>
+</ol>
+<h2 id="2-内核变量获取">2. 内核变量获取</h2>
+<p>跟内核代码相关的事件，如kernel.function(&ldquo;function&rdquo;)和kernel.statement(&ldquo;statement&rdquo;)，允许使用目标变量获取这部分代码中可访问到的变量的值。<code>stap -L</code> 可以列出特定探测点下可用的目标变量。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; stap -L <span class="sb">`</span>kernel.function<span class="o">(</span><span class="s2">&#34;vfs_read&#34;</span><span class="o">)</span><span class="sb">`</span>
+</span></span><span class="line"><span class="cl">kernel.function<span class="o">(</span><span class="s2">&#34;vfs_read@fs/read_write.c:277&#34;</span><span class="o">)</span> <span class="nv">$file</span>:struct file* <span class="nv">$buf</span>:char* <span class="nv">$count</span>:size_t <span class="nv">$pos</span>:loff_t*
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>stap -L</code> 输出的每个目标变量前面都以$开头，并以:加变量类型结尾。上面的输出表示，vfs_read函数入口处有4个变量可用:</p>
+<ol>
+<li>$file（指向描述文件的结构体）</li>
+<li>$buf（指向接收读取的数据的用户空间缓冲区）</li>
+<li>$count（读取的字节数）</li>
+<li>$pos（读开始的位置）</li>
+</ol>
+<p>下面使用目标变量的一个示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; stap -L <span class="s1">&#39;syscall.read&#39;</span>
+</span></span><span class="line"><span class="cl">stap -L <span class="s1">&#39;syscall.read&#39;</span>
+</span></span><span class="line"><span class="cl">syscall.read name:string fd:long buf_uaddr:long count:long argstr:string <span class="nv">$fd</span>:long int <span class="nv">$buf</span>:long int <span class="nv">$count</span>:long int <span class="nv">$ret</span>:long int
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">probe syscall.read.return <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">p</span> <span class="o">=</span> pid<span class="o">()</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">fd</span> <span class="o">=</span> <span class="nv">$fd</span>                   <span class="c1"># 引用目标变量</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">bytes</span> <span class="o">=</span> <span class="nv">$return</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">time</span> <span class="o">=</span> gettimeofday_us<span class="o">()</span> - @entry<span class="o">(</span>gettimeofday_us<span class="o">())</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="o">(</span>bytes &gt; 0<span class="o">)</span>
+</span></span><span class="line"><span class="cl">    fileread<span class="o">[</span>p, fd<span class="o">]</span> +<span class="o">=</span> bytes
+</span></span><span class="line"><span class="cl">  time_io<span class="o">[</span>p, fd<span class="o">]</span> <span class="o">&lt;&lt;&lt;</span> <span class="nb">time</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="2全局变量获取">2.全局变量获取</h2>
+<p>对于那些不属于本地变量的变量，像是全局变量或一个在文件中定义的静态变量，可以用<code>@var(&quot;varname@src/file.c&quot;)</code>获取。 SystemTap会保留目标变量的类型信息，并且允许通过<code>-&gt;</code>访问其中的成员。</p>
+<p><code>-&gt;</code>既可以用来访问指针指向的值，也可以用来访问子结构体中的成员。在获取复杂结构体中的信息时，<code>-&gt;</code>可以链式使用。下面是一个获取 <code>fs/file_table.c</code>中的静态目标变量<code>files_stat</code> 的示例，files_stat存储着一些当前文件系统中可调节的参数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">probe kernel.function<span class="o">(</span>vfs_read<span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    printf<span class="o">(</span><span class="s2">&#34;current file_stat max_files: %d\n&#34;</span>, 
+</span></span><span class="line"><span class="cl">            @var<span class="o">(</span><span class="s2">&#34;file_stat@fs/file_table.c&#34;</span><span class="o">)</span>-&gt;max_files<span class="o">)</span>
+</span></span><span class="line"><span class="cl">            exit<span class="o">()</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>有许多函数可以通过指向基本类型的指针获取内核空间对应地址上的数据：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">函数</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">kernel_char(address)</td>
+<td style="text-align:left">从内核空间地址中获取char变量</td>
+</tr>
+<tr>
+<td style="text-align:left">kernel_short(address)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">kernel_long(address)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">kernel_int(address)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">kernel_string(address)</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">kernel_string_n(address, n)</td>
+<td style="text-align:left">从内核空间地址中获取长为n的字符串</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-内置变量">3. 内置变量</h2>
+<p>某些场景中，我们可能需要输出当前可访问的各种变量，以便于记录底层的变化。SystemTap提供了一些操作，可以生成描述特定目标变量的字符串：</p>
+<ol>
+<li><code>$$vars</code>:
+<ul>
+<li>输出作用域内每个变量的值</li>
+<li>等同于 <code>sprintf(&quot;parm1=%x ... parmN=%x var1=%x ... varN=%x&quot;, parm1, ..., parmN, var1, ..., varN)</code></li>
+</ul>
+</li>
+<li><code>$$locals</code>: 同$$vars，只输出本地变量</li>
+<li><code>$$parms</code>: 同$$vars，只输出函数入参。</li>
+<li><code>$$return</code>:
+<ul>
+<li>仅在带return的探针中可用</li>
+<li>如果被监控的函数有返回值，它等价于sprintf(&ldquo;return=%x&rdquo;, $return)，否则为空字符串。</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; stap -e <span class="s1">&#39;probe kernel.function(&#34;vfs_read&#34;) {printf(&#34;%s\n&#34;, $$parms); exit(); }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># vfs_read的入参有四个：file，buf，count，和pos</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># $$params会给这些入参生成描述字符串。在这个例子里，四个变量都是指针</span>
+</span></span><span class="line"><span class="cl"><span class="nv">file</span><span class="o">=</span>0xffff8800b40d4c80 <span class="nv">buf</span><span class="o">=</span>0x7fff634403e0 <span class="nv">count</span><span class="o">=</span>0x2004 <span class="nv">pos</span><span class="o">=</span>0xffff8800af96df48
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 要想输出指针指向的值，我们可以加上$后缀</span>
+</span></span><span class="line"><span class="cl">&gt; stap -e <span class="s1">&#39;probe kernel.function(&#34;vfs_read&#34;) {printf(&#34;%s\n&#34;, $$parms$); exit(); }&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">file</span><span class="o">={</span>.f_u<span class="o">={</span>...<span class="o">}</span>, .f_path<span class="o">={</span>...<span class="o">}</span>, .f_op<span class="o">=</span>0xffffffffa06e1d80, .f_lock<span class="o">={</span>...<span class="o">}</span>, ....
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 要想展开嵌套的结构体，你需要使用$$后缀。下面是一个使用$$的例子：</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># $$的输出，会受到字符串最长长度的限制而被截断</span>
+</span></span><span class="line"><span class="cl">&gt; stap -e <span class="s1">&#39;probe kernel.function(&#34;vfs_read&#34;) {printf(&#34;%s\n&#34;, $$parms$$); exit(); }&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="4-如何使用-tapset">4. 如何使用 tapset</h2>
+<p>tapset 是 systemtap 提供的函数库，提供了:</p>
+<ol>
+<li>可用的内置函数</li>
+<li>对于常见的目标变量，已将其提取为直接可用的内置变量。</li>
+</ol>
+<p>我们以 ioblock 为例，来看看如何使用 tapset。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="o">&gt;</span> <span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">systemtap</span><span class="o">/</span><span class="n">tapset</span><span class="o">/</span><span class="n">linux</span><span class="o">/</span><span class="n">ioblock</span><span class="p">.</span><span class="n">stp</span>
+</span></span><span class="line"><span class="cl"><span class="cm">/**
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  probe ioblock.request - Fires whenever making a generic block I/O request.
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @name      - name of the probe point
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @devname   - block device name
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @ino       - i-node number of the mapped file
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @sector    - beginning sector for the entire bio
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @flags     - see below
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_UPTODATE    0       ok after I/O completion
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_RW_BLOCK    1       RW_AHEAD set, and read/write would block
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_EOF         2       out-out-bounds error
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_SEG_VALID   3       nr_hw_seg valid 
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_CLONED      4       doesn&#39;t own data
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_BOUNCED     5       bio is a bounce bio
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_USER_MAPPED 6       contains user pages
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  	BIO_EOPNOTSUPP  7       not supported
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @rw        - binary trace for read/write request
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @vcnt      - bio vector count which represents number of array element (page, offset, length) which make up this I/O request
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @idx       - offset into the bio vector array
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @phys_segments - number of segments in this bio after physical address coalescing is performed
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @hw_segments -   number of segments after physical and DMA remapping hardware coalescing is performed
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @size      - total size in bytes
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @bdev      - target block device
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @bdev_contains - points to the device object which contains the partition (when bio structure represents a partition)
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  @p_start_sect -  points to the start sector of the partition structure of the device
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *
+</span></span></span><span class="line"><span class="cl"><span class="cm"> * Context:
+</span></span></span><span class="line"><span class="cl"><span class="cm"> *  The process makes block I/O request
+</span></span></span><span class="line"><span class="cl"><span class="cm"> */</span>
+</span></span><span class="line"><span class="cl"><span class="n">probe</span> <span class="n">ioblock</span><span class="p">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">kernel</span><span class="p">.</span><span class="n">function</span> <span class="p">(</span><span class="s">&#34;generic_make_request&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="n">name</span> <span class="o">=</span> <span class="s">&#34;ioblock.request&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">devname</span> <span class="o">=</span> <span class="n">__bio_devname</span><span class="p">(</span><span class="err">$</span><span class="n">bio</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ino</span> <span class="o">=</span> <span class="n">__bio_ino</span><span class="p">(</span><span class="err">$</span><span class="n">bio</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">sector</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_sector</span>
+</span></span><span class="line"><span class="cl">        <span class="n">flags</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_flags</span>
+</span></span><span class="line"><span class="cl">        <span class="n">rw</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_rw</span>
+</span></span><span class="line"><span class="cl">        <span class="n">vcnt</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_vcnt</span>
+</span></span><span class="line"><span class="cl">        <span class="n">idx</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_idx</span>
+</span></span><span class="line"><span class="cl">        <span class="n">phys_segments</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_phys_segments</span>
+</span></span><span class="line"><span class="cl">	<span class="n">hw_segments</span> <span class="o">=</span> <span class="p">(</span><span class="err">@</span><span class="n">defined</span><span class="p">(</span><span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_hw_segments</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		       <span class="o">?</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="nl">bi_hw_segments</span> <span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">size</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_size</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">bdev</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_bdev</span>
+</span></span><span class="line"><span class="cl">        <span class="n">bdev_contains</span> <span class="o">=</span> <span class="err">$</span><span class="n">bio</span><span class="o">-&gt;</span><span class="n">bi_bdev</span><span class="o">-&gt;</span><span class="n">bd_contains</span>
+</span></span><span class="line"><span class="cl">        <span class="n">p_start_sect</span> <span class="o">=</span> <span class="n">__bio_start_sect</span><span class="p">(</span><span class="err">$</span><span class="n">bio</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>说明:</p>
+<ol>
+<li>上面是 ioblock.stp 内容的一部分</li>
+<li><code>probe ioblock.request</code> 将常用的目标变量定义成了直接可用内部变量，eg: 通过 devname，我们可以直接获取设备名称，而不需要通过目标变量去获取</li>
+<li><code>__bio_ino</code> 是 ioblock.stap 内定义的函数，但是 <code>__</code> 开头的属于内置函数不能使用。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">stap -ve <span class="s1">&#39;probe ioblock.request {printf(&#34;%s,%s\n&#34;, &#34;devname: &#34;, devname)}&#39;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-01-10</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" data-title="3.3 Systemtap 内核空间探测" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" data-title="3.3 Systemtap 内核空间探测"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" data-title="3.3 Systemtap 内核空间探测"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/13_stap%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" data-title="3.3 Systemtap 内核空间探测" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/12_stap%E8%84%9A%E6%9C%AC/" class="prev" rel="prev" title="3.2 stap 脚本"><i class="fas fa-angle-left fa-fw"></i>3.2 stap 脚本</a>
+            <a href="/posts/linux/linux_perf/14_stap%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E6%8E%A2%E6%B5%8B/" class="next" rel="next" title="3.4 Systemtap 用户空间探测">3.4 Systemtap 用户空间探测<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-10T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"3.3 Systemtap 内核空间探测"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>2.1 ftrace 的原理与使用 - LoveIt</title><meta name="Description" content="2.1 ftrace 的原理与使用"><meta property="og:title" content="2.1 ftrace 的原理与使用" />
+<meta property="og:description" content="2.1 ftrace 的原理与使用" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-01-03T22:10:00+08:00" />
+<meta property="article:modified_time" content="2022-03-14T11:18:09+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="2.1 ftrace 的原理与使用"/>
+<meta name="twitter:description" content="2.1 ftrace 的原理与使用"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" /><link rel="prev" href="https://hotttao.github.io/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" /><link rel="next" href="https://hotttao.github.io/posts/linux/linux_perf/04_perf/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "2.1 ftrace 的原理与使用",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/03_ftrace\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Linux 性能调优","wordcount":  4245 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/linux\/linux_perf\/03_ftrace\/","datePublished": "2020-01-03T22:10:00+08:00","dateModified": "2022-03-14T11:18:09+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "2.1 ftrace 的原理与使用"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">2.1 ftrace 的原理与使用</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/linux/"><i class="far fa-folder fa-fw"></i>Linux</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-01-03">2020-01-03</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4245 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-ftrace-简介">1. ftrace 简介</a></li>
+    <li><a href="#2-ftrace-原理">2. ftrace 原理</a></li>
+    <li><a href="#3-ftrace-控制机制">3. ftrace 控制机制</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#提示类">提示类</a></li>
+            <li><a href="#控制类">控制类</a></li>
+            <li><a href="#输出类">输出类</a></li>
+            <li><a href="#辅助类">辅助类</a></li>
+          </ul>
+        </li>
+        <li><a href="#4-ftrace-tracer">4. ftrace tracer</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-ftrace-的实战">5. ftrace 的实战</a>
+      <ul>
+        <li><a href="#51-跟踪进程调度">5.1 跟踪进程调度</a></li>
+        <li><a href="#52-跟踪系统调用">5.2 跟踪系统调用</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-trace-cmd">6. trace-cmd</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>最早 ftrace 是一个 function tracer，仅能够记录内核的函数调用流程。如今 ftrace 已经成为一个 framework，采用 plugin 的方式支持开发人员添加更多种类的 trace 功能。</p>
+<!-- more -->
+<h2 id="1-ftrace-简介">1. ftrace 简介</h2>
+<p>Ftrace 最初是在 2.6.27 中出现，那时 systemTap 已经开始崭露头角，其他的 trace 工具包括 LTTng 等也已经发展多年。那为什么人们还要再开发一个 trace 工具呢？</p>
+<p>SystemTap 目标是达到甚至超越 Dtrace 。因此 SystemTap 设计比较复杂，在真正的产品环境，人们依然无法放心的使用她。不当的使用和 SystemTap 自身的不完善都有可能导致系统崩溃。</p>
+<p>Ftrace 的设计目标简单，本质上是一种静态代码插装技术，不需要支持某种编程接口让用户自定义 trace 行为。静态代码插装技术更加可靠，不会因为用户的不当使用而导致内核崩溃。 ftrace 代码量很小，稳定可靠。实际上，即使是 Dtrace，大多数用户也只使用其静态 trace 功能。因此 ftrace 的设计非常务实。</p>
+<p>ftrace一个比较明显的缺点是没有用户态的跟踪点支持。perf-tools 对Ftrace的功能进行了很好的封装和集成，建议大家用perf-tools来使用Ftrace，则效果更佳更简单。后面会介绍 perf-tools 的使用，在此之前我们先来看看怎么使用 ftrace。</p>
+<h2 id="2-ftrace-原理">2. ftrace 原理</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/linux_pf/ftrace_arch.png"
+        data-srcset="/images/linux_pf/ftrace_arch.png, /images/linux_pf/ftrace_arch.png 1.5x, /images/linux_pf/ftrace_arch.png 2x"
+        data-sizes="auto"
+        alt="/images/linux_pf/ftrace_arch.png"
+        title="ftrace_arch" />
+Ftrace 有两大组成部分:</p>
+<ol>
+<li>一是 framework</li>
+<li>二是一系列的 tracer， 每个 tracer 完成不同的功能，它们统一由 framework 管理</li>
+<li>ftrace 的 trace 信息保存在 ring buffer(内存缓冲区) 中，由 framework 负责管理</li>
+<li>ftrace有两种主要跟踪机制可以往缓冲区中写数据
+<ul>
+<li>一是函数: 即动态探针，可以跟踪内核函数的调用栈，包括 function tracer，function graph tracer 两个 tracer</li>
+<li>二是事件: 即静态探针，包括其他大多数的 tracer</li>
+</ul>
+</li>
+<li>Framework 利用 debugfs 系统在 /debugfs 下建立 tracing 目录，对用户空间输出 trace 信息，并提供了一系列的控制文件</li>
+<li>ftrace的目录设置和sysfs类似，都是把目录当作对象，把里面的文件当作这个对象的属性。debugfs/tracing 目录可以理解成一个独立的监控实例 instance，在 tracing 目录或者子目录创建任何目录相当于创建了一个新的 ftrace 实例，ftrace 会为这个 ftrace 实例自动创建 ring buffer 内存缓冲区，并在这个目录下创建 ftrace 实例所需的与 tracing 目录完全相同的文件。</li>
+</ol>
+<p>debugfs在大部分发行版中都mount在**/sys/kernel/debug**目录下，而ftrace就在这个目录下的tracing目录中。如果系统没有mount这个文件系统，可以手动 mount。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 重新挂在 debugfs  </span>
+</span></span><span class="line"><span class="cl">mount -t debugfs none /debugs
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. debugfs/tracing 目录</span>
+</span></span><span class="line"><span class="cl">ll /debugs/tracing
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 创建新的 ftrace trace 实例</span>
+</span></span><span class="line"><span class="cl">mkdir /debugs/tracing/instance/python
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># ftrace 会创建新的内存缓冲区并生成 ftrace 相关文件</span>
+</span></span><span class="line"><span class="cl">ll tracing/instances/python/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3-ftrace-控制机制">3. ftrace 控制机制</h2>
+<p>在讲解 ftrace 的 tracer 之前，我们先来看看 tracing 目录下的文件，它们提供了对 ftrace trace 过程的控制。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">ls
+</span></span><span class="line"><span class="cl">available_events            free_buffer               printk_formats       snapshot            trace_stat
+</span></span><span class="line"><span class="cl">available_filter_functions  function_profile_enabled  README               stack_max_size    tracing_cpumask
+</span></span><span class="line"><span class="cl">available_tracers           hwlat_detector            saved_cmdlines       stack_trace   tracing_max_latency
+</span></span><span class="line"><span class="cl">buffer_size_kb              instances                 saved_cmdlines_size  stack_trace_filter  tracing_on
+</span></span><span class="line"><span class="cl">buffer_total_size_kb        kprobe_events             set_event            trace              tracing_thresh
+</span></span><span class="line"><span class="cl">current_tracer              kprobe_profile            set_ftrace_filter    trace_clock        uprobe_events
+</span></span><span class="line"><span class="cl">dyn_ftrace_total_info       max_graph_depth           set_ftrace_notrace   trace_marker       uprobe_profile
+</span></span><span class="line"><span class="cl">enabled_functions           options                   set_ftrace_pid       trace_options
+</span></span><span class="line"><span class="cl">events                      per_cpu                   set_graph_function   trace_pipe
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>tracing 目录下的文件分成了下面四类:</p>
+<ol>
+<li>提示类：显示当前系统可用的event，tracer 列表</li>
+<li>控制类：控制 ftrace 的跟踪参数</li>
+<li>显示类：显示 trace 信息</li>
+<li>辅助类：一些不明或者不重要的辅助信息</li>
+</ol>
+<h4 id="提示类">提示类</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ftrace 文件</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">available_events</td>
+<td style="text-align:left">可用事件列表，也可查看 events/ 目录</td>
+</tr>
+<tr>
+<td style="text-align:left">available_filter_functions</td>
+<td style="text-align:left">当前内核导出的可以跟踪的函数</td>
+</tr>
+<tr>
+<td style="text-align:left">dyn_ftrace_total_info</td>
+<td style="text-align:left">显示available_filter_functins中跟中函数的数目</td>
+</tr>
+<tr>
+<td style="text-align:left">available_tracers</td>
+<td style="text-align:left">可用的 tracer，不同的 tracer 有不同的功能</td>
+</tr>
+<tr>
+<td style="text-align:left">events</td>
+<td style="text-align:left">1. 查看可用事件列表以及事件参数(事件包含的内核上下文信息)<br>cat events/sched/sched_switch/format<br>2.设置事件的过滤条件<br>echo &rsquo;next_comm ~ &ldquo;cs&rdquo;&rsquo; &gt; events/sched/sched_switch/filter</td>
+</tr>
+</tbody>
+</table>
+<h4 id="控制类">控制类</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">适用 tracer</th>
+<th style="text-align:left">ftrace 文件</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">tracing_on</td>
+<td style="text-align:left">用于控制跟踪打开或停止，0停止跟踪，1继续跟踪</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">tracing_cpumask</td>
+<td style="text-align:left">设置允许跟踪特定CPU</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">tracing_max_latency</td>
+<td style="text-align:left">记录Tracer的最大延时</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">tracing_thresh</td>
+<td style="text-align:left">延时记录Trace的阈值，当延时超过此值时才开始记录Trace。单位是ms，只有非0才起作用</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">events</td>
+<td style="text-align:left">1. 查看可用事件列表以及事件参数(事件包含的内核上下文信息)<br>cat events/sched/sched_switch/format<br>2.设置事件的过滤条件<br>echo &rsquo;next_comm ~ &ldquo;cs&rdquo;&rsquo; &gt; events/sched/sched_switch/filter</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">set_event</td>
+<td style="text-align:left">设置跟踪的 event 事件，与通过events目录内的 filter 文件设置一致</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">current_tracer</td>
+<td style="text-align:left">1. 设置或者显示当前使用的跟踪器列表<br>2. 系统缺省为nop，可以通过写入nop重置跟踪器<br>3. 使用echo将跟踪器名字写入即可打开<br>echo function_graph &gt; current_tracer</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">buffer_size_kb</td>
+<td style="text-align:left">设置单个CPU所使用的跟踪缓存的大小<br>如果跟踪太多，旧的信息会被新的跟踪信息覆盖掉<br>不想被覆盖需要先将current_trace设置为nop才可以</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">buffer_total_size_kb</td>
+<td style="text-align:left">显示所有CPU ring buffer 大小之和</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">trace_options</td>
+<td style="text-align:left">trace 过程的复杂控制选项<br>控制Trace打印内容或者操作跟踪器<br>也可通过 options/目录设置</td>
+</tr>
+<tr>
+<td style="text-align:left">通用</td>
+<td style="text-align:left">options/</td>
+<td style="text-align:left">显示 trace_option 的设置结果<br>也可以直接设置，作用同 trace_options</td>
+</tr>
+<tr>
+<td style="text-align:left">func</td>
+<td style="text-align:left">function_profile_enabled</td>
+<td style="text-align:left">打开此选项，trace_stat就会显示function的统计信息<br>echo 0/1 &gt; function_profile_enabled</td>
+</tr>
+<tr>
+<td style="text-align:left">func</td>
+<td style="text-align:left">set_ftrace_pid</td>
+<td style="text-align:left">设置跟踪的pid</td>
+</tr>
+<tr>
+<td style="text-align:left">func</td>
+<td style="text-align:left">set_ftrace_filter</td>
+<td style="text-align:left">用于显示指定要跟踪的函数<br></td>
+</tr>
+<tr>
+<td style="text-align:left">func</td>
+<td style="text-align:left">set_ftrace_notrace</td>
+<td style="text-align:left">用于指定不跟踪的函数，缺省为空</td>
+</tr>
+<tr>
+<td style="text-align:left">graph</td>
+<td style="text-align:left">max_graph_depth</td>
+<td style="text-align:left">函数嵌套的最大深度</td>
+</tr>
+<tr>
+<td style="text-align:left">graph</td>
+<td style="text-align:left">set_graph_function</td>
+<td style="text-align:left">设置要清晰显示调用关系的函数<br>缺省对所有函数都生成调用关系</td>
+</tr>
+<tr>
+<td style="text-align:left">Stack</td>
+<td style="text-align:left">stack_max_size</td>
+<td style="text-align:left">当使用stack跟踪器时，记录产生过的最大stack size</td>
+</tr>
+<tr>
+<td style="text-align:left">Stack</td>
+<td style="text-align:left">stack_trace</td>
+<td style="text-align:left">显示stack的back trace</td>
+</tr>
+<tr>
+<td style="text-align:left">Stack</td>
+<td style="text-align:left">stack_trace_filter</td>
+<td style="text-align:left">设置stack tracer不检查的函数名称</td>
+</tr>
+</tbody>
+</table>
+<h4 id="输出类">输出类</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ftrace 文件</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">printk_formats</td>
+<td style="text-align:left">提供给工具读取原始格式trace的文件</td>
+</tr>
+<tr>
+<td style="text-align:left">trace</td>
+<td style="text-align:left">查看 ring buffer 内跟踪信息<br>echo &gt; trace可以清空当前RingBuffer</td>
+</tr>
+<tr>
+<td style="text-align:left">trace_pipe</td>
+<td style="text-align:left">输出和trace一样的内容，但输出Trace同时将RingBuffer清空<br>可避免RingBuffer的溢出<br>保存文件内容: cat trace_pipe &gt; trace.txt &amp;</td>
+</tr>
+<tr>
+<td style="text-align:left">snapshot</td>
+<td style="text-align:left">是对trace的snapshot<br>echo 0清空缓存，并释放对应内存<br>echo 1进行对当前trace进行snapshot，如没有内存则分配<br>echo 2清空缓存，不释放也不分配内存</td>
+</tr>
+<tr>
+<td style="text-align:left">trace_clock</td>
+<td style="text-align:left">显示当前Trace的timestamp所基于的时钟，默认使用local时钟<br>local：默认时钟；可能无法在不同CPU间同步<br>global：不同CUP间同步，但是可能比local慢<br>counter：跨CPU计数器，需要分析不同CPU间event顺序比较有效</td>
+</tr>
+<tr>
+<td style="text-align:left">trace_marker</td>
+<td style="text-align:left">从用户空间写入标记到trace中，用于用户空间行为和内核时间同步</td>
+</tr>
+<tr>
+<td style="text-align:left">trace_stat</td>
+<td style="text-align:left">每个CPU的Trace统计信息</td>
+</tr>
+<tr>
+<td style="text-align:left">per_cpu/</td>
+<td style="text-align:left">trace等文件的输出是综合所有CPU的，如果你关心单个CPU可以进入per_cpu目录，里面有这些文件的分CPU版本</td>
+</tr>
+<tr>
+<td style="text-align:left">enabled_functions</td>
+<td style="text-align:left">显示有回调附着的函数名称</td>
+</tr>
+<tr>
+<td style="text-align:left">saved_cmdlines</td>
+<td style="text-align:left">放pid对应的comm名称作为ftrace的cache，这样ftrace中不光能显示pid还能显示comm</td>
+</tr>
+<tr>
+<td style="text-align:left">saved_cmdlines_size</td>
+<td style="text-align:left">saved_cmdlines的数目</td>
+</tr>
+</tbody>
+</table>
+<p>trace、trace_pipe和snapshot的区别:</p>
+<ol>
+<li>trace是从RingBuffer中取出内容</li>
+<li>trace_pipe会一直读取Buffer流。</li>
+<li>snapshot是trace的一个瞬间快照：</li>
+</ol>
+<h4 id="辅助类">辅助类</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ftrace 文件</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">free_buffer</td>
+<td style="text-align:left">此文件用于在一个进程被关闭后，同时释放RingBuffer内存，并将调整大小到最小值</td>
+</tr>
+<tr>
+<td style="text-align:left">instances</td>
+<td style="text-align:left">空目录，可在此目录创建新的 ftrace 实例</td>
+</tr>
+<tr>
+<td style="text-align:left">hwlat_detector</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">kprobe_events</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">kprobe_profile</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">uprobe_events</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">uprobe_profile</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-ftrace-tracer">4. ftrace tracer</h3>
+<p>下面是 ftrace tracer 的不完全列表，每一个 tracer 输出的内容和格式都不一样，对于我们比较常用的是 Function，Graph，Schedule switch，softirq。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ftrace</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Function</td>
+<td style="text-align:left">跟踪函数调用</td>
+</tr>
+<tr>
+<td style="text-align:left">Function graph tracer</td>
+<td style="text-align:left">跟踪函数调用，显示调用关系</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Schedule switch</strong></td>
+<td style="text-align:left">跟踪进程调度情况</td>
+</tr>
+<tr>
+<td style="text-align:left">Wakeup</td>
+<td style="text-align:left">跟踪进程的调度延迟，即高优先级进程从进入 ready 状态到获得 CPU 的延迟时间。该 tracer 只针对实时进程</td>
+</tr>
+<tr>
+<td style="text-align:left">Irqsoff</td>
+<td style="text-align:left">当中断被禁止时，系统无法相应外部事件，比如键盘和鼠标，时钟也无法产生 tick 中断。这意味着系统响应延迟，irqsoff 这个 tracer 能够跟踪并记录内核中哪些函数禁止了中断，对于其中中断禁止时间最长的，irqsoff 将在 log 文件的第一行标示出来，从而使开发人员可以迅速定位造成响应延迟的罪魁祸首</td>
+</tr>
+<tr>
+<td style="text-align:left">Preemptoff</td>
+<td style="text-align:left">和前一个 tracer 类似，preemptoff tracer 跟踪并记录禁止内核抢占的函数，并清晰地显示出禁止抢占时间最长的内核函数</td>
+</tr>
+<tr>
+<td style="text-align:left">Preemptirqsoff</td>
+<td style="text-align:left">同上，跟踪和记录禁止中断或者禁止抢占的内核函数，以及禁止时间最长的函数</td>
+</tr>
+<tr>
+<td style="text-align:left">Branch</td>
+<td style="text-align:left">跟踪内核程序中的 likely/unlikely 分支预测命中率情况。 Branch tracer 能够记录这些分支语句有多少次预测成功。从而为优化程序提供线索</td>
+</tr>
+<tr>
+<td style="text-align:left">Hardware branch</td>
+<td style="text-align:left">利用处理器的分支跟踪能力，实现硬件级别的指令跳转记录。在 x86 上，主要利用了 BTS 这个特性</td>
+</tr>
+<tr>
+<td style="text-align:left">Initcall</td>
+<td style="text-align:left">记录系统在 boot 阶段所调用的 init call</td>
+</tr>
+<tr>
+<td style="text-align:left">Mmiotrace</td>
+<td style="text-align:left">记录 memory map IO 的相关信息</td>
+</tr>
+<tr>
+<td style="text-align:left">Power</td>
+<td style="text-align:left">记录系统电源管理相关的信息</td>
+</tr>
+<tr>
+<td style="text-align:left">Sysprof</td>
+<td style="text-align:left">缺省情况下，sysprof tracer 每隔 1 msec 对内核进行一次采样，记录函数调用和堆栈信息</td>
+</tr>
+<tr>
+<td style="text-align:left">Kernel memory</td>
+<td style="text-align:left">内存 tracer 主要用来跟踪 slab allocator 的分配情况。包括 kfree，kmem_cache_alloc 等 API 的调用情况，用户程序可以根据 tracer 收集到的信息分析内部碎片情况，找出内存分配最频繁的代码片断，等等</td>
+</tr>
+<tr>
+<td style="text-align:left">Workqueue statistical</td>
+<td style="text-align:left">这是一个 statistic tracer，统计系统中所有的 workqueue 的工作情况，比如有多少个 work 被插入 workqueue，多少个已经被执行等。开发人员可以以此来决定具体的 workqueue 实现，比如是使用 single threaded workqueue 还是 per cpu workqueue</td>
+</tr>
+<tr>
+<td style="text-align:left">Event</td>
+<td style="text-align:left">跟踪系统事件，比如 timer，系统调用，中断等</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-ftrace-的实战">5. ftrace 的实战</h2>
+<h3 id="51-跟踪进程调度">5.1 跟踪进程调度</h3>
+<p>示例一我们来看看如何跟踪 Python 进程执行过程发生的进程调度:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 假设我们要跟踪一个 Python 文件执行中的进程调度</span>
+</span></span><span class="line"><span class="cl">&gt; vim run.py
+</span></span><span class="line"><span class="cl">with open<span class="o">(</span><span class="s2">&#34;./content.csv&#34;</span><span class="o">)</span> as bf:
+</span></span><span class="line"><span class="cl">    print<span class="o">(</span>bf.readlines<span class="o">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 将 ftrace 的选项写入脚本中</span>
+</span></span><span class="line"><span class="cl">&gt; vim ftrace.sh
+</span></span><span class="line"><span class="cl"><span class="nv">py</span><span class="o">=</span>/home/tao/debugs/tracing/
+</span></span><span class="line"><span class="cl">mkdir -pv <span class="nv">$py</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> nop &gt; <span class="nv">$py</span>/current_tracer
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="m">0</span> &gt; <span class="nv">$py</span>/tracing_on
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$$</span> &gt; <span class="nv">$py</span>/set_ftrace_pid
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="s2">&#34;sched:*&#34;</span> &gt; <span class="nv">$py</span>/set_event
+</span></span><span class="line"><span class="cl"><span class="c1">#replace test_proc_show by your function name</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#echo test_proc_show &gt; $py/set_graph_function</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="m">1</span> &gt; <span class="nv">$py</span>/tracing_on
+</span></span><span class="line"><span class="cl"><span class="nb">exec</span> <span class="s2">&#34;</span><span class="nv">$@</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3.启动跟踪并查看结果</span>
+</span></span><span class="line"><span class="cl">&gt; bash ftrace.sh python ftrace.py <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="m">0</span> &gt; /home/tao/debugs/tracing/tracing_on
+</span></span><span class="line"><span class="cl">&gt; vim /home/tao/debugs/tracing/trace
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="52-跟踪系统调用">5.2 跟踪系统调用</h3>
+<p>示例2 我们来看看如何跟踪系统调用。以 ls 命令为例，显示 do_sys_open 调用栈。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 这次使用系统默认挂载的 debugfs</span>
+</span></span><span class="line"><span class="cl">$ <span class="nb">cd</span> /sys/kernel/debug/tracing/
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 设置要显示调用栈的函数</span>
+</span></span><span class="line"><span class="cl">$ <span class="nb">echo</span> do_sys_open &gt; set_graph_function 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 配置跟踪选项，开启函数调用跟踪，并跟踪调用进程</span>
+</span></span><span class="line"><span class="cl">$ <span class="nb">echo</span> function_graph &gt; current_tracer
+</span></span><span class="line"><span class="cl">$ <span class="nb">echo</span> funcgraph-proc &gt; trace_options
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 开启追踪</span>
+</span></span><span class="line"><span class="cl">$ <span class="nb">echo</span> <span class="m">1</span> &gt; tracing_on
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 4. 执行一个 ls 命令后，再关闭跟踪：</span>
+</span></span><span class="line"><span class="cl">$ ls
+</span></span><span class="line"><span class="cl">$ <span class="nb">echo</span> <span class="m">0</span> &gt; tracing_on
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 5.查看追踪结果</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ cat trace
+</span></span><span class="line"><span class="cl"><span class="c1"># tracer: function_graph</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># CPU  TASK/PID         DURATION                  FUNCTION CALLS</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># |     |    |           |   |                     |   |   |   |</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>               <span class="p">|</span>  do_sys_open<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>               <span class="p">|</span>    getname<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>               <span class="p">|</span>      getname_flags<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>               <span class="p">|</span>        kmem_cache_alloc<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>               <span class="p">|</span>          _cond_resched<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.049 us    <span class="p">|</span>            rcu_all_qs<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.791 us    <span class="p">|</span>          <span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.041 us    <span class="p">|</span>          should_failslab<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.040 us    <span class="p">|</span>          prefetch_freepointer<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.039 us    <span class="p">|</span>          memcg_kmem_put_cache<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   2.895 us    <span class="p">|</span>        <span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>               <span class="p">|</span>        __check_object_size<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.067 us    <span class="p">|</span>          __virt_addr_valid<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.044 us    <span class="p">|</span>          __check_heap_object<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   0.039 us    <span class="p">|</span>          check_stack_object<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   1.570 us    <span class="p">|</span>        <span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   5.790 us    <span class="p">|</span>      <span class="o">}</span>
+</span></span><span class="line"><span class="cl"> 0<span class="o">)</span>    ls-12276    <span class="p">|</span>   6.325 us    <span class="p">|</span>    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出: 第三列是函数执行延迟；最后一列，则是函数调用关系图。</p>
+<h2 id="6-trace-cmd">6. trace-cmd</h2>
+<p>trace-cmd 可以把上面这些步骤给包装起来，通过同一个命令行工具，就可完成上述所有过程。下面是示例2 中跟踪 do_sys_open 的 trace-cmd 版本。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 安装</span>
+</span></span><span class="line"><span class="cl">$ yum install trace-cmd
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 启动追踪</span>
+</span></span><span class="line"><span class="cl">$ trace-cmd record -p function_graph -g do_sys_open -O funcgraph-proc ls
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 查看追踪结果</span>
+</span></span><span class="line"><span class="cl">$ trace-cmd report
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075341: funcgraph_entry:                   <span class="p">|</span>  do_sys_open<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075363: funcgraph_entry:                   <span class="p">|</span>    getname<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075364: funcgraph_entry:                   <span class="p">|</span>      getname_flags<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075364: funcgraph_entry:                   <span class="p">|</span>        kmem_cache_alloc<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075365: funcgraph_entry:                   <span class="p">|</span>          _cond_resched<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075365: funcgraph_entry:        0.074 us   <span class="p">|</span>            rcu_all_qs<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075366: funcgraph_exit:         1.143 us   <span class="p">|</span>          <span class="o">}</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075366: funcgraph_entry:        0.064 us   <span class="p">|</span>          should_failslab<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075367: funcgraph_entry:        0.075 us   <span class="p">|</span>          prefetch_freepointer<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075368: funcgraph_entry:        0.085 us   <span class="p">|</span>          memcg_kmem_put_cache<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075369: funcgraph_exit:         4.447 us   <span class="p">|</span>        <span class="o">}</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075369: funcgraph_entry:                   <span class="p">|</span>        __check_object_size<span class="o">()</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075370: funcgraph_entry:        0.132 us   <span class="p">|</span>          __virt_addr_valid<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075370: funcgraph_entry:        0.093 us   <span class="p">|</span>          __check_heap_object<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075371: funcgraph_entry:        0.059 us   <span class="p">|</span>          check_stack_object<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075372: funcgraph_exit:         2.323 us   <span class="p">|</span>        <span class="o">}</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075372: funcgraph_exit:         8.411 us   <span class="p">|</span>      <span class="o">}</span>
+</span></span><span class="line"><span class="cl">              ls-12418 <span class="o">[</span>000<span class="o">]</span> 85558.075373: funcgraph_exit:         9.195 us   <span class="p">|</span>    <span class="o">}</span>
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="参考">参考</h2>
+<ul>
+<li><a href="https://www.ibm.com/developerworks/cn/linux/l-cn-ftrace/index.html" target="_blank" rel="noopener noreffer">ftrace 简介</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/22130013" target="_blank" rel="noopener noreffer">在Linux下做性能分析2：ftrace</a></li>
+<li><a href="https://www.cnblogs.com/arnoldlu/p/7211249.html" target="_blank" rel="noopener noreffer">Linux ftrace框架介绍及运用</a></li>
+<li><a href="https://juejin.im/post/5dc4235ce51d456e300e0a8f" target="_blank" rel="noopener noreffer">宋宝华：关于Ftrace的一个完整案例</a></li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-03-14&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/9f7d652e9e23f2d556f506f043f502e3a794737a" target="_blank" title="commit by tsong(tsong@example.com) 9f7d652e9e23f2d556f506f043f502e3a794737a: linux 性能优化">
+                                    <i class="fas fa-hashtag fa-fw"></i>9f7d652</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/linux/linux_perf/03_ftrace/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" data-title="2.1 ftrace 的原理与使用" data-hashtags="Linux 性能调优"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" data-hashtag="Linux 性能调优"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" data-title="2.1 ftrace 的原理与使用"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" data-title="2.1 ftrace 的原理与使用"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/linux/linux_perf/03_ftrace/" data-title="2.1 ftrace 的原理与使用" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/linux-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/">Linux 性能调优</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/linux/linux_perf/02_linux%E8%BF%BD%E8%B8%AA%E6%8A%80%E6%9C%AF%E6%A6%82%E8%A7%88/" class="prev" rel="prev" title="1.2 Linux 性能调优概览"><i class="fas fa-angle-left fa-fw"></i>1.2 Linux 性能调优概览</a>
+            <a href="/posts/linux/linux_perf/04_perf/" class="next" rel="next" title="2.2 perf 的原理">2.2 perf 的原理<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.94.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-01-03T22:10:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"2.1 ftrace 的原理与使用"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
