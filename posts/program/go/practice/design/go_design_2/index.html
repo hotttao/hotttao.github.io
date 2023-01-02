@@ -10,7 +10,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://hotttao.github.io/posts/program/go/practice/design/go_design_2/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-03-02T22:00:00+08:00" />
-<meta property="article:modified_time" content="2023-01-01T21:49:20+08:00" />
+<meta property="article:modified_time" content="2023-01-02T13:54:45+08:00" />
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
 
@@ -28,8 +28,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/practice\/design\/go_design_2\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 惯例","wordcount":  6319 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/practice\/design\/go_design_2\/","datePublished": "2021-03-02T22:00:00+08:00","dateModified": "2023-01-01T21:49:20+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 惯例","wordcount":  7669 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/practice\/design\/go_design_2\/","datePublished": "2021-03-02T22:00:00+08:00","dateModified": "2023-01-02T13:54:45+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -110,8 +110,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">go 错误处理</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-03-02">2021-03-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6319 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 13 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-03-02">2021-03-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 7669 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 16 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -139,13 +139,16 @@
             <li><a href="#githubcompkgerrors-使用限制">github.com/pkg/errors 使用限制</a></li>
           </ul>
         </li>
-        <li><a href="#25-错误判定">2.5 错误判定</a>
+        <li><a href="#25-错误行为特征检视策略">2.5 错误行为特征检视策略</a></li>
+        <li><a href="#26-错误判定">2.6 错误判定</a>
           <ul>
             <li><a href="#isas-实现">Is/As 实现</a></li>
           </ul>
         </li>
+        <li><a href="#27-错误处理的总结">2.7 错误处理的总结</a></li>
       </ul>
     </li>
+    <li><a href="#3-go-的异常处理">3. Go 的异常处理</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><p>Go 错误处理。这篇文章摘录自<a href="https://coolshell.cn/articles/21128.html" target="_blank" rel="noopener noreffer">耗子哥博客-Go编程模式</a></p>
@@ -662,6 +665,7 @@
 <li>sentinel error: 预定义错误</li>
 <li>error types: 实现了 error 接口的自定义类型并结合断言进行使用</li>
 <li>error wrapt: 错误包装</li>
+<li>错误行为特征检视策略: 将某个包中的错误类型归类，统一提取出一些公共的错误行为特征（behaviour），并将这些错误行为特征放入一个公开的接口类型</li>
 </ol>
 <p>接下来我们会一一比较这几种处理方式得优劣，得出最佳得 Error 得处理实践。</p>
 <h3 id="22-sentinel-error">2.2 sentinel error</h3>
@@ -909,7 +913,121 @@
 <h4 id="githubcompkgerrors-使用限制">github.com/pkg/errors 使用限制</h4>
 <p>上面所有的一套错误包装，在使用上是由一定限制的。试想一下，一个第三方库也使用上面的方法进行错误包装，那么在应用层也以同样的方法包装错误时，就会重复打印堆栈信息。所以只有 applications 可以选择错误包装。具有可重用性的基础包只能返回根错误值，即 sentinel error 或者自定义错误。此机制与 Go 标准库中使用的相同。</p>
 <p>最后一单错误已经被处理了，这个错误就不应该被继续上抛给调用方，应该只返回 nil。</p>
-<h3 id="25-错误判定">2.5 错误判定</h3>
+<h3 id="25-错误行为特征检视策略">2.5 错误行为特征检视策略</h3>
+<p>以标准库中的net包为例，它将包内的所有错误类型的公共行为特征抽象并放入net.Error这个接口中。而错误处理方仅需依赖这个公共接口即可检视具体错误值的错误行为特征信息，并根据这些信息做出后续错误处理分支选择的决策。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// $GOROOT/src/net/net.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Error</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">Timeout</span><span class="p">()</span> <span class="kt">bool</span>   <span class="c1">// 是超时类错误吗？
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nf">Temporary</span><span class="p">()</span> <span class="kt">bool</span> <span class="c1">// 是临时性错误吗？
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面是http包使用错误行为特征检视策略进行错误处理的代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// $GOROOT/src/net/http/server.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">srv</span> <span class="o">*</span><span class="nx">Server</span><span class="p">)</span> <span class="nf">Serve</span><span class="p">(</span><span class="nx">l</span> <span class="nx">net</span><span class="p">.</span><span class="nx">Listener</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">rw</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nf">Accept</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">e</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">srv</span><span class="p">.</span><span class="nf">getDoneChan</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span> <span class="nx">ErrServerClosed</span>
+</span></span><span class="line"><span class="cl">            <span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">ne</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">e</span><span class="p">.(</span><span class="nx">net</span><span class="p">.</span><span class="nx">Error</span><span class="p">);</span> <span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">ne</span><span class="p">.</span><span class="nf">Temporary</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="c1">// 这里对临时性错误进行处理
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                <span class="o">...</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">tempDelay</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">e</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Accept方法实际上返回的错误类型为*OpError，它是net包中的一个自定义错误类型，实现了错误公共特征接口net.Error，因此可以被错误处理方通过net.Error接口的方法判断其行为是否满足Temporary或Timeout特征。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// $GOROOT/src/net/net.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">OpError</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// Err is the error that occurred during the operation.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">Err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">temporary</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">Temporary</span><span class="p">()</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">OpError</span><span class="p">)</span> <span class="nf">Temporary</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">ne</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">e</span><span class="p">.</span><span class="nx">Err</span><span class="p">.(</span><span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">SyscallError</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">t</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">ne</span><span class="p">.</span><span class="nx">Err</span><span class="p">.(</span><span class="nx">temporary</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">t</span><span class="p">.</span><span class="nf">Temporary</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">t</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">e</span><span class="p">.</span><span class="nx">Err</span><span class="p">.(</span><span class="nx">temporary</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">t</span><span class="p">.</span><span class="nf">Temporary</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="26-错误判定">2.6 错误判定</h3>
 <p>前面我们提到了两种错误判定的方法:</p>
 <ol>
 <li>使用 == 进行 sentinel error 的错误判定</li>
@@ -1221,12 +1339,65 @@
 </span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="o">*</span><span class="nx">withMessage</span><span class="p">)</span> <span class="nf">Unwrap</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">w</span><span class="p">.</span><span class="nx">cause</span> <span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
+</div><h3 id="27-错误处理的总结">2.7 错误处理的总结</h3>
+<p>Go社区中关于如何进行错误处理的讨论有很多，但唯一正确的结论是没有哪一种错误处理策略适用于所有项目或场合。综合上述的构造错误值方法及错误处理策略，请记住如下几点：</p>
+<ol>
+<li>尽量使用透明错误处理策略降低错误处理方与错误值构造方之间的耦合；</li>
+<li>如果可以通过错误值类型的特征进行错误检视，那么尽量使用错误行为特征检视策略；</li>
+<li>在上述两种策略无法实施的情况下，再用“哨兵”策略和错误值类型检视策略；</li>
+<li>在Go 1.13及后续版本中，尽量用errors.Is和errors.As方法替换原先的错误检视比较语句。</li>
+</ol>
+<h2 id="3-go-的异常处理">3. Go 的异常处理</h2>
+<p>Go的正常错误处理与异常处理之间是泾渭分明的，这与其他主流编程语言使用结构化错误处理统一处理错误与异常是两种不同的理念。Go提供了panic专门用于处理异常。</p>
+<p>panic是一个Go内置函数，它用来停止当前常规控制流并启动panicking过程。当函数F调用panic函数时，函数F的执行停止，函数F中已进行了求值的defer函数都将得到正常执行，然后函数F将控制权返还给其调用者。对于函数F的调用者而言，函数F之后的行为就如同调用者调用的函数是panic一样，该panicking过程将继续在栈上进行下去，直到当前goroutine中的所有函数都返回为止，此时程序将崩溃退出。</p>
+<p>在Go中，panic则是“不得已而为之”，即所有引发panic的情形，无论是显式的（我们主动调用panic函数引发的）还是隐式的（Go运行时检测到违法情况而引发的），都是我们不期望看到的。对这些引发的panic，我们很少有预案应对，更多的是让程序快速崩溃掉。因此一旦发生panic，就意味着我们的代码很大可能出现了bug。</p>
+<p>使用recover可以捕获panic，防止goroutine意外退出</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">ss</span><span class="p">)</span> <span class="nf">Token</span><span class="p">(</span><span class="nx">skipSpace</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">f</span> <span class="kd">func</span><span class="p">(</span><span class="kt">rune</span><span class="p">)</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">tok</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">e</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">e</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">se</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">e</span><span class="p">.(</span><span class="nx">scanError</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">err</span> <span class="p">=</span> <span class="nx">se</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nb">panic</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">f</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">f</span> <span class="p">=</span> <span class="nx">notSpace</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">s</span><span class="p">.</span><span class="nx">buf</span> <span class="p">=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">buf</span><span class="p">[:</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">tok</span> <span class="p">=</span> <span class="nx">s</span><span class="p">.</span><span class="nf">token</span><span class="p">(</span><span class="nx">skipSpace</span><span class="p">,</span> <span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
 </div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2023-01-01&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/47535c88988231d6e86c797d58bf36e8365fd9c7" target="_blank" title="commit by tao(tao@example.com) 47535c88988231d6e86c797d58bf36e8365fd9c7: go 进阶">
-                                    <i class="fas fa-hashtag fa-fw"></i>47535c8</a></span>
+                <span>更新于 2023-01-02&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/d672a3faf14015b25fe733c4df58cd3613508fdd" target="_blank" title="commit by tao(tao@example.com) d672a3faf14015b25fe733c4df58cd3613508fdd: 错误处理 错误行为特征检视策略">
+                                    <i class="fas fa-hashtag fa-fw"></i>d672a3f</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>
