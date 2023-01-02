@@ -1,4 +1,4 @@
-# 5. Go 代码生成和泛型
+# Go 代码生成和泛型
 
 Go 的泛型和代码生成，这篇文章摘录自[耗子哥博客-Go编程模式](https://coolshell.cn/articles/21179.html)
 

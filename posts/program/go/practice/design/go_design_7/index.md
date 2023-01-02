@@ -1,4 +1,4 @@
-# 7. Go PIPELINE
+# Go PIPELINE
 
 Go 流处理编程模式，这篇文章摘录自[耗子哥博客-Go编程模式](https://coolshell.cn/articles/21228.html)
 

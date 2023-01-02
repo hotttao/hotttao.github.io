@@ -1,4 +1,4 @@
-# 6. Go 装饰器
+# Go 装饰器
 
 Go 的装饰器，这篇文章摘录自[耗子哥博客-Go编程模式](https://coolshell.cn/articles/17929.html)
 

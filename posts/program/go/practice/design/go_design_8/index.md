@@ -1,5 +1,4 @@
-# 8. Go Visitor 模式
-
+# Go Visitor 模式
 
 K8S Visitor 模式，这篇文章摘录自[耗子哥博客-Go编程模式](https://coolshell.cn/articles/21263.html)
 
