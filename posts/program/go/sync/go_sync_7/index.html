@@ -10,7 +10,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_7/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-05-06T22:00:00+08:00" />
-<meta property="article:modified_time" content="2022-03-08T23:33:01+08:00" />
+<meta property="article:modified_time" content="2023-01-11T18:58:39+08:00" />
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
 
@@ -28,8 +28,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_7\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2115 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_7\/","datePublished": "2021-05-06T22:00:00+08:00","dateModified": "2022-03-08T23:33:01+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  2664 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_7\/","datePublished": "2021-05-06T22:00:00+08:00","dateModified": "2023-01-11T18:58:39+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -110,8 +110,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">Cond 条件变量</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-06">2021-05-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2115 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-06">2021-05-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2664 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -124,7 +124,11 @@
         <li><a href="#11-cond-使用">1.1 Cond 使用</a></li>
       </ul>
     </li>
-    <li><a href="#2-cond-实现">2. Cond 实现</a></li>
+    <li><a href="#2-cond-实现">2. Cond 实现</a>
+      <ul>
+        <li><a href="#21-开源项目的应用">2.1 开源项目的应用</a></li>
+      </ul>
+    </li>
     <li><a href="#3-cond-采坑点">3. Cond 采坑点</a></li>
     <li><a href="#4-cond-使用上的理解">4. Cond 使用上的理解</a></li>
     <li><a href="#参考">参考</a></li>
@@ -366,6 +370,103 @@
 <li>Signal 和 Broadcast 只涉及到 notifyList 数据结构，不涉及到锁</li>
 <li>Wait 把调用者加入到等待队列时会释放锁，在被唤醒之后还会请求锁。在阻塞休眠期间，调用者是不持有锁的，这样能让其他 goroutine 有机会检查或者更新等待变量。</li>
 </ol>
+<h3 id="21-开源项目的应用">2.1 开源项目的应用</h3>
+<p>开源项目中使用 sync.Cond 的代码少之又少，Kubernetes 中有一个使用 Cond 的例子。Kubernetes 项目中定义了优先级队列 PriorityQueue 这样一个数据结构，用来实现 Pod 的调用。它内部有三个 Pod 的队列，即 activeQ、podBackoffQ 和 unschedulableQ，其中 activeQ 就是用来调度的活跃队列（heap）。Pop 方法调用的时候，如果这个队列为空，并且这个队列没有 Close 的话，会调用 Cond 的 Wait 方法等待。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 从队列中取出一个元素
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">PriorityQueue</span><span class="p">)</span> <span class="nf">Pop</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">framework</span><span class="p">.</span><span class="nx">QueuedPodInfo</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">p</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">p</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">p</span><span class="p">.</span><span class="nx">activeQ</span><span class="p">.</span><span class="nf">Len</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span> <span class="c1">// 如果队列为空
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nx">p</span><span class="p">.</span><span class="nx">closed</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="nx">queueClosed</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">p</span><span class="p">.</span><span class="nx">cond</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span> <span class="c1">// 等待，直到被唤醒
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">......</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">pInfo</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当 activeQ 增加新的元素时，会调用条件变量的 Boradcast 方法，通知被 Pop 阻塞的调用者。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 增加元素到队列中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">PriorityQueue</span><span class="p">)</span> <span class="nf">Add</span><span class="p">(</span><span class="nx">pod</span> <span class="o">*</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Pod</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">p</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">p</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">pInfo</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">newQueuedPodInfo</span><span class="p">(</span><span class="nx">pod</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">activeQ</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">pInfo</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span><span class="c1">//增加元素到队列中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">klog</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;Error adding pod %v to the scheduling queue: %v&#34;</span><span class="p">,</span> <span class="nf">nsNameForPod</span><span class="p">(</span><span class="nx">pod</span><span class="p">),</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">......</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">p</span><span class="p">.</span><span class="nx">cond</span><span class="p">.</span><span class="nf">Broadcast</span><span class="p">()</span> <span class="c1">//通知其它等待的goroutine，队列中有元素了
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个优先级队列被关闭的时候，也会调用 Broadcast 方法，避免被 Pop 阻塞的调用者永远 hang 住。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">PriorityQueue</span><span class="p">)</span> <span class="nf">Close</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">p</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">p</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">close</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">stop</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">p</span><span class="p">.</span><span class="nx">closed</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">p</span><span class="p">.</span><span class="nx">cond</span><span class="p">.</span><span class="nf">Broadcast</span><span class="p">()</span> <span class="c1">//关闭时通知等待的goroutine，避免它们永远等待
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>对于需要重复调用 Broadcast 的场景，比如这里的 Kubernetes 的例子，每次往队列中成功增加了元素后就需要调用 Broadcast 通知所有的等待者，使用 Cond 就再合适不过了。</p>
 <h2 id="3-cond-采坑点">3. Cond 采坑点</h2>
 <p>使用 Cond 时有两个常见错误</p>
 <ol>
@@ -384,8 +485,8 @@
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2022-03-08&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/120df7cebd93c9e91499f78079173890824b3a3b" target="_blank" title="commit by WardSong(1556824234@qq.com) 120df7cebd93c9e91499f78079173890824b3a3b: 页面目录缩放配置">
-                                    <i class="fas fa-hashtag fa-fw"></i>120df7c</a></span>
+                <span>更新于 2023-01-11&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/cc53f81bdced278492f2623b9a6e15f9a58c2c6f" target="_blank" title="commit by tao(tao@example.com) cc53f81bdced278492f2623b9a6e15f9a58c2c6f: go 并发更新">
+                                    <i class="fas fa-hashtag fa-fw"></i>cc53f81</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>
