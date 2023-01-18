@@ -10,7 +10,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_12/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-05-11T22:00:00+08:00" />
-<meta property="article:modified_time" content="2022-03-08T23:33:01+08:00" />
+<meta property="article:modified_time" content="2023-01-18T11:02:34+08:00" />
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
 
@@ -28,8 +28,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_12\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  3336 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_12\/","datePublished": "2021-05-11T22:00:00+08:00","dateModified": "2022-03-08T23:33:01+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 并发","wordcount":  4472 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/sync\/go_sync_12\/","datePublished": "2021-05-11T22:00:00+08:00","dateModified": "2023-01-18T11:02:34+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -110,8 +110,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">Atomic 原子操作</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-11">2021-05-11</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3336 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-11">2021-05-11</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4472 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -135,12 +135,18 @@
         </li>
       </ul>
     </li>
-    <li><a href="#2-atomic-的扩展">2. Atomic 的扩展</a>
+    <li><a href="#2-atomicvalue-的实现和使用">2. atomic.Value 的实现和使用</a>
       <ul>
-        <li><a href="#3-使用-atomic-实现-lock-free-queue">3. 使用 atomic 实现 Lock-Free queue</a></li>
+        <li><a href="#21-atomicvalue-的实现">2.1 atomic.Value 的实现</a></li>
+        <li><a href="#22-atomicvalue-的使用">2.2 atomic.Value 的使用</a></li>
       </ul>
     </li>
-    <li><a href="#4-对一个地址的赋值是原子操作吗">4. 对一个地址的赋值是原子操作吗？</a></li>
+    <li><a href="#3-atomic-的扩展">3. Atomic 的扩展</a>
+      <ul>
+        <li><a href="#4-使用-atomic-实现-lock-free-queue">4. 使用 atomic 实现 Lock-Free queue</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-对一个地址的赋值是原子操作吗">5. 对一个地址的赋值是原子操作吗？</a></li>
     <li><a href="#参考">参考</a></li>
   </ul>
 </nav></div>
@@ -313,17 +319,422 @@
 <h4 id="value-类型">Value 类型</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Value</span>
 </span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Load</span><span class="p">()</span> <span class="p">(</span><span class="nx">x</span> <span class="kd">interface</span><span class="p">{})</span>
 </span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Store</span><span class="p">(</span><span class="nx">x</span> <span class="kd">interface</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// go1.8 之后 Value 已经直至 CAS 操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Value</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">CompareAndSwap</span><span class="p">(</span><span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="nx">any</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Load</span><span class="p">()</span> <span class="p">(</span><span class="nx">val</span> <span class="nx">any</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Store</span><span class="p">(</span><span class="nx">val</span> <span class="nx">any</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Swap</span><span class="p">(</span><span class="nx">new</span> <span class="nx">any</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="nx">any</span><span class="p">)</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>Value 类型:</p>
+</div><h2 id="2-atomicvalue-的实现和使用">2. atomic.Value 的实现和使用</h2>
+<h3 id="21-atomicvalue-的实现">2.1 atomic.Value 的实现</h3>
+<p>相比于其他原子操作直接与 CPU 指令相关，atomic.Value 的实现是基于其他更基本原子操作实现的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span><span class="lnt">178
+</span><span class="lnt">179
+</span><span class="lnt">180
+</span><span class="lnt">181
+</span><span class="lnt">182
+</span><span class="lnt">183
+</span><span class="lnt">184
+</span><span class="lnt">185
+</span><span class="lnt">186
+</span><span class="lnt">187
+</span><span class="lnt">188
+</span><span class="lnt">189
+</span><span class="lnt">190
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">atomic</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;unsafe&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// A Value provides an atomic load and store of a consistently typed value.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// The zero value for a Value returns nil from Load.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Once Store has been called, a Value must not be copied.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// A Value must not be copied after first use.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Value</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">v</span> <span class="nx">any</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// ifaceWords is interface{} internal representation.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">ifaceWords</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">typ</span>  <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">data</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Load returns the value set by the most recent Store.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// It returns nil if there has been no call to Store for this Value.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Load</span><span class="p">()</span> <span class="p">(</span><span class="nx">val</span> <span class="nx">any</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vp</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">v</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">typ</span> <span class="o">:=</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">typ</span> <span class="o">==</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// First store not yet completed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">data</span> <span class="o">:=</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vlp</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">val</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vlp</span><span class="p">.</span><span class="nx">typ</span> <span class="p">=</span> <span class="nx">typ</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vlp</span><span class="p">.</span><span class="nx">data</span> <span class="p">=</span> <span class="nx">data</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">firstStoreInProgress</span> <span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Store sets the value of the Value to x.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// All calls to Store for a given Value must use values of the same concrete type.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Store of an inconsistent type panics, as does Store(nil).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Store</span><span class="p">(</span><span class="nx">val</span> <span class="nx">any</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">val</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: store of nil value into Value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vp</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">v</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vlp</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">val</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">typ</span> <span class="o">:=</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Attempt to start first store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Disable preemption so that other goroutines can use
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// active spin wait to wait for completion.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nf">runtime_procPin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Complete first store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">vlp</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="nx">vlp</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// First store in progress. Wait.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Since we disable preemption around the first store,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// we can wait with active spinning.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// First store completed. Check type and overwrite data.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">typ</span> <span class="o">!=</span> <span class="nx">vlp</span><span class="p">.</span><span class="nx">typ</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: store of inconsistently typed value into Value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">vlp</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Swap stores new into Value and returns the previous value. It returns nil if
+</span></span></span><span class="line"><span class="cl"><span class="c1">// the Value is empty.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// All calls to Swap for a given Value must use values of the same concrete
+</span></span></span><span class="line"><span class="cl"><span class="c1">// type. Swap of an inconsistent type panics, as does Swap(nil).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">Swap</span><span class="p">(</span><span class="nx">new</span> <span class="nx">any</span><span class="p">)</span> <span class="p">(</span><span class="nx">old</span> <span class="nx">any</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">new</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: swap of nil value into Value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vp</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">v</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">np</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">new</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">typ</span> <span class="o">:=</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Attempt to start first store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Disable preemption so that other goroutines can use
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// active spin wait to wait for completion; and so that
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// GC does not see the fake type accidentally.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nf">runtime_procPin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Complete first store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">np</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="nx">np</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// First store in progress. Wait.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Since we disable preemption around the first store,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// we can wait with active spinning.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// First store completed. Check type and overwrite data.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">typ</span> <span class="o">!=</span> <span class="nx">np</span><span class="p">.</span><span class="nx">typ</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: swap of inconsistently typed value into Value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">op</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">old</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">op</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">data</span> <span class="p">=</span> <span class="nx">np</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="nf">SwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">np</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">old</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// CompareAndSwap executes the compare-and-swap operation for the Value.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// All calls to CompareAndSwap for a given Value must use values of the same
+</span></span></span><span class="line"><span class="cl"><span class="c1">// concrete type. CompareAndSwap of an inconsistent type panics, as does
+</span></span></span><span class="line"><span class="cl"><span class="c1">// CompareAndSwap(old, nil).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">v</span> <span class="o">*</span><span class="nx">Value</span><span class="p">)</span> <span class="nf">CompareAndSwap</span><span class="p">(</span><span class="nx">old</span><span class="p">,</span> <span class="nx">new</span> <span class="nx">any</span><span class="p">)</span> <span class="p">(</span><span class="nx">swapped</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">new</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: compare and swap of nil value into Value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vp</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">v</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">np</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">new</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">op</span> <span class="o">:=</span> <span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">old</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">op</span><span class="p">.</span><span class="nx">typ</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">np</span><span class="p">.</span><span class="nx">typ</span> <span class="o">!=</span> <span class="nx">op</span><span class="p">.</span><span class="nx">typ</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: compare and swap of inconsistently typed values&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">typ</span> <span class="o">:=</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">old</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Attempt to start first store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Disable preemption so that other goroutines can use
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// active spin wait to wait for completion; and so that
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// GC does not see the fake type accidentally.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nf">runtime_procPin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Complete first store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">np</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">typ</span><span class="p">,</span> <span class="nx">np</span><span class="p">.</span><span class="nx">typ</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">typ</span> <span class="o">==</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">firstStoreInProgress</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// First store in progress. Wait.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Since we disable preemption around the first store,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// we can wait with active spinning.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// First store completed. Check type and overwrite data.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">typ</span> <span class="o">!=</span> <span class="nx">np</span><span class="p">.</span><span class="nx">typ</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;sync/atomic: compare and swap of inconsistently typed value into Value&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// Compare old and current via runtime equality check.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// This allows value types to be compared, something
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// not offered by the package functions.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// CompareAndSwapPointer below only ensures vp.data
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// has not changed since LoadPointer.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">data</span> <span class="o">:=</span> <span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">i</span> <span class="nf">any</span>
+</span></span><span class="line"><span class="cl">		<span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">i</span><span class="p">)).</span><span class="nx">typ</span> <span class="p">=</span> <span class="nf">typ</span>
+</span></span><span class="line"><span class="cl">		<span class="p">(</span><span class="o">*</span><span class="nx">ifaceWords</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">i</span><span class="p">)).</span><span class="nx">data</span> <span class="p">=</span> <span class="nx">data</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">i</span> <span class="o">!=</span> <span class="nx">old</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">vp</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">data</span><span class="p">,</span> <span class="nx">np</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Disable/enable preemption, implemented in runtime.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">runtime_procPin</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">runtime_procUnpin</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>本质上跟 interface 的内部表示有关，</p>
+<h3 id="22-atomicvalue-的使用">2.2 atomic.Value 的使用</h3>
+<p>Value 类型:</p>
 <ol>
 <li>可以<strong>原子地存取对象类型</strong>，但也只能存取，不能 CAS 和 Swap，<strong>常常用在配置变更等场景中</strong></li>
 </ol>
@@ -414,7 +825,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="2-atomic-的扩展">2. Atomic 的扩展</h2>
+</div><h2 id="3-atomic-的扩展">3. Atomic 的扩展</h2>
 <p>atomic 的 API 已经算是很简单的了，它提供了包一级的函数，可以对几种类型的数据执行原子操作。有些人就对这些函数做了进一步的包装，跟 atomic 中的 Value 类型类似，这些类型也提供了面向对象的使用方式，比如关注度比较高的<a href="https://github.com/uber-go/atomic" target="_blank" rel="noopener noreffer">uber-go/atomic</a>。</p>
 <p>uber-go/atomic 定义和封装了几种与常见类型相对应的原子操作类型，这些类型提供了原子操作的方法。这些类型包括 Bool、Duration、Error、Float64、Int32、Int64、String、Uint32、Uint64 等。s</p>
 <div class="highlight"><div class="chroma">
@@ -432,7 +843,7 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>atomic.Value 只有 Load/Store 方法，可以参考<a href="https://github.com/golang/go/issues/39351" target="_blank" rel="noopener noreffer">这篇文章</a>为其增加 Swap 和 CompareAndSwap 方法。</p>
-<h3 id="3-使用-atomic-实现-lock-free-queue">3. 使用 atomic 实现 Lock-Free queue</h3>
+<h3 id="4-使用-atomic-实现-lock-free-queue">4. 使用 atomic 实现 Lock-Free queue</h3>
 <p>atomic 常常用来实现 Lock-Free 的数据结构，这里我们实现一个  Lock-Free queue。(sync.Pool 的实现中就包含了一个 lock-free queue 的实现 poolDequeue)</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -586,7 +997,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="4-对一个地址的赋值是原子操作吗">4. 对一个地址的赋值是原子操作吗？</h2>
+</div><h2 id="5-对一个地址的赋值是原子操作吗">5. 对一个地址的赋值是原子操作吗？</h2>
 <p>对一个地址的赋值是原子操作吗？这是一个很有趣的问题，如果是原子操作，还要 atomic 包干什么(Value 类型的 Store Load 方法)？如何理解 atomic 和直接内存操作的区别？(参见<a href="https://dave.cheney.net/2018/01/06/if-aligned-memory-writes-are-atomic-why-do-we-need-the-sync-atomic-package" target="_blank" rel="noopener noreffer">Dave Cheney</a>)</p>
 <ol>
 <li>在现在的系统中，write 的地址基本上都是对齐的（aligned），对齐地址的写，不会导致其他人看到只写了一半的数据，因为它通过一个指令就可以实现对地址的操作</li>
@@ -605,8 +1016,8 @@
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2022-03-08&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/120df7cebd93c9e91499f78079173890824b3a3b" target="_blank" title="commit by WardSong(1556824234@qq.com) 120df7cebd93c9e91499f78079173890824b3a3b: 页面目录缩放配置">
-                                    <i class="fas fa-hashtag fa-fw"></i>120df7c</a></span>
+                <span>更新于 2023-01-18&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/c7eda20b2ce1ef3c82b63e30bca9954953a16da6" target="_blank" title="commit by tao(tao@example.com) c7eda20b2ce1ef3c82b63e30bca9954953a16da6: go 并发文档更新">
+                                    <i class="fas fa-hashtag fa-fw"></i>c7eda20</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>
@@ -634,7 +1045,7 @@
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
             </noscript></div></article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.109.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.110.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
