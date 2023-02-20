@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Delve 调试Go代码 - LoveIt</title><meta name="Description" content="这个系列我们开始学习 go 语言的第二部分-go语言进阶"><meta property="og:title" content="Delve 调试Go代码" />
+<meta property="og:description" content="这个系列我们开始学习 go 语言的第二部分-go语言进阶" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-04T22:00:00+08:00" />
+<meta property="article:modified_time" content="2023-02-20T20:44:06+08:00" />
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Delve 调试Go代码"/>
+<meta name="twitter:description" content="这个系列我们开始学习 go 语言的第二部分-go语言进阶"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/expert/go_export/expert_11/" /><link rel="next" href="https://hotttao.github.io/posts/program/go/expert/go_export/expert_13/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Delve 调试Go代码",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/program\/go\/expert\/go_export\/expert_12\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "go 进阶","wordcount":  6411 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/program\/go\/expert\/go_export\/expert_12\/","datePublished": "2023-01-04T22:00:00+08:00","dateModified": "2023-02-20T20:44:06+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "这个系列我们开始学习 go 语言的第二部分-go语言进阶"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">Delve 调试Go代码</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2023-01-04">2023-01-04</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6411 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 13 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-专业调试工具">1. 专业调试工具</a>
+      <ul>
+        <li><a href="#11-gccgo">1.1 gccgo</a></li>
+        <li><a href="#12-delve">1.2 Delve</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-delve">2. Delve</a>
+      <ul>
+        <li><a href="#21-delve-使用">2.1 Delve 使用</a></li>
+        <li><a href="#22-delve-启动方式">2.2 Delve 启动方式</a>
+          <ul>
+            <li><a href="#直接调试二进制文件的潜在问题">直接调试二进制文件的潜在问题</a></li>
+          </ul>
+        </li>
+        <li><a href="#23-delve-架构和原理">2.3 Delve 架构和原理</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-并发coredump文件与挂接进程调试">3. 并发、Coredump文件与挂接进程调试</a>
+      <ul>
+        <li><a href="#31-delve-调试并发程序">3.1 Delve 调试并发程序</a></li>
+        <li><a href="#32-delve调试core-dump文件">3.2 Delve调试core dump文件</a></li>
+        <li><a href="#33-使用delve挂接到正在运行的进程进行调试">3.3 使用Delve挂接到正在运行的进程进行调试</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-delve-调试单元测试">4. Delve 调试单元测试</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-专业调试工具">1. 专业调试工具</h2>
+<p>bug是表象，要发现内部原因需要利用更多的表象数据去推理，需要收集足够多的“现场数据”。我们可以通过编程语言内置的输出语句（如Go的print、fmt.Printf等）输出我们需要的信息，而更为专业的方法是通过编程语言提供的专业调试工具（如GDB）设置断点来采集现场数据或重现bug。</p>
+<p>尽管使用 print 输出调试信息更加简单快捷、灵活直观且无须对外部有任何依赖。但专业调试器可以运用在“print辅助调试”无法胜任的场景下，比如：</p>
+<ol>
+<li>与IDE集成，通过图形化操作可大幅简化专业调试器的调试循环，提供更佳的体验；</li>
+<li>事后调查（postmortem）</li>
+<li>调试core dump文件；</li>
+<li>在生产环境通过挂接（attach）应用进程，深入应用进程内部进行调试。</li>
+</ol>
+<p>语言内置的print语句辅助调试与采用专门的调试器调试代码是相辅相成的，并非对立关系。</p>
+<h3 id="11-gccgo">1.1 gccgo</h3>
+<p>Go发行版中，除了标准的Go编译器之外，还有一个名为gccgo的编译器。和标准Go编译器相比，gccgo具有如下特点：</p>
+<ol>
+<li>gccgo是GCC编译器的新前端；</li>
+<li>Go语言由<a href="https://tip.golang.org/ref/spec" target="_blank" rel="noopener noreffer">Go语言规范</a>定义和驱动演进，gccgo是另一个实现了该语言规范的编译器，但与标准Go编译器实现的侧重点有所不同；</li>
+<li>gccgo编译速度较慢，但具有更为强大的优化能力；</li>
+<li>gccgo复用了GCC后端，因此支持的处理器架构更多；</li>
+<li>gccgo的演进速度与标准Go编译器的速度并不一致，按照最新<a href="https://tip.golang.org/doc/install/gccgo" target="_blank" rel="noopener noreffer">官方文档</a>，gcc8等价于go 1.10.1的实现，而gcc9等价于Go 1.12.2的实现。</li>
+</ol>
+<p>通过gccgo编译而成的Go程序可以得到GCC成熟工具链集合的原生支持，包括使用强大的GDB进行调试。但由于gccgo不是主流，因此我们这里考虑的是基于标准Go编译器编译的代码的调试。</p>
+<p>那么GDB调试器是否可以调试通过标准Go编译器编译生成的Go程序呢？答案是肯定的。但GDB对标准Go编译器输出的程序的支持是不完善的，主要体现在GDB并不十分了解Go程序：</p>
+<ol>
+<li>Go的栈管理、线程模型、运行时等与GDB所了解的执行模型有很大不同，这会导致GDB在调试过程中输出错误的结果，尤其是针对拥有大量并发的Go程序时，GDB并不是一个可靠的调试器；</li>
+<li>使用复杂，需加载插件（$GOROOT/src/runtime/runtime-gdb.py）才能更好地理解Go符号；</li>
+<li>GDB无法理解一些Go类型信息、名称限定等，导致输出的栈信息和打印的变量类型信息难于识别、查看和分析；</li>
+<li>Go 1.11后，编译后的可执行文件中调试信息默认是压缩的，低版本的GDB无法加载这些压缩的调试信息，除非显式使用<code>go build -ldflags=-compressdwarf=false</code> 设置不执行调试信息压缩。</li>
+</ol>
+<p>综上，GDB显然也不是Go调试工具的最佳选择，虽然其适用于调试带有cgo代码的Go程序或事后调查调试。</p>
+<h3 id="12-delve">1.2 Delve</h3>
+<p><a href="https://github.com/go-delve/delve" target="_blank" rel="noopener noreffer">Delve</a>是另一个Go语言调试器，旨在为Go提供一个简单、功能齐全、易用使用和调用的调试工具。它紧跟Go语言版本演进，是目前Go调试器的事实标准。和GDB相比，Delve的优势在于</p>
+<ol>
+<li>它可以更好地理解Go的一切，对并发程序有着很好的支持</li>
+<li>支持跨平台（支持Windows、macOS、Linux三大主流平台）</li>
+<li>前后端分离的设计使得它可以非常容易地被集成到各种IDE（如GoLand）、编译器插件（vscode go、vim-go等）、图形化调试器前端（如gdlv）中</li>
+</ol>
+<p>接下来，我们就来看看如何使用Delve调试Go程序。</p>
+<h2 id="2-delve">2. Delve</h2>
+<h3 id="21-delve-使用">2.1 Delve 使用</h3>
+<p>下面是一个使用  Delve 调试本地程序的示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span><span class="lnt">178
+</span><span class="lnt">179
+</span><span class="lnt">180
+</span><span class="lnt">181
+</span><span class="lnt">182
+</span><span class="lnt">183
+</span><span class="lnt">184
+</span><span class="lnt">185
+</span><span class="lnt">186
+</span><span class="lnt">187
+</span><span class="lnt">188
+</span><span class="lnt">189
+</span><span class="lnt">190
+</span><span class="lnt">191
+</span><span class="lnt">192
+</span><span class="lnt">193
+</span><span class="lnt">194
+</span><span class="lnt">195
+</span><span class="lnt">196
+</span><span class="lnt">197
+</span><span class="lnt">198
+</span><span class="lnt">199
+</span><span class="lnt">200
+</span><span class="lnt">201
+</span><span class="lnt">202
+</span><span class="lnt">203
+</span><span class="lnt">204
+</span><span class="lnt">205
+</span><span class="lnt">206
+</span><span class="lnt">207
+</span><span class="lnt">208
+</span><span class="lnt">209
+</span><span class="lnt">210
+</span><span class="lnt">211
+</span><span class="lnt">212
+</span><span class="lnt">213
+</span><span class="lnt">214
+</span><span class="lnt">215
+</span><span class="lnt">216
+</span><span class="lnt">217
+</span><span class="lnt">218
+</span><span class="lnt">219
+</span><span class="lnt">220
+</span><span class="lnt">221
+</span><span class="lnt">222
+</span><span class="lnt">223
+</span><span class="lnt">224
+</span><span class="lnt">225
+</span><span class="lnt">226
+</span><span class="lnt">227
+</span><span class="lnt">228
+</span><span class="lnt">229
+</span><span class="lnt">230
+</span><span class="lnt">231
+</span><span class="lnt">232
+</span><span class="lnt">233
+</span><span class="lnt">234
+</span><span class="lnt">235
+</span><span class="lnt">236
+</span><span class="lnt">237
+</span><span class="lnt">238
+</span><span class="lnt">239
+</span><span class="lnt">240
+</span><span class="lnt">241
+</span><span class="lnt">242
+</span><span class="lnt">243
+</span><span class="lnt">244
+</span><span class="lnt">245
+</span><span class="lnt">246
+</span><span class="lnt">247
+</span><span class="lnt">248
+</span><span class="lnt">249
+</span><span class="lnt">250
+</span><span class="lnt">251
+</span><span class="lnt">252
+</span><span class="lnt">253
+</span><span class="lnt">254
+</span><span class="lnt">255
+</span><span class="lnt">256
+</span><span class="lnt">257
+</span><span class="lnt">258
+</span><span class="lnt">259
+</span><span class="lnt">260
+</span><span class="lnt">261
+</span><span class="lnt">262
+</span><span class="lnt">263
+</span><span class="lnt">264
+</span><span class="lnt">265
+</span><span class="lnt">266
+</span><span class="lnt">267
+</span><span class="lnt">268
+</span><span class="lnt">269
+</span><span class="lnt">270
+</span><span class="lnt">271
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 1. 安装
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="err">$</span><span class="k">go</span> <span class="nx">get</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="k">go</span><span class="o">-</span><span class="nx">delve</span><span class="o">/</span><span class="nx">delve</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">dlv</span>
+</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="nx">dlv</span> <span class="nx">version</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Delve</span> <span class="nx">Debugger</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Version</span><span class="p">:</span> <span class="mf">1.4.1</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Build</span><span class="p">:</span> <span class="err">$</span><span class="nx">Id</span><span class="p">:</span> <span class="nx">bda606147ff48b58bde39e20b9e11378eaa4db4</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 2. 示例代码结构
+</span></span></span><span class="line"><span class="cl"><span class="c1">// delve-demo1/
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="err">$</span><span class="nx">tree</span> <span class="p">.</span>
+</span></span><span class="line"><span class="cl"><span class="p">.</span>
+</span></span><span class="line"><span class="cl"><span class="err">├──</span> <span class="nx">cmd</span>
+</span></span><span class="line"><span class="cl"><span class="err">│</span>   <span class="err">└──</span> <span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span>
+</span></span><span class="line"><span class="cl"><span class="err">│</span>       <span class="err">└──</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl"><span class="err">├──</span> <span class="k">go</span><span class="p">.</span><span class="nx">mod</span>
+</span></span><span class="line"><span class="cl"><span class="err">└──</span> <span class="nx">pkg</span>
+</span></span><span class="line"><span class="cl">    <span class="err">└──</span> <span class="nx">foo</span>
+</span></span><span class="line"><span class="cl">        <span class="err">└──</span> <span class="nx">foo</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3. 开始调试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="err">$</span><span class="nx">cd</span> <span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 执行dlv后，dlv会对被调试Go包进行编译并在当前工作目录下生成一个临时的二进制文件用于调试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="err">$</span><span class="nx">dlv</span> <span class="nx">debug</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.1 查看代码
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">list</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">list</span> <span class="nx">foo</span><span class="p">.</span><span class="nx">Foo</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.2 设置/查看断点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>       <span class="c1">// 设置匿名断点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">b1</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">13</span>    <span class="c1">// 设置具名断点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bp</span>                 <span class="c1">// breakpoints命令（简写为bp）可以查看已设置的断点列表
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">clear</span> <span class="nx">b1</span>           <span class="c1">// 删除具名断点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">clear</span> <span class="mi">2</span>            <span class="c1">// 删除匿名断点
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">b1</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">b1</span> <span class="nx">set</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bp</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">runtime</span><span class="o">-</span><span class="nx">fatal</span><span class="o">-</span><span class="nf">throw</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x434cc0</span> <span class="k">for</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">throw</span><span class="p">()</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">982</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">unrecovered</span><span class="o">-</span><span class="nf">panic</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x435080</span> <span class="k">for</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">fatalpanic</span><span class="p">()</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">1065</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">print</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">curg</span><span class="p">.</span><span class="nx">_panic</span><span class="p">.</span><span class="nx">arg</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nf">b1</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">// b1 设置的名称
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">clear</span> <span class="nx">b1</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">b1</span> <span class="nx">cleared</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="mi">2</span> <span class="nx">set</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bp</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">runtime</span><span class="o">-</span><span class="nx">fatal</span><span class="o">-</span><span class="nf">throw</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x434cc0</span> <span class="k">for</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">throw</span><span class="p">()</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">982</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">unrecovered</span><span class="o">-</span><span class="nf">panic</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x435080</span> <span class="k">for</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">fatalpanic</span><span class="p">()</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">1065</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">print</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">curg</span><span class="p">.</span><span class="nx">_panic</span><span class="p">.</span><span class="nx">arg</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="mi">2</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>   <span class="c1">// 2 是匿名的断点序号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">clear</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="mi">2</span> <span class="nx">cleared</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.3 条件断点
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 条件断点，指的就是当满足某个条件时，被调试的目标程序才会在该断点处暂停
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">b2</span> <span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">cond</span> <span class="nx">b2</span> <span class="nx">sum</span> <span class="p">&gt;</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.4 执行和调试
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bp</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">runtime</span><span class="o">-</span><span class="nx">fatal</span><span class="o">-</span><span class="nf">throw</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x434cc0</span> <span class="k">for</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">throw</span><span class="p">()</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">982</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">unrecovered</span><span class="o">-</span><span class="nf">panic</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x435080</span> <span class="k">for</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">fatalpanic</span><span class="p">()</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">1065</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">print</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">curg</span><span class="p">.</span><span class="nx">_panic</span><span class="p">.</span><span class="nx">arg</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="mi">1</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nf">b2</span> <span class="p">(</span><span class="nx">enabled</span><span class="p">)</span> <span class="nx">at</span> <span class="mh">0x496749</span> <span class="k">for</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cond</span> <span class="nx">sum</span> <span class="p">&gt;</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">c</span>                <span class="c1">// continue命令（简写 c）执行程序，程序会在下一个断点处停下来，没有断点，程序运行到结束
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">&gt;</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4967aa</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">10</span><span class="p">:</span>		<span class="nx">a</span> <span class="o">:=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">11</span><span class="p">:</span>		<span class="nx">b</span> <span class="o">:=</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">12</span><span class="p">:</span>		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">13</span><span class="p">:</span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">s</span>               <span class="c1">// step 命令（简写 s）单步调试，如果断点处有函数调用，step命令会进入断点所在行调用的函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">&gt;</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">3</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496700</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">1</span><span class="p">:</span>	<span class="kn">package</span> <span class="nx">foo</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">2</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>   <span class="mi">3</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">Foo</span><span class="p">(</span><span class="nx">step</span><span class="p">,</span> <span class="nx">count</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">4</span><span class="p">:</span>		<span class="nx">sum</span> <span class="o">:=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">5</span><span class="p">:</span>		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">count</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">6</span><span class="p">:</span>			<span class="nx">sum</span> <span class="o">+=</span> <span class="nx">step</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>		<span class="k">return</span> <span class="nf">sum</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">n</span>               <span class="c1">// next 命令（简写 n）单步调试，让程序执行到下一行代码              
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">&gt;</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">4</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496720</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">1</span><span class="p">:</span>	<span class="kn">package</span> <span class="nx">foo</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">2</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">3</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">Foo</span><span class="p">(</span><span class="nx">step</span><span class="p">,</span> <span class="nx">count</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>   <span class="mi">4</span><span class="p">:</span>		<span class="nx">sum</span> <span class="o">:=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">5</span><span class="p">:</span>		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">count</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">6</span><span class="p">:</span>			<span class="nx">sum</span> <span class="o">+=</span> <span class="nx">step</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>		<span class="k">return</span> <span class="nx">sum</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">r</span>              <span class="c1">// restart 命令（简写 r），重启程序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">Process</span> <span class="nx">restarted</span> <span class="nx">with</span> <span class="nx">PID</span> <span class="mi">43945</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.5 查看变量值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">c</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b2</span><span class="p">]</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496749</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">1</span><span class="p">:</span>	<span class="kn">package</span> <span class="nx">foo</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">2</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">3</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">Foo</span><span class="p">(</span><span class="nx">step</span><span class="p">,</span> <span class="nx">count</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">4</span><span class="p">:</span>		<span class="nx">sum</span> <span class="o">:=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">5</span><span class="p">:</span>		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">count</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>   <span class="mi">6</span><span class="p">:</span>			<span class="nx">sum</span> <span class="o">+=</span> <span class="nx">step</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>		<span class="k">return</span> <span class="nx">sum</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">args</span>                       <span class="c1">// 当前函数栈参数和返回值列表（包括参数和返回值的值）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">step</span> <span class="p">=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl"><span class="nx">count</span> <span class="p">=</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl"><span class="err">~</span><span class="nx">r0</span> <span class="p">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">locals</span>                     <span class="c1">// 当前函数栈本地变量列表（包括变量的值）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">sum</span> <span class="p">=</span> <span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">i</span> <span class="p">=</span> <span class="mi">4</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">regs</span>                       <span class="c1">// 当前寄存器中的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">Rip</span> <span class="p">=</span> <span class="mh">0x0000000000496749</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rsp</span> <span class="p">=</span> <span class="mh">0x000000c000051ee0</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rax</span> <span class="p">=</span> <span class="mh">0x0000000000000003</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rbx</span> <span class="p">=</span> <span class="mh">0x000000000000000a</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rcx</span> <span class="p">=</span> <span class="mh">0x0000000000000004</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rdx</span> <span class="p">=</span> <span class="mh">0x00000000004b4f68</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rsi</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rdi</span> <span class="p">=</span> <span class="mh">0x00000000ffffffff</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Rbp</span> <span class="p">=</span> <span class="mh">0x000000c000051ef8</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">R8</span> <span class="p">=</span> <span class="mh">0x0000000000000010</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">R9</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">R10</span> <span class="p">=</span> <span class="mh">0x0000000000000008</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">R11</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">R12</span> <span class="p">=</span> <span class="mh">0x000000c000051b30</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">R13</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">R14</span> <span class="p">=</span> <span class="mh">0x000000c0000021a0</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">R15</span> <span class="p">=</span> <span class="mh">0x0000000000000058</span>
+</span></span><span class="line"><span class="cl"> <span class="nx">Rflags</span> <span class="p">=</span> <span class="mh">0x0000000000000206</span>	<span class="p">[</span><span class="nx">PF</span> <span class="nx">IF</span> <span class="nx">IOPL</span><span class="p">=</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">Es</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">Cs</span> <span class="p">=</span> <span class="mh">0x0000000000000033</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">Ss</span> <span class="p">=</span> <span class="mh">0x000000000000002b</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">Ds</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">Fs</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">     <span class="nx">Gs</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Fs_base</span> <span class="p">=</span> <span class="mh">0x0000000000529a70</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Gs_base</span> <span class="p">=</span> <span class="mh">0x0000000000000000</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">whatis</span> <span class="nx">i</span>                    <span class="c1">// 输出后面的表达式的类型。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kt">int</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">p</span> <span class="nx">i</span>                         <span class="c1">// print（简写为p）：输出源码中变量的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="mi">4</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">x</span> <span class="mh">0x10c2431</span>                 <span class="c1">// examinemem（简写为x）：查看某一内存地址上的值
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">Command</span> <span class="nx">failed</span><span class="p">:</span> <span class="nx">input</span><span class="o">/</span><span class="nx">output</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.6 查看函数调用栈
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bt</span>                          <span class="c1">// stack命令（简写为bt）输出函数调用栈信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="mi">0</span>  <span class="mh">0x0000000000496749</span> <span class="nx">in</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nx">Foo</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span>
+</span></span><span class="line"><span class="cl"><span class="mi">1</span>  <span class="mh">0x00000000004967b9</span> <span class="nx">in</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="mi">2</span>  <span class="mh">0x00000000004373b8</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">main</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">250</span>
+</span></span><span class="line"><span class="cl"><span class="mi">3</span>  <span class="mh">0x0000000000461501</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">goexit</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">asm_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">1571</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">up</span>                          <span class="c1">// up和down命令，可以在函数调用栈的栈帧间进行跳转
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b2</span><span class="p">]</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496749</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Frame</span> <span class="mi">1</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mi">4967</span><span class="nx">b9</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">10</span><span class="p">:</span>		<span class="nx">a</span> <span class="o">:=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">11</span><span class="p">:</span>		<span class="nx">b</span> <span class="o">:=</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">12</span><span class="p">:</span>		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">13</span><span class="p">:</span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">up</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b2</span><span class="p">]</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496749</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Frame</span> <span class="mi">2</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">250</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mi">4373</span><span class="nx">b8</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">245</span><span class="p">:</span>			<span class="c1">// A program compiled with -buildmode=c-archive or c-shared
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="mi">246</span><span class="p">:</span>			<span class="c1">// has a main, but it is not executed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="mi">247</span><span class="p">:</span>			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">248</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">249</span><span class="p">:</span>		<span class="nx">fn</span> <span class="o">:=</span> <span class="nx">main_main</span> <span class="c1">// make an indirect call, as the linker doesn&#39;t know the address of the main package when laying down the runtime
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">=&gt;</span> <span class="mi">250</span><span class="p">:</span>		<span class="nf">fn</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">251</span><span class="p">:</span>		<span class="k">if</span> <span class="nx">raceenabled</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">252</span><span class="p">:</span>			<span class="nf">racefini</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">253</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">254</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">   <span class="mi">255</span><span class="p">:</span>		<span class="c1">// Make racy client program work: if panicking on
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">up</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b2</span><span class="p">]</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496749</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Frame</span> <span class="mi">3</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">asm_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">1571</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mi">461501</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="mi">1566</span><span class="p">:</span>		<span class="nx">RET</span>
+</span></span><span class="line"><span class="cl">  <span class="mi">1567</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">  <span class="mi">1568</span><span class="p">:</span>	<span class="c1">// The top-most function running on a goroutine
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="mi">1569</span><span class="p">:</span>	<span class="c1">// returns to goexit+PCQuantum.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="mi">1570</span><span class="p">:</span>	<span class="nx">TEXT</span> <span class="nx">runtime</span><span class="err">·</span><span class="nf">goexit</span><span class="p">(</span><span class="nx">SB</span><span class="p">),</span><span class="nx">NOSPLIT</span><span class="p">|</span><span class="nx">TOPFRAME</span><span class="p">,</span><span class="err">$</span><span class="mi">0</span><span class="o">-</span><span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span><span class="mi">1571</span><span class="p">:</span>		<span class="nx">BYTE</span>	<span class="err">$</span><span class="mh">0x90</span>	<span class="c1">// NOP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="mi">1572</span><span class="p">:</span>		<span class="nx">CALL</span>	<span class="nx">runtime</span><span class="err">·</span><span class="nf">goexit1</span><span class="p">(</span><span class="nx">SB</span><span class="p">)</span>	<span class="c1">// does not return
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="mi">1573</span><span class="p">:</span>		<span class="c1">// traceback from goexit1 must hit code range of goexit
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="mi">1574</span><span class="p">:</span>		<span class="nx">BYTE</span>	<span class="err">$</span><span class="mh">0x90</span>	<span class="c1">// NOP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="mi">1575</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">  <span class="mi">1576</span><span class="p">:</span>	<span class="c1">// This is called from .init_array and follows the platform, not Go, ABI.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">down</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b2</span><span class="p">]</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496749</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Frame</span> <span class="mi">2</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">250</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mi">4373</span><span class="nx">b8</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">245</span><span class="p">:</span>			<span class="c1">// A program compiled with -buildmode=c-archive or c-shared
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="mi">246</span><span class="p">:</span>			<span class="c1">// has a main, but it is not executed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="mi">247</span><span class="p">:</span>			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">248</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">249</span><span class="p">:</span>		<span class="nx">fn</span> <span class="o">:=</span> <span class="nx">main_main</span> <span class="c1">// make an indirect call, as the linker doesn&#39;t know the address of the main package when laying down the runtime
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">=&gt;</span> <span class="mi">250</span><span class="p">:</span>		<span class="nf">fn</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">251</span><span class="p">:</span>		<span class="k">if</span> <span class="nx">raceenabled</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">252</span><span class="p">:</span>			<span class="nf">racefini</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">253</span><span class="p">:</span>		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="mi">254</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">   <span class="mi">255</span><span class="p">:</span>		<span class="c1">// Make racy client program work: if panicking on
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">down</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b2</span><span class="p">]</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x496749</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Frame</span> <span class="mi">1</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mi">4967</span><span class="nx">b9</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">10</span><span class="p">:</span>		<span class="nx">a</span> <span class="o">:=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">11</span><span class="p">:</span>		<span class="nx">b</span> <span class="o">:=</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">12</span><span class="p">:</span>		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">13</span><span class="p">:</span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3.7 修改变量的值，并手工调用函数（试验功能）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">clearall</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="mi">1</span> <span class="nx">cleared</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">b2</span> <span class="nx">cleared</span> <span class="nx">at</span> <span class="mh">0x496749</span> <span class="k">for</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">()</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">foo</span><span class="o">/</span><span class="nx">foo</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">6</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">b1</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">b1</span> <span class="nx">set</span> <span class="nx">at</span> <span class="mh">0x4967aa</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">r</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Process</span> <span class="nx">restarted</span> <span class="nx">with</span> <span class="nx">PID</span> <span class="mi">44312</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">c</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b1</span><span class="p">]</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4967aa</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">10</span><span class="p">:</span>		<span class="nx">a</span> <span class="o">:=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">11</span><span class="p">:</span>		<span class="nx">b</span> <span class="o">:=</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">12</span><span class="p">:</span>		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">13</span><span class="p">:</span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">set</span> <span class="nx">a</span> <span class="p">=</span> <span class="mi">4</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">p</span> <span class="nx">a</span>
+</span></span><span class="line"><span class="cl"><span class="mi">4</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">call</span> <span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span><span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4967aa</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 在手工重新设置a = 40后，再手工调用call命令执行foo.Foo(a, b)后的结果为40。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">Values</span> <span class="nx">returned</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">	<span class="err">~</span><span class="nx">r0</span><span class="p">:</span> <span class="mi">40</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">8</span><span class="p">:</span>	
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>	<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">10</span><span class="p">:</span>		<span class="nx">a</span> <span class="o">:=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">11</span><span class="p">:</span>		<span class="nx">b</span> <span class="o">:=</span> <span class="mi">10</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">12</span><span class="p">:</span>		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">foo</span><span class="p">.</span><span class="nf">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">13</span><span class="p">:</span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>	<span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-delve-启动方式">2.2 Delve 启动方式</h3>
+<p>Delve 启动方式有多种:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 第一种: 就是上面使用的，调试包</span>
+</span></span><span class="line"><span class="cl"><span class="nv">$cd</span> delve-demo1
+</span></span><span class="line"><span class="cl"><span class="nv">$dlv</span> debug github.com/bigwhite/delve-demo1/cmd/delve-demo1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 第二种: 直接调试源码文件的方式启动调试流程，这样的方式与调试包是等价的：</span>
+</span></span><span class="line"><span class="cl"><span class="nv">$dlv</span> debug cmd/delve-demo1/main.go
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 第三种: 通过exec子命令直接调试已经构建完的Go二进制程序文件，比如：</span>
+</span></span><span class="line"><span class="cl"><span class="nv">$go</span> build github.com/bigwhite/delve-demo1/cmd/delve-demo1
+</span></span><span class="line"><span class="cl"><span class="nv">$dlv</span> <span class="nb">exec</span> ./delve-demo1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="直接调试二进制文件的潜在问题">直接调试二进制文件的潜在问题</h4>
+<p>在直接调试二进制文件时，Delve会根据二进制文件中保存的源文件位置到对应的路径下寻找对应的源文件并展示对应源码。如果把那个路径下的源文件挪走，那么再通过list命令展示源码就会出现错误：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="err">$</span><span class="k">go</span> <span class="nx">build</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span>
+</span></span><span class="line"><span class="cl"><span class="err">$</span><span class="nx">dlv</span> <span class="nx">exec</span> <span class="p">.</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nf">demo1</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">list</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Showing</span> <span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x109ced1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Command</span> <span class="nx">failed</span><span class="p">:</span> <span class="nx">open</span> <span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span> <span class="nx">no</span> <span class="nx">such</span> <span class="nx">file</span> <span class="nx">or</span> <span class="nx">directory</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>某些时候，通过 Delve 直接调试构建后的二进制文件可能会出现如下错误（下面仅是模拟示例）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="k">break</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Command</span> <span class="nx">failed</span><span class="p">:</span> <span class="nx">could</span> <span class="nx">not</span> <span class="nx">find</span> <span class="nx">statement</span> <span class="nx">at</span> <span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">12</span><span class="p">,</span> <span class="nx">please</span> <span class="nx">use</span> <span class="nx">a</span> <span class="nx">line</span> <span class="nx">with</span> <span class="nx">a</span> <span class="nx">statement</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>main.go的第12行明明是一个函数调用，但Delve就是提示这行没有Go语句。出现这个问题的原因很可能是Go编译器对目标代码做了优化，比如将foo.Foo内联掉了。为了避免这样的问题，我们可以在编译的时候加入关闭优化的标志位，这样Delve就不会因目标代码优化而报出错误的信息了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="err">$</span><span class="k">go</span> <span class="nx">build</span> <span class="o">-</span><span class="nx">gcflags</span><span class="p">=</span><span class="nx">all</span><span class="p">=</span><span class="s">&#34;-N -l&#34;</span> <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">bigwhite</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo1</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="23-delve-架构和原理">2.3 Delve 架构和原理</h3>
+<p>为了便于各种调试器前端（命令行、IDE、编辑器插件、图形化前端）与Delve集成，Delve采用了一个前后分离的架构:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/go/expert/delve_frame.png"
+        data-srcset="/images/go/expert/delve_frame.png, /images/go/expert/delve_frame.png 1.5x, /images/go/expert/delve_frame.png 2x"
+        data-sizes="auto"
+        alt="/images/go/expert/delve_frame.png"
+        title="delve 架构" /></p>
+<p>UI Layer对应的就是我们使用的dlv命令行或Goland/vim-go中的调试器前端，而Service Layer显然用于前后端通信。Delve真正施展的“魔法”是由Symbolic Layer和Target Layer两层合作实现的。</p>
+<p>Target Layer通过各个操作系统提供的系统API来控制被调试目标进程，它对被调试目标的源码没有任何了解，实现的功能包括：</p>
+<ol>
+<li>挂接（attach）/分离（detach）目标进程；</li>
+<li>枚举目标进程中的线程；</li>
+<li>启动/停止单个线程（或整个进程）；</li>
+<li>接收和处理“调试事件”（线程创建/退出以及线程在断点处暂停）；</li>
+<li>读写目标进程的内存；</li>
+<li>读写停止线程的CPU寄存器；</li>
+<li>读取core dump文件。</li>
+</ol>
+<p>真正了解被调试目标源码文件的是Symbolic Layer，这一层通过读取Go编译器（包括链接器）以DWARF格式（一种标准的调试信息格式）写入目标二进制文件中的<strong>调试符号信息</strong>来了解被调试目标源码，并实现了被调试目标进程中的<strong>地址</strong>、二进制文件中的<strong>调试符号</strong>及<strong>源码</strong>相关信息三者之间的关系映射，如下图所示。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/go/expert/delve_link.png"
+        data-srcset="/images/go/expert/delve_link.png, /images/go/expert/delve_link.png 1.5x, /images/go/expert/delve_link.png 2x"
+        data-sizes="auto"
+        alt="/images/go/expert/delve_link.png"
+        title="Delve Symbolic层原理" /></p>
+<h2 id="3-并发coredump文件与挂接进程调试">3. 并发、Coredump文件与挂接进程调试</h2>
+<h3 id="31-delve-调试并发程序">3.1 Delve 调试并发程序</h3>
+<p>下面是一个调试并发程序的例子:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// delve-demo2的目录结构
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="err">$</span><span class="nx">tree</span> <span class="p">.</span>
+</span></span><span class="line"><span class="cl"><span class="p">.</span>
+</span></span><span class="line"><span class="cl"><span class="err">├──</span> <span class="nx">cmd</span>
+</span></span><span class="line"><span class="cl"><span class="err">│</span>    <span class="err">└──</span> <span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span>
+</span></span><span class="line"><span class="cl"><span class="err">│</span>        <span class="err">└──</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl"><span class="err">├──</span> <span class="k">go</span><span class="p">.</span><span class="nx">mod</span>
+</span></span><span class="line"><span class="cl"><span class="err">└──</span> <span class="nx">pkg</span>
+</span></span><span class="line"><span class="cl">    <span class="err">├──</span> <span class="nx">bar</span>
+</span></span><span class="line"><span class="cl">    <span class="err">│</span>    <span class="err">└──</span> <span class="nx">bar</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl">    <span class="err">└──</span> <span class="nx">foo</span>
+</span></span><span class="line"><span class="cl">        <span class="err">└──</span> <span class="nx">foo</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 1. 调试并发程序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="err">$</span> <span class="nx">dlv</span> <span class="nx">debug</span> <span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">list</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Showing</span> <span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">tao</span><span class="o">/</span><span class="nx">code</span><span class="o">/</span><span class="nx">github</span><span class="o">/</span><span class="nx">GoProgrammingFromBeginnerToMaster</span><span class="o">/</span><span class="nx">chapter8</span><span class="o">/</span><span class="nx">sources</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4970b7</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">15</span><span class="p">:</span>		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">16</span><span class="p">:</span>			<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">17</span><span class="p">:</span>				<span class="nx">d</span> <span class="o">:=</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">18</span><span class="p">:</span>				<span class="nx">e</span> <span class="o">:=</span> <span class="mi">20</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">19</span><span class="p">:</span>				<span class="nx">f</span> <span class="o">:=</span> <span class="nx">bar</span><span class="p">.</span><span class="nf">Bar</span><span class="p">(</span><span class="nx">d</span><span class="p">,</span> <span class="nx">e</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">20</span><span class="p">:</span>				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">21</span><span class="p">:</span>				<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">22</span><span class="p">:</span>			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">23</span><span class="p">:</span>			<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">24</span><span class="p">:</span>		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">b</span> <span class="nx">b1</span> <span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Breakpoint</span> <span class="nx">b1</span> <span class="nx">set</span> <span class="nx">at</span> <span class="mh">0x4970b7</span> <span class="k">for</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">c</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// main goroutine输出了foo.Foo调用的返回结果30，然后调试程序在main.go的第19行停了下来
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="mi">30</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b1</span><span class="p">]</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">34</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4970b7</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">15</span><span class="p">:</span>		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">16</span><span class="p">:</span>			<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">17</span><span class="p">:</span>				<span class="nx">d</span> <span class="o">:=</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">18</span><span class="p">:</span>				<span class="nx">e</span> <span class="o">:=</span> <span class="mi">20</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">19</span><span class="p">:</span>				<span class="nx">f</span> <span class="o">:=</span> <span class="nx">bar</span><span class="p">.</span><span class="nf">Bar</span><span class="p">(</span><span class="nx">d</span><span class="p">,</span> <span class="nx">e</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">20</span><span class="p">:</span>				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">21</span><span class="p">:</span>				<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">22</span><span class="p">:</span>			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">23</span><span class="p">:</span>			<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">24</span><span class="p">:</span>		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 2. 查看 goroutine
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">goroutine</span>                                <span class="c1">// 打印当前 goroutine 信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">Thread</span> <span class="mi">45702</span> <span class="nx">at</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Goroutine</span> <span class="mi">34</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Runtime</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span> <span class="p">(</span><span class="mh">0x4970b7</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">User</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span> <span class="p">(</span><span class="mh">0x4970b7</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Go</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">15</span> <span class="nx">main</span><span class="p">.</span><span class="nf">main</span> <span class="p">(</span><span class="mh">0x496f46</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Start</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">15</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span> <span class="p">(</span><span class="mh">0x497080</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">goroutines</span>                              <span class="c1">// 查看当前程序内的goroutine列表
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="nx">Goroutine</span> <span class="mi">1</span> <span class="o">-</span> <span class="nx">User</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sema</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">56</span> <span class="nx">sync</span><span class="p">.</span><span class="nf">runtime_Semacquire</span> <span class="p">(</span><span class="mh">0x45e225</span><span class="p">)</span> <span class="p">[</span><span class="nx">semacquire</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Goroutine</span> <span class="mi">2</span> <span class="o">-</span> <span class="nx">User</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">362</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">gopark</span> <span class="p">(</span><span class="mh">0x4377d2</span><span class="p">)</span> <span class="p">[</span><span class="nx">force</span> <span class="nf">gc</span> <span class="p">(</span><span class="nx">idle</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Goroutine</span> <span class="mi">17</span> <span class="o">-</span> <span class="nx">User</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">362</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">gopark</span> <span class="p">(</span><span class="mh">0x4377d2</span><span class="p">)</span> <span class="p">[</span><span class="nx">GC</span> <span class="nx">sweep</span> <span class="nx">wait</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Goroutine</span> <span class="mi">18</span> <span class="o">-</span> <span class="nx">User</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">362</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">gopark</span> <span class="p">(</span><span class="mh">0x4377d2</span><span class="p">)</span> <span class="p">[</span><span class="nx">GC</span> <span class="nx">scavenge</span> <span class="nx">wait</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Goroutine</span> <span class="mi">33</span> <span class="o">-</span> <span class="nx">User</span><span class="p">:</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">362</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">gopark</span> <span class="p">(</span><span class="mh">0x4377d2</span><span class="p">)</span> <span class="p">[</span><span class="nx">finalizer</span> <span class="nx">wait</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 星号 表示当前终端所在的 goroutine
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">*</span> <span class="nx">Goroutine</span> <span class="mi">34</span> <span class="o">-</span> <span class="nx">User</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span> <span class="p">(</span><span class="mh">0x4970b7</span><span class="p">)</span> <span class="p">(</span><span class="nx">thread</span> <span class="mi">45702</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="mi">6</span> <span class="nx">goroutines</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">list</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="p">[</span><span class="nx">b1</span><span class="p">]</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">19</span> <span class="p">(</span><span class="nx">hits</span> <span class="nf">goroutine</span><span class="p">(</span><span class="mi">34</span><span class="p">):</span><span class="mi">1</span> <span class="nx">total</span><span class="p">:</span><span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4970b7</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">14</span><span class="p">:</span>		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">15</span><span class="p">:</span>		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">16</span><span class="p">:</span>			<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">17</span><span class="p">:</span>				<span class="nx">d</span> <span class="o">:=</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">18</span><span class="p">:</span>				<span class="nx">e</span> <span class="o">:=</span> <span class="mi">20</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">19</span><span class="p">:</span>				<span class="nx">f</span> <span class="o">:=</span> <span class="nx">bar</span><span class="p">.</span><span class="nf">Bar</span><span class="p">(</span><span class="nx">d</span><span class="p">,</span> <span class="nx">e</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">20</span><span class="p">:</span>				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">21</span><span class="p">:</span>				<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">22</span><span class="p">:</span>			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">23</span><span class="p">:</span>			<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">24</span><span class="p">:</span>		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">n</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nf">func1</span><span class="p">()</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">20</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x4970cb</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">15</span><span class="p">:</span>		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">16</span><span class="p">:</span>			<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">17</span><span class="p">:</span>				<span class="nx">d</span> <span class="o">:=</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">18</span><span class="p">:</span>				<span class="nx">e</span> <span class="o">:=</span> <span class="mi">20</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">19</span><span class="p">:</span>				<span class="nx">f</span> <span class="o">:=</span> <span class="nx">bar</span><span class="p">.</span><span class="nf">Bar</span><span class="p">(</span><span class="nx">d</span><span class="p">,</span> <span class="nx">e</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>  <span class="mi">20</span><span class="p">:</span>				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">21</span><span class="p">:</span>				<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">22</span><span class="p">:</span>			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">23</span><span class="p">:</span>			<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">24</span><span class="p">:</span>		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">25</span><span class="p">:</span>		<span class="nx">a</span> <span class="o">:=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">p</span> <span class="nx">f</span>
+</span></span><span class="line"><span class="cl"><span class="mi">1048576</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">goroutine</span> <span class="mi">1</span>                         <span class="c1">// 切换到其他goroutine中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">Switched</span> <span class="nx">from</span> <span class="mi">34</span> <span class="nx">to</span> <span class="mi">1</span> <span class="p">(</span><span class="nx">thread</span> <span class="mi">45702</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bt</span>
+</span></span><span class="line"><span class="cl"><span class="mi">0</span>  <span class="mh">0x00000000004377d2</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">gopark</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">362</span>
+</span></span><span class="line"><span class="cl"><span class="mi">1</span>  <span class="mh">0x000000000043786a</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">goparkunlock</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">367</span>
+</span></span><span class="line"><span class="cl"><span class="mi">2</span>  <span class="mh">0x0000000000446392</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">semacquire1</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sema</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">144</span>
+</span></span><span class="line"><span class="cl"><span class="mi">3</span>  <span class="mh">0x000000000045e225</span> <span class="nx">in</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">runtime_Semacquire</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sema</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">56</span>
+</span></span><span class="line"><span class="cl"><span class="mi">4</span>  <span class="mh">0x00000000004754fc</span> <span class="nx">in</span> <span class="nx">sync</span><span class="p">.(</span><span class="o">*</span><span class="nx">WaitGroup</span><span class="p">).</span><span class="nx">Wait</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">sync</span><span class="o">/</span><span class="nx">waitgroup</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">136</span>
+</span></span><span class="line"><span class="cl"><span class="mi">5</span>  <span class="mh">0x0000000000496ff9</span> <span class="nx">in</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">29</span>
+</span></span><span class="line"><span class="cl"><span class="mi">6</span>  <span class="mh">0x00000000004373b8</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">main</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">250</span>
+</span></span><span class="line"><span class="cl"><span class="mi">7</span>  <span class="mh">0x00000000004617a1</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">goexit</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">at</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">asm_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">1571</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">threads</span>                             <span class="c1">// thread和threads命令，查看当前启动的线程列表并在各个线程间切换
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="o">*</span> <span class="nx">Thread</span> <span class="mi">45702</span> <span class="nx">at</span> <span class="mh">0x4970cb</span> <span class="p">.</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">delve</span><span class="o">-</span><span class="nx">demo2</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">20</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span><span class="p">.</span><span class="nx">func1</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Thread</span> <span class="mi">45708</span> <span class="nx">at</span> <span class="mh">0x46305d</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">149</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">usleep</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Thread</span> <span class="mi">45709</span> <span class="nx">at</span> <span class="mh">0x463643</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">553</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">futex</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Thread</span> <span class="mi">45710</span> <span class="nx">at</span> <span class="mh">0x463643</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">553</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">futex</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Thread</span> <span class="mi">45711</span> <span class="nx">at</span> <span class="mh">0x463643</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">553</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">futex</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">Thread</span> <span class="mi">45712</span> <span class="nx">at</span> <span class="mh">0x463643</span> <span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">local</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">553</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">futex</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="32-delve调试core-dump文件">3.2 Delve调试core dump文件</h3>
+<p>core dump文件是在程序异常终止或崩溃时操作系统对程序当时的内存状态进行记录并保存而生成的一个数据文件，该文件以core命名，也被称为核心转储文件。通过对操作系统记录的core文件中的数据的分析诊断，开发人员可以快速定位程序中存在的bug，这尤其适用于生产环境中的调试。</p>
+<p>根据Delve官方文档的描述，Delve目前支持对linux/amd64、linux/arm64架构下产生的core文件的调试，以及Windows/amd64架构下产生的minidump小转储文件的调试。在这里我们以linux/amd64架构为例，看看如何使用Delve调试core dump文件。</p>
+<p>测试的程序如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// chapter8/sources/delve-demo3/main.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">p</span> <span class="o">*</span><span class="kt">int</span>
+</span></span><span class="line"><span class="cl">    <span class="o">*</span><span class="nx">p</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 空指针解引用而崩溃
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;program exit&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在Linux/amd64下（Ubuntu 18.04，Go 1.14，Delve 1.4.1）进行这次调试。要想在Linux下让Go程序崩溃时产生core文件，我们需要进行一些设置（因为默认情况下Go程序崩溃并不会产生core文件）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">$ulimit</span> -c unlimited // 不限制core文件大小
+</span></span><span class="line"><span class="cl"><span class="nv">$go</span> build main.go
+</span></span><span class="line"><span class="cl"><span class="nv">$GOTRACEBACK</span><span class="o">=</span>crash ./main
+</span></span><span class="line"><span class="cl">panic: runtime error: invalid memory address or nil pointer dereference
+</span></span><span class="line"><span class="cl"><span class="o">[</span>signal SIGSEGV: segmentation violation <span class="nv">code</span><span class="o">=</span>0x1 <span class="nv">addr</span><span class="o">=</span>0x0 <span class="nv">pc</span><span class="o">=</span>0x49142f<span class="o">]</span>
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl"> /root/.bin/go1.14/src/runtime/asm_amd64.s:1373 +0x1 <span class="nv">fp</span><span class="o">=</span>0xc0000307e8 <span class="nv">sp</span><span class="o">=</span>0xc0000307e0 <span class="nv">pc</span><span class="o">=</span>0x45b911
+</span></span><span class="line"><span class="cl">created by runtime.createfing
+</span></span><span class="line"><span class="cl">    /root/.bin/go1.14/src/runtime/mfinal.go:156 +0x61
+</span></span><span class="line"><span class="cl">Aborted <span class="o">(</span>core dumped<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nv">$ls</span> -lh
+</span></span><span class="line"><span class="cl">total 103M
+</span></span><span class="line"><span class="cl">-rw------- <span class="m">1</span> root root 101M May <span class="m">28</span> 14:55 core
+</span></span><span class="line"><span class="cl">-rwxr-xr-x <span class="m">1</span> root root 2.0M May <span class="m">28</span> 14:55 main
+</span></span><span class="line"><span class="cl">-rw-r--r-- <span class="m">1</span> root root  <span class="m">102</span> May <span class="m">28</span> 14:54 main.g0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 按照上述步骤执行完，发现当前目录下没有核心转储文件，还需要执行下面这一步，设置操作将核心转储文件保存到当前目录下</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> core &gt; /proc/sys/kernel/core_pattern
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用dlv core命令对产生的core文件进行调试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="err">$</span><span class="nx">dlv</span> <span class="nx">core</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span> <span class="p">.</span><span class="o">/</span><span class="nx">core</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Type</span> <span class="err">&#39;</span><span class="nx">help</span><span class="err">&#39;</span> <span class="k">for</span> <span class="nx">list</span> <span class="nx">of</span> <span class="nx">commands</span><span class="p">.</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">bt</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">0</span>  <span class="mh">0x000000000045d4a1</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">raise</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">165</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">1</span>  <span class="mh">0x0000000000442acb</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">dieFromSignal</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">signal_unix</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">721</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">2</span>  <span class="mh">0x0000000000442f5e</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">sigfwdgo</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">signal_unix</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">935</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">3</span>  <span class="mh">0x00000000004419d4</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">sigtrampgo</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">signal_unix</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">404</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">4</span>  <span class="mh">0x000000000045d803</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">sigtramp</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">389</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">5</span>  <span class="mh">0x000000000045d8f0</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">sigreturn</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">481</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">6</span>  <span class="mh">0x0000000000442c5a</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">crash</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">signal_unix</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">813</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">7</span>  <span class="mh">0x000000000042ee54</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">fatalpanic</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">1212</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">8</span>  <span class="mh">0x000000000042e7f0</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">gopanic</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">1060</span>
+</span></span><span class="line"><span class="cl"> <span class="mi">9</span>  <span class="mh">0x00000000004429ea</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">panicmem</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">panic</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">212</span>
+</span></span><span class="line"><span class="cl"><span class="mi">10</span>  <span class="mh">0x00000000004429ea</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">sigpanic</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">signal_unix</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">687</span>
+</span></span><span class="line"><span class="cl"><span class="mi">11</span>  <span class="mh">0x000000000049142f</span> <span class="nx">in</span> <span class="nx">main</span><span class="p">.</span><span class="nx">main</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">8</span>
+</span></span><span class="line"><span class="cl"><span class="mi">12</span>  <span class="mh">0x0000000000431222</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">main</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">proc</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">203</span>
+</span></span><span class="line"><span class="cl"><span class="mi">13</span>  <span class="mh">0x000000000045b911</span> <span class="nx">in</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">goexit</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">at</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">asm_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">1373</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过stack（简写为bt）命令输出的函数调用栈多为Go运行时的函数，我们唯一熟悉的就是main.main，于是，通过frame命令跳到main.main这个函数栈帧中：
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 如果代码复杂且涉及函数调用较多，我们还可以继续通过up和down在各层函数栈帧中搜寻问题的原因。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">(</span><span class="nx">dlv</span><span class="p">)</span> <span class="nx">frame</span> <span class="mi">11</span>
+</span></span><span class="line"><span class="cl"><span class="p">&gt;</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">raise</span><span class="p">()</span> <span class="o">/</span><span class="nx">root</span><span class="o">/</span><span class="p">.</span><span class="nx">bin</span><span class="o">/</span><span class="nx">go1</span><span class="mf">.14</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">runtime</span><span class="o">/</span><span class="nx">sys_linux_amd64</span><span class="p">.</span><span class="nx">s</span><span class="p">:</span><span class="mi">165</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mh">0x45d4a1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Warning</span><span class="p">:</span> <span class="nx">debugging</span> <span class="nx">optimized</span> <span class="nx">function</span>
+</span></span><span class="line"><span class="cl"><span class="nx">Frame</span> <span class="mi">11</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="nx">main</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">8</span> <span class="p">(</span><span class="nx">PC</span><span class="p">:</span> <span class="mi">49142</span><span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">3</span><span class="p">:</span>    <span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">4</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">5</span><span class="p">:</span>    <span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">6</span><span class="p">:</span>           <span class="kd">var</span> <span class="nx">p</span> <span class="o">*</span><span class="kt">int</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">7</span><span class="p">:</span>           <span class="nx">p</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">=&gt;</span>   <span class="mi">8</span><span class="p">:</span>           <span class="o">*</span><span class="nx">p</span> <span class="p">=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">     <span class="mi">9</span><span class="p">:</span>           <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;program exit&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">10</span><span class="p">:</span>    <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="33-使用delve挂接到正在运行的进程进行调试">3.3 使用Delve挂接到正在运行的进程进行调试</h3>
+<p>在一些特定的情况下，我们可能需要对正在运行的Go应用进程进行调试。不过这类调试是有较大风险的：<strong>调试器一旦成功挂接到正在运行的进程中，调试器就掌握了进程执行的指挥权，并且正在运行的goroutine都会暂停</strong>，等待调试器的进一步指令。因此，不到万不得已，请不要在生产环境中使用这种调试方法。</p>
+<p>使用 <strong>dlv attach</strong> 挂接到进程进行调试的方法如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 找到正在运行的进程</span>
+</span></span><span class="line"><span class="cl"><span class="nv">$ps</span> -ef<span class="p">|</span>grep delve-demo2
+</span></span><span class="line"><span class="cl">  <span class="m">501</span> <span class="m">75863</span> <span class="m">63197</span>   <span class="m">0</span>  3:33下午 ttys011    0:00.02 ./delve-demo2
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 挂载到运行中的进程</span>
+</span></span><span class="line"><span class="cl"><span class="nv">$dlv</span> attach <span class="m">75863</span> ./delve-demo2
+</span></span><span class="line"><span class="cl"><span class="c1"># Delve一旦成功切入delve-demo2进程，delve-demo2进程内的所有goroutine都将暂停运行，等待Delve的进一步指令。</span>
+</span></span><span class="line"><span class="cl"><span class="o">(</span>dlv<span class="o">)</span> goroutines
+</span></span><span class="line"><span class="cl">  Goroutine <span class="m">1</span> - User: <span class="nv">$GOROOT</span>/src/runtime/sema.go:56 sync.runtime_Semacquire <span class="o">(</span>0x103f472<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  Goroutine <span class="m">2</span> - User: <span class="nv">$GOROOT</span>/src/runtime/proc.go:305 runtime.gopark <span class="o">(</span>0x1030f60<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  Goroutine <span class="m">3</span> - User: <span class="nv">$GOROOT</span>/src/runtime/proc.go:305 runtime.gopark <span class="o">(</span>0x1030f60<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  Goroutine <span class="m">4</span> - User: <span class="nv">$GOROOT</span>/src/runtime/proc.go:305 runtime.gopark <span class="o">(</span>0x1030f60<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  Goroutine <span class="m">17</span> - User: <span class="nv">$GOROOT</span>/src/runtime/proc.go:305 runtime.gopark <span class="o">(</span>0x1030f60<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  Goroutine <span class="m">18</span> - User: <span class="nv">$GOROOT</span>/src/runtime/time.go:198 time.Sleep <span class="o">(</span>0x104ba7a<span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span><span class="m">6</span> goroutines<span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">(</span>dlv<span class="o">)</span> b b1 main.go:19
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="4-delve-调试单元测试">4. Delve 调试单元测试</h2>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2023-02-20&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/0a65889e65618b43c8a70cfb543aa2279a40c1e6" target="_blank" title="commit by tao(tao@example.com) 0a65889e65618b43c8a70cfb543aa2279a40c1e6: go 进阶">
+                                    <i class="fas fa-hashtag fa-fw"></i>0a65889</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/program/go/expert/go_export/expert_12/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" data-title="Delve 调试Go代码" data-hashtags="go 进阶"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" data-hashtag="go 进阶"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" data-title="Delve 调试Go代码"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" data-title="Delve 调试Go代码"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/program/go/expert/go_export/expert_12/" data-title="Delve 调试Go代码" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">go 进阶</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/expert/go_export/expert_11/" class="prev" rel="prev" title="expvar"><i class="fas fa-angle-left fa-fw"></i>expvar</a>
+            <a href="/posts/program/go/expert/go_export/expert_13/" class="next" rel="next" title="Go 汇编反汇编">Go 汇编反汇编<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.110.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2023-01-04T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Delve 调试Go代码"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
