@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Docker 问题排查工具 - LoveIt</title><meta name="Description" content="这个系列我们开始学习 go 语言的第二部分-go语言进阶"><meta property="og:title" content="Docker 问题排查工具" />
+<meta property="og:description" content="这个系列我们开始学习 go 语言的第二部分-go语言进阶" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/tool/k8s/docker/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-12-25T12:00:00+08:00" />
+<meta property="article:modified_time" content="2023-02-23T17:18:14+08:00" />
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Docker 问题排查工具"/>
+<meta name="twitter:description" content="这个系列我们开始学习 go 语言的第二部分-go语言进阶"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/tool/k8s/docker/" /><link rel="prev" href="https://hotttao.github.io/posts/program/go/expert/go_export/expert_1/" /><link rel="next" href="https://hotttao.github.io/posts/program/go/expert/go_export/expert_2/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Docker 问题排查工具",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/tool\/k8s\/docker\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "工具集","wordcount":  818 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/tool\/k8s\/docker\/","datePublished": "2022-12-25T12:00:00+08:00","dateModified": "2023-02-23T17:18:14+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "这个系列我们开始学习 go 语言的第二部分-go语言进阶"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">Docker 问题排查工具</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%B7%A5%E5%85%B7%E9%9B%86/"><i class="far fa-folder fa-fw"></i>工具集</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2022-12-25">2022-12-25</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 818 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-工具简介">1. 工具简介</a></li>
+    <li><a href="#2-namespace-类">2. NameSpace 类</a>
+      <ul>
+        <li><a href="#21-lsns">2.1 lsns</a></li>
+        <li><a href="#22-nsenter">2.2 nsenter</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-工具简介">1. 工具简介</h2>
+<p>下面这些工具可以用来排查 Docker 相关的问题:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">分类</th>
+<th style="text-align:left">工具</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">NameSpace</td>
+<td style="text-align:left"><code>lsns</code></td>
+<td style="text-align:left">查看系统上存在的 namespace</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"><code>ls -la /proc/&lt;pid&gt;/ns</code></td>
+<td style="text-align:left">查看进程的 namespace</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"><code>nsenter -t &lt;pid&gt;</code></td>
+<td style="text-align:left">进入某 namespace 运行命令</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-namespace-类">2. NameSpace 类</h2>
+<h3 id="21-lsns">2.1 lsns</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ lsns --help
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">用法：
+</span></span><span class="line"><span class="cl"> lsns <span class="o">[</span>选项<span class="o">]</span> <span class="o">[</span>&lt;名字空间&gt;<span class="o">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">列出系统名字空间。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">选项：
+</span></span><span class="line"><span class="cl"> -J, --json              使用 JSON 输出格式
+</span></span><span class="line"><span class="cl"> -l, --list             使用列表格式的输出
+</span></span><span class="line"><span class="cl"> -n, --noheadings       不打印标题
+</span></span><span class="line"><span class="cl"> -o, --output &lt;list&gt;    定义使用哪个输出列
+</span></span><span class="line"><span class="cl"> -p, --task &lt;pid&gt;       打印进程名字空间
+</span></span><span class="line"><span class="cl"> -r, --raw              使用原生输出格式
+</span></span><span class="line"><span class="cl"> -u, --notruncate       不截断列中的文本
+</span></span><span class="line"><span class="cl"> -W, --nowrap           don<span class="err">&#39;</span>t use multi-line representation
+</span></span><span class="line"><span class="cl"> -t, --type &lt;name&gt;      名字空间类型<span class="o">(</span>mnt, net, ipc, user, pid, uts, cgroup<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> -h, --help             display this <span class="nb">help</span>
+</span></span><span class="line"><span class="cl"> -V, --version          display version
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Available output columns:
+</span></span><span class="line"><span class="cl">          NS  名字空间标识符 <span class="o">(</span>inode 号<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        TYPE  名字空间类型
+</span></span><span class="line"><span class="cl">        PATH  名字空间路径
+</span></span><span class="line"><span class="cl">      NPROCS  名字空间中的进程数
+</span></span><span class="line"><span class="cl">         PID  名字空间中的最低 PID
+</span></span><span class="line"><span class="cl">        PPID  PID 的 PPID
+</span></span><span class="line"><span class="cl">     COMMAND  PID 的命令行
+</span></span><span class="line"><span class="cl">         UID  PID 的 UID
+</span></span><span class="line"><span class="cl">        USER  PID 的用户名
+</span></span><span class="line"><span class="cl">     NETNSID  namespace ID as used by network subsystem
+</span></span><span class="line"><span class="cl">        NSFS  nsfs mountpoint <span class="o">(</span>usually used network subsystem<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-nsenter">2.2 nsenter</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ nsenter --help
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">用法：
+</span></span><span class="line"><span class="cl"> nsenter <span class="o">[</span>选项<span class="o">]</span> <span class="o">[</span>&lt;程序&gt; <span class="o">[</span>&lt;参数&gt;...<span class="o">]]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">以其他程序的名字空间运行某个程序。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">选项：
+</span></span><span class="line"><span class="cl"> -a, --all              enter all namespaces
+</span></span><span class="line"><span class="cl"> -t, --target &lt;pid&gt;     要获取名字空间的目标进程
+</span></span><span class="line"><span class="cl"> -m, --mount<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>   进入 mount 名字空间
+</span></span><span class="line"><span class="cl"> -u, --uts<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>     进入 UTS 名字空间<span class="o">(</span>主机名等<span class="o">)</span>
+</span></span><span class="line"><span class="cl"> -i, --ipc<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>     进入 System V IPC 名字空间
+</span></span><span class="line"><span class="cl"> -n, --net<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>     进入网络名字空间
+</span></span><span class="line"><span class="cl"> -p, --pid<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>     进入 pid 名字空间
+</span></span><span class="line"><span class="cl"> -C, --cgroup<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>  进入 cgroup 名字空间
+</span></span><span class="line"><span class="cl"> -U, --user<span class="o">[=</span>&lt;文件&gt;<span class="o">]</span>    进入用户名字空间
+</span></span><span class="line"><span class="cl"> -S, --setuid &lt;uid&gt;     设置进入空间中的 uid
+</span></span><span class="line"><span class="cl"> -G, --setgid &lt;gid&gt;     设置进入名字空间中的 gid
+</span></span><span class="line"><span class="cl">     --preserve-credentials 不干涉 uid 或 gid
+</span></span><span class="line"><span class="cl"> -r, --root<span class="o">[=</span>&lt;目录&gt;<span class="o">]</span>     设置根目录
+</span></span><span class="line"><span class="cl"> -w, --wd<span class="o">[=</span>&lt;dir&gt;<span class="o">]</span>       设置工作目录
+</span></span><span class="line"><span class="cl"> -F, --no-fork          执行 &lt;程序&gt; 前不 fork
+</span></span><span class="line"><span class="cl"> -Z, --follow-context  根据 --target PID 设置 SELinux 环境
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> -h, --help             display this <span class="nb">help</span>
+</span></span><span class="line"><span class="cl"> -V, --version          display version
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ sudo docker inspect -f <span class="s1">&#39;{{ .State.Pid }}&#39;</span> bitbucket_drone_drone_1
+</span></span><span class="line"><span class="cl"><span class="m">4992</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ sudo nsenter -t <span class="m">4992</span> -n ip addr
+</span></span><span class="line"><span class="cl">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span class="m">65536</span> qdisc noqueue state UNKNOWN group default qlen <span class="m">1000</span>
+</span></span><span class="line"><span class="cl">    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span class="line"><span class="cl">    inet 127.0.0.1/8 scope host lo
+</span></span><span class="line"><span class="cl">       valid_lft forever preferred_lft forever
+</span></span><span class="line"><span class="cl">27: eth0@if28: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1500</span> qdisc noqueue state UP group default 
+</span></span><span class="line"><span class="cl">    link/ether 02:42:ac:12:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid <span class="m">0</span>
+</span></span><span class="line"><span class="cl">    inet 172.18.0.3/16 brd 172.18.255.255 scope global eth0
+</span></span><span class="line"><span class="cl">       valid_lft forever preferred_lft forever
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2023-02-23&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/266733a65a1a073f33d5d058c25c352098ea2339" target="_blank" title="commit by tao(tao@example.com) 266733a65a1a073f33d5d058c25c352098ea2339: 工具集目录">
+                                    <i class="fas fa-hashtag fa-fw"></i>266733a</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/tool/k8s/docker/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/tool/k8s/docker/" data-title="Docker 问题排查工具" data-hashtags="工具集"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/tool/k8s/docker/" data-hashtag="工具集"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/tool/k8s/docker/" data-title="Docker 问题排查工具"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/tool/k8s/docker/" data-title="Docker 问题排查工具"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/tool/k8s/docker/" data-title="Docker 问题排查工具" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E5%B7%A5%E5%85%B7%E9%9B%86/">工具集</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/program/go/expert/go_export/expert_1/" class="prev" rel="prev" title="Go 语言进阶开篇"><i class="fas fa-angle-left fa-fw"></i>Go 语言进阶开篇</a>
+            <a href="/posts/program/go/expert/go_export/expert_2/" class="next" rel="next" title="Go 声明、类型与初始化">Go 声明、类型与初始化<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.110.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2022-12-25T12:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Docker 问题排查工具"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
