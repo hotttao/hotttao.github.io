@@ -71,13 +71,128 @@ kubeadm 确实简单易用，可是我又该如何定制我的集群组件参数
 $ kubeadm init --config kubeadm.yaml
 ```
 
+[kubeadm.yaml](https://kubernetes.io/docs/reference/config-api/kubeadm-config.v1beta3/) 的内容参考如下:
+
+```yaml
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+bootstrapTokens:
+  - token: "9a08jv.c0izixklcxtmnze7"
+    description: "kubeadm bootstrap token"
+    ttl: "24h"
+  - token: "783bde.3f89s0fje9f38fhf"
+    description: "another bootstrap token"
+    usages:
+      - authentication
+      - signing
+    groups:
+      - system:bootstrappers:kubeadm:default-node-token
+nodeRegistration:
+  name: "ec2-10-100-0-1"
+  criSocket: "/var/run/dockershim.sock"
+  taints:
+    - key: "kubeadmNode"
+      value: "someValue"
+      effect: "NoSchedule"
+  kubeletExtraArgs:
+    v: 4
+  ignorePreflightErrors:
+    - IsPrivilegedUser
+  imagePullPolicy: "IfNotPresent"
+localAPIEndpoint:
+  advertiseAddress: "10.100.0.1"
+  bindPort: 6443
+certificateKey: "e6a2eb8581237ab72a4f494f30285ec12a9694d750b9785706a83bfcbbbd2204"
+skipPhases:
+  - addon/kube-proxy
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+etcd:
+  # one of local or external
+  local:
+    imageRepository: "registry.k8s.io"
+    imageTag: "3.2.24"
+    dataDir: "/var/lib/etcd"
+    extraArgs:
+      listen-client-urls: "http://10.100.0.1:2379"
+    serverCertSANs:
+      -  "ec2-10-100-0-1.compute-1.amazonaws.com"
+    peerCertSANs:
+      - "10.100.0.1"
+  # external:
+    # endpoints:
+    # - "10.100.0.1:2379"
+    # - "10.100.0.2:2379"
+    # caFile: "/etcd/kubernetes/pki/etcd/etcd-ca.crt"
+    # certFile: "/etcd/kubernetes/pki/etcd/etcd.crt"
+    # keyFile: "/etcd/kubernetes/pki/etcd/etcd.key"
+networking:
+  serviceSubnet: "10.96.0.0/16"
+  podSubnet: "10.244.0.0/24"
+  dnsDomain: "cluster.local"
+kubernetesVersion: "v1.21.0"
+controlPlaneEndpoint: "10.100.0.1:6443"
+apiServer:
+  extraArgs:
+    authorization-mode: "Node,RBAC"
+  extraVolumes:
+    - name: "some-volume"
+      hostPath: "/etc/some-path"
+      mountPath: "/etc/some-pod-path"
+      readOnly: false
+      pathType: File
+  certSANs:
+    - "10.100.1.1"
+    - "ec2-10-100-0-1.compute-1.amazonaws.com"
+  timeoutForControlPlane: 4m0s
+controllerManager:
+  extraArgs:
+    "node-cidr-mask-size": "20"
+  extraVolumes:
+    - name: "some-volume"
+      hostPath: "/etc/some-path"
+      mountPath: "/etc/some-pod-path"
+      readOnly: false
+      pathType: File
+scheduler:
+  extraArgs:
+    address: "10.100.0.1"
+  extraVolumes:
+    - name: "some-volume"
+      hostPath: "/etc/some-path"
+      mountPath: "/etc/some-pod-path"
+      readOnly: false
+      pathType: File
+certificatesDir: "/etc/kubernetes/pki"
+imageRepository: "registry.k8s.io"
+clusterName: "example-cluster"
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+# kubelet specific options here
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+# kube-proxy specific options here
+```
+
 kubeadm 就会使用 kubeadm.yaml 中的信息替换 /etc/kubernetes/manifests/ 里对应服务的 pod yaml 文件。kubeadmin.yaml 支持的参数参见 k8s 的[文档](https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/control-plane-flags/)。
 
 kubeadm 的源代码，直接就在 kubernetes/cmd/kubeadm 目录下，是 Kubernetes 项目的一部分。其中，app/phases 文件夹下的代码，对应的就是我在这篇文章中详细介绍的每一个具体步骤。
 
-kubeadm 目前应该已经具备一键部署一个高可用的 Kubernetes 集群，即：Etcd、Master 组件都应该是多节点集群，而不是现在这样的单点。可参考文档[Creating Highly Available Clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)。除了 kubadmin 更推荐采用如下两种方式:
-1. 使用[kops](https://github.com/kubernetes/kops)
-2. 使用[Ansible](https://github.com/gjmzj/kubeasz) 
+kubeadm 目前应该已经具备一键部署一个高可用的 Kubernetes 集群，即：Etcd、Master 组件都应该是多节点集群，而不是现在这样的单点。可参考文档[Creating Highly Available Clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)。除了 kubadmin 目前有多种安装 k8s 的方式:
+
+|工具|适用|原理|推荐指数|
+|:---|:---|:---|:---|
+|[kops](https://github.com/kubernetes/kops)|生产环境|||
+|[kubeasz](https://github.com/gjmzj/kubeasz) |生产环境|ansible||
+|[kubespray](https://imroc.cc/kubernetes/deploy/kubespray/index.html)|生产环境|ansible||
+|[Rancher](https://rancher.com/docs/rancher/latest/zh/)|生产环境||标准|
+|[kubeadm](https://kubernetes.io/zh-cn/docs/setup/production-environment/tools/kubeadm/)|生产/学习||推荐|
+|[kind](https://github.com/kubernetes-sigs/kind)|单机安装|||
+|[minikube](https://github.com/kubernetes/minikube)|单机安装|||
+
 
 ## 2. kubadmin 安装 k8s 
 使用 kubadmin 安装 k8s 分成如下几个步骤:
@@ -88,97 +203,84 @@ kubeadm 目前应该已经具备一键部署一个高可用的 Kubernetes 集群
 5. 部署 Dashboard 可视化插件；
 6. 部署容器存储插件
 
-### 2.1 安装 Docker 和 kubeadm；
-#### 准备 yum 源
-首先准备 yum 源安装 Docker 和 kubeadmin
+详细的过程可以参考这个博客: [kubeadm 在 CentOS 8 中安装 kubernetes 1.26 单节点集群](https://book.aishangwei.net/blog-7.html)。这个博主维护的脚本很整齐，很赞。下面简述一些重要的过程:
 
-```bash
-cd /etc/yum.repo.d/
-# docker-ce 源
-wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-
-# kubernetes 源
-vim kubernetes.repo
-[kuberneters]
-name=kuberneters repo
-baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
-gpgcheck=1
-enabled=1
-gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
-
-
-# 设置 docker kubelet 开机自启动
-systemctl enable docker kubelet
-```
-
-#### 安装配置相关组件
-```bash
-# 安装相关组件
-yum install docker-ce kubectl kubelet kubeadm
-
-# 配置 docer 的 unit file 添加 https 代理，以便能下载相关被墙的镜像
-# 不过依旧不能用，此步骤省略
-# vim /usr/lib/systemd/system/docker.service # 添加
-# Environment="HTTPS_PROXY=http://www.ik8s.io:10080"
-
-systemctl daemon-reload
-systemctl restart docker
-docker info   # 看到 HTTPS_PROXY 行即可
-
-# 配置 kuberneters 不受 swap 分区的影响
-vim /etc/sysconfig/kubelet
-KUBELET_EXTRA_ARGS="--fail-swap-on=false"
-
-# 系统参数初始化
-sysctl -w net.bridge.bridge-nf-call-ip6tables=1
-sysctl -w net.bridge.bridge-nf-call-iptables=1
-iptables -F
-```
-
-#### 准备 kubeadm 所需镜像
-因为某种不可描述的原因，kubeadm 使用到的镜像无法访问，因此需要手动准备 kubeadm 所需的镜像文件。这里有片文章可以指导你去构建相应的 镜像 https://ieevee.com/tech/2017/04/07/k8s-mirror.html
-
-```bash
-> kubeadm config images list
-k8s.gcr.io/kube-apiserver:v1.12.2
-k8s.gcr.io/kube-controller-manager:v1.12.2
-k8s.gcr.io/kube-scheduler:v1.12.2
-k8s.gcr.io/kube-proxy:v1.12.2
-k8s.gcr.io/pause:3.1
-k8s.gcr.io/etcd:3.2.24
-k8s.gcr.io/coredns:1.2.2
-```
-
-我是自己去阿里云自建的镜像，使用下面的脚本对镜像进行重命名
+### 2.1 生成 kubeadm 默认配置文件
 ```bash
 #!/bin/bash
-base=k8s.gcr.io
-aliyun="registry.cn-qingdao.aliyuncs.com/htttao"
-images=(kube-apiserver:v1.12.2 kube-controller-manager:v1.12.2 kube-scheduler:v1.12.2 kube-proxy:v1.12.2  pause:3.1  etcd:3.2.24 coredns:1.2.2)
+# 作用: 生成 kubeadm 的默认配置文件
 
-for i in ${images[@]}
-do
-	docker	pull $aliyun/$i
-	docker  tag  $aliyun/$i  $base/$i
-done
+set -e
+SHELL_PATH=`readlink -f $0`
+PROJECT_ROOT=$(dirname  $SHELL_PATH)
+
+kubeadm config print init-defaults --component-configs KubeletConfiguration > $PROJECT_ROOT/kubeadm_default.yaml
 ```
 
-
-### 2.2 初始化 Master 节点
-首先我们为 kubadmin 准备一个配置文件，已启动一些特殊实验性功能。
+默认生成的配置文件需要修改以下几个地方:
 
 ```yaml
-apiVersion: kubeadm.k8s.io/v1alpha1
-kind: MasterConfiguration
-controllerManagerExtraArgs:
-  horizontal-pod-autoscaler-use-rest-clients: "true"
-  horizontal-pod-autoscaler-sync-period: "10s"
-  node-monitor-grace-period: "10s"
-apiServerExtraArgs:
-  runtime-config: "api/all=true"
-kubernetesVersion: "stable-1.11"
+imageRepository: registry.aliyuncs.com/google_containers
+controlPlaneEndpoint: "k8sinternal.xiodi.cn:6443"   // kubeadm 运行机器的 ip 地址 或者域名
+podSubnet: 10.244.0.0/16
+cgroupDriver: systemd
+mode: ipvs
 ```
-其中 `horizontal-pod-autoscaler-use-rest-clients: "true"` 意味着，将来部署的 kube-controller-manager 能够使用自定义资源（Custom Metrics）进行自动水平扩展。然后我们只需要下面的命令就可以完成 master 节点的部署。
+
+修改完之后就可以用 `kubeadm config images pull --config $PROJECT_ROOT/kubeadm.yaml` 先下载所需的镜像。
+
+### 2.2 初始化 Master 节点
+首先我们为 kubadmin 准备一个配置文件: 
+
+```yaml
+apiVersion: kubeadm.k8s.io/v1beta3
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: abcdef.0123456789abcdef
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  # apiserver 监听的地址
+  advertiseAddress: 192.168.2.197
+  bindPort: 6443
+nodeRegistration:
+  # containerd 监听的socket 默认值与 yum install containerd 后的配置不一致需要修改
+  criSocket: unix:///run/containerd/containerd.sock
+  imagePullPolicy: IfNotPresent
+  name: master
+  taints: null
+  
+---
+apiServer:
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta3
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controllerManager: {}
+dns: {}
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers
+kind: ClusterConfiguration
+kubernetesVersion: 1.26.0
+networking:
+  dnsDomain: cluster.local
+  serviceSubnet: 10.96.0.0/12
+scheduler: {}
+
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+# kubelet specific options here
+cgroupDriver: systemd
+
+```
+然后我们只需要下面的命令就可以完成 master 节点的部署。
 
 ```bash
 $ kubeadm init --config kubeadm.yaml
@@ -202,20 +304,7 @@ kubectl get ns
 
 需要这些配置命令的原因是：Kubernetes 集群默认需要加密方式访问。所以，这几条命令，就是将刚刚部署生成的 Kubernetes 集群的安全配置文件，保存到当前用户的.kube 目录下，kubectl 默认会使用这个目录下的授权信息访问 Kubernetes 集群。如果不这么做的话，我们每次都需要通过 export KUBECONFIG 环境变量告诉 kubectl 这个安全配置文件的位置。
 
-### 2.3 部署网络组件
-初始化 Master 还有非常重要的一步，就是部署网络组件，否则各个 pod 等组件之间是无法通信的
-```bash
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
-
-kubectl get pods -n kube-system
-```
-
-### 2.4 部署 Worker 节点
-相比与 Master Worker 节点的部署只需要两步即可完成:
-1. 安装 kubeadm 和 Docker
-2. 执行 Master 初始化后输出的 kubadmin join 命令
-
-### 2.5 调整 Master 执行 Pod 的策略
+### 2.3 调整 Master 执行 Pod 的策略
 默认情况下 Master 节点是不允许运行用户 Pod 的。而 Kubernetes 做到这一点，依靠的是 Kubernetes 的 Taint/Toleration 机制:
 1. 某个节点可以被加上了一个 Taint
 2. 一旦某个节点被加上了一个 Taint，即被“打上了污点”，那么所有 Pod 就都不能在这个节点上运行
@@ -279,10 +368,11 @@ $ kubectl taint nodes --all node-role.kubernetes.io/master-
 短横线“-”，意味着移除所有以“node-role.kubernetes.io/master”为键的 Taint。
 
 ### 2.6 部署 Dashboard 可视化插件
-```bash
-$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-rc6/aio/deploy/recommended.yaml
 
-$ kubectl get pods -n kube-system
+```bash
+
+helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+helm install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard
 ```
 
 1.7 版本之后的 Dashboard 项目部署完成后，默认只能通过 Proxy 的方式在本地访问，想要直接访问，具体的操作，你可以查看 Dashboard 项目的[官方文档](https://github.com/kubernetes/dashboard)。
@@ -298,12 +388,10 @@ Rook 项目是一个基于 Ceph 的 Kubernetes 存储插件（它后期也在加
 
 ```bash
 
-$ kubectl apply -f https://raw.githubusercontent.com/rook/rook/master/cluster/examples/kubernetes/ceph/common.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/rook/rook/master/cluster/examples/kubernetes/ceph/operator.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/rook/rook/master/cluster/examples/kubernetes/ceph/cluster.yaml
+helm repo add rook-release https://charts.rook.io/release
+helm install --create-namespace --namespace rook-ceph rook-ceph rook-release/rook-ceph -f values.yaml
 
-$ kubectl get pods -n rook-ceph-system
-$ kubectl get pods -n rook-ceph
+kubectl get pods -n rook-ceph
 ```
 部署完成后，接下来在 Kubernetes 项目上创建的所有 Pod 就能够通过 Persistent Volume（PV）和 Persistent Volume Claim（PVC）的方式，在容器里挂载由 Ceph 提供的数据卷了。
 
@@ -333,62 +421,145 @@ ip link delete flannel.1
 systemctl start docker
 ```
 
-## 2.9 安装脚本
-整个集群安装比较复杂，因此我将物理环境准备以及镜像下载写成了两个脚本，以便于 k8s 集群的安装。
+## 3. 容器化一个应用
+环境有了，我们先来借助一个例子，熟悉一下 k8s 的基本操作以及如何容器化一个应用。
 
-#### 基础环境配置脚本
-```bash
-#!/bin/bash
-# 1. 设置系统参数
-mount /dev/cdrom /cdrom
-iptables -F
+### 3.1 配置文件定义
+在 k8s 中要创建一个容器的第一步是为其编写配置文件，即：把容器的定义、参数、配置，统统记录在一个 YAML 文件中。就像下面这样:
 
-# 2. 准备 yum 源
-wget -P /etc/yum.repos.d/ https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-cat << EOF >> /etc/yum.repos.d/kubernetes.repo
-[kuberneters]
-name=kuberneters repo
-baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
-gpgcheck=1
-enabled=1
-gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
-EOF
+```yaml
 
-# 3. 配置 kuberneters 不受 swap 分区的影响
-yum install docker-ce kubelet kubeadm kubectl -y
-echo 'KUBELET_EXTRA_ARGS="--fail-swap-on=false"' > /etc/sysconfig/kubelet
-
-# 4. 启动相关服务
-systemctl start docker
-systemctl enable docker kubelet
-
-cat << EOF > /etc/docker/daemon.json
-{
-  "registry-mirrors": ["https://osafqkzd.mirror.aliyuncs.com"]
-}
-EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
 ```
 
-#### 镜像下载脚本
-执行下面的下载脚本 `/root/kubernetes.sh`
+像这样的一个 YAML 文件，对应到 Kubernetes 中，就是一个 API Object（API 对象），其中:
+1. kind 字段，指定了这个 API 对象的类型（Type），是一个 Deployment
+2. spec.template 定义了Pod 的模版
+3. metadata: API 对象的“标识”，即元数据
+4. metadata.labels: 就是一组 key-value 格式的标签，在 k8s 中称为 Label Selector。
+  - selector.matchLabels: metadata.labels 与 matchLabels 组合定义了控制器与被控制对象之间的关联关系
+  - 像上面这样使用一种 API 对象（Deployment）管理另一种 API 对象（Pod）的方法，在 Kubernetes 中，叫作 **控制器模式（controller pattern）** ，Deployment 扮演的正是 Pod 的控制器的角色。
+4. metadata.annotations: 
+  - 在 Metadata 中，还有一个与 Labels 格式、层级完全相同的字段叫 Annotations
+  - Annotations 专门用来携带 key-value 格式的内部信息
+  - 所谓内部信息，指的是对这些信息感兴趣的，是 Kubernetes 组件本身，而不是用户
+  - 所以大多数 Annotations，都是在 Kubernetes 运行过程中，被自动加在这个 API 对象上
+
+### 1.2 对象创建
+配置文件准备好之后，使用下面的命令就可以创建对应的 API 对象:
+
 ```bash
-#!/bin/bash
-sudo docker login --username=1556824234@qq.com registry.cn-qingdao.aliyuncs.com
-sysctl net.bridge.bridge-nf-call-ip6tables=1
-sysctl net.bridge.bridge-nf-call-iptables=1
+# 创建 API 对象
+$ kubectl create -f nginx-deployment.yaml
 
-base=k8s.gcr.io
-aliyun="registry.cn-qingdao.aliyuncs.com/htttao"
-images=(kube-apiserver:v1.12.2 kube-controller-manager:v1.12.2 kube-scheduler:v1.12.2 kube-proxy:v1.12.2  pause:3.1  etcd:3.2.24 coredns:1.2.2)
+# kubectl get 指令的作用，就是从 Kubernetes 里面获取（GET）指定的 API 对象
+# -l 参数，即获取所有匹配 app: nginx 标签的 Pod
+# 在命令行中，所有 key-value 格式的参数，都使用“=”而非“:”表示
+$ kubectl get pods -l app=nginx
 
-for i in ${images[@]}
-do
-	docker	pull $aliyun/$i
-	docker  tag  $aliyun/$i  $base/$i
-done
+# kubectl describe 命令，查看一个 API 对象的细节
+$ kubectl describe pod nginx-deployment-67594d6bf6-9gdvr
+```
 
-flannel=flannel:v0.10.0-amd64
-docker    pull $aliyun/$flannel
-docker    tag  $aliyun/$flannel  quay.io/coreos/$flannel
+在 kubectl describe 命令返回的结果中，需要特别关注是 Events（事件），它包含了Kubernetes 执行的过程中，对 API 对象的所有重要操作。这正是我们将来进行 Debug 的重要依据。如果有异常发生，你一定要第一时间查看这些 Events。
+
+### 1.3 声明式 API
+假如现在我们要对 Nginx 服务进行升级，把它的镜像版本从 1.7.9 升级为 1.8，要怎么做呢？
+1. 首先，需要修改 YAML 文件
+2. 然后，执行 `kubectl replace -f nginx-deployment.yaml`
+
+但是更正宗的写法是使用 kubectl apply 命令，来统一进行 Kubernetes 对象的创建和更新操作：
+
+```bash
+
+$ kubectl apply -f nginx-deployment.yaml
+
+# 修改nginx-deployment.yaml的内容
+
+$ kubectl apply -f nginx-deployment.yaml
+```
+
+这正是 Kubernetes“声明式 API”所推荐的使用方法。也就是说，作为用户，你不必关心当前的操作是创建，还是更新，你执行的命令始终是 kubectl apply，而 Kubernetes 则会根据 YAML 文件的内容变化，自动进行具体的处理。
+
+这个流程的好处是，它有助于帮助开发和运维人员，围绕着可以版本化管理的 YAML 文件，而不是“行踪不定”的命令行进行协作，从而大大降低开发人员和运维人员之间的沟通成本。
+
+如果通过容器镜像，我们能够保证应用本身在开发与部署环境里的一致性的话，那么现在，Kubernetes 项目通过这些 YAML 文件，就保证了应用的“部署参数”在开发与部署环境中的一致性。而当应用本身发生变化时，开发人员和运维人员可以依靠容器镜像来进行同步；当应用部署参数发生变化时，这些 YAML 文件就是他们相互沟通和信任的媒介。
+
+### 1.4 添加 volume
+接下来，我们再在这个 Deployment 中尝试声明一个 Volume。
+
+```yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.8
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: nginx-vol
+      volumes:
+      - name: nginx-vol
+        emptyDir: {}
+```
+
+如上，Deployment 的 Pod 模板部分添加了一个 volumes 字段，定义了这个 Pod 声明的所有 Volume。它的名字叫作 nginx-vol，类型是 emptyDir。emptyDir 类型其实就等同于我们之前讲过的 Docker 的隐式 Volume 参数，即：不显式声明宿主机目录的 Volume。所以，Kubernetes 也会在宿主机上创建一个临时目录，这个目录将来就会被绑定挂载到容器所声明的 Volume 目录上。
+
+Pod 中的容器，使用的是 volumeMounts 字段来声明自己要挂载哪个 Volume，并通过 mountPath 字段来定义容器内的 Volume 目录，比如：/usr/share/nginx/html。
+
+Kubernetes 也提供了显式的 Volume 定义，它叫作 hostPath:
+
+```yaml   
+    volumes:
+      - name: nginx-vol
+        hostPath: 
+          path:  " /var/data"
+```
+
+### 1.5 进入容器
+你还可以使用 kubectl exec 指令，进入到这个 Pod 当中:
+
+```bash
+$ kubectl exec -it nginx-deployment-5c678cfb6d-lg9lw -- /bin/bash
+# ls /usr/share/nginx/html
+```
+
+### 1.6 对象删除
+最后，如果想删除这个 Nginx Deployment 的话，直接执行：
+
+```bash
+$ kubectl delete -f nginx-deployment.yaml
 ```
 

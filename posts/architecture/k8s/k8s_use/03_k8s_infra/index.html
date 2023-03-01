@@ -10,7 +10,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://hotttao.github.io/posts/architecture/k8s/k8s_use/03_k8s_infra/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2020-08-02T22:00:00+08:00" />
-<meta property="article:modified_time" content="2023-02-26T12:44:35+08:00" />
+<meta property="article:modified_time" content="2023-03-01T09:48:10+08:00" />
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
 
@@ -28,8 +28,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/k8s\/k8s_use\/03_k8s_infra\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "k8s","wordcount":  1407 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/k8s\/k8s_use\/03_k8s_infra\/","datePublished": "2020-08-02T22:00:00+08:00","dateModified": "2023-02-26T12:44:35+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "k8s","wordcount":  1720 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/k8s\/k8s_use\/03_k8s_infra\/","datePublished": "2020-08-02T22:00:00+08:00","dateModified": "2023-03-01T09:48:10+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -110,8 +110,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">k8s 架构简述</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/architecture/"><i class="far fa-folder fa-fw"></i>architecture</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-08-02">2020-08-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1407 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-08-02">2020-08-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1720 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -121,8 +121,8 @@
   <ul>
     <li><a href="#1-kubernetes-架构">1. kubernetes 架构</a>
       <ul>
-        <li><a href="#11-k8s-架构图">1.1 k8s 架构图</a></li>
-        <li><a href="#12-kubernetes-核心设计">1.2 kubernetes 核心设计</a></li>
+        <li><a href="#11-kubernetes-核心设计">1.1 kubernetes 核心设计</a></li>
+        <li><a href="#12-k8s-架构图">1.2 k8s 架构图</a></li>
       </ul>
     </li>
     <li><a href="#2-k8s-源码结构">2. k8s 源码结构</a></li>
@@ -130,7 +130,26 @@
 </nav></div>
             </div><div class="content" id="content"><p>k8s 内容庞大，今天我们希望能从 k8s 的架构和源码出发，构建一个学习 k8s 架构图。这样我们才能在后面深入的学习过程中，不至于忘记所有知识之间的联系，从而达到深入浅出学习 k8s 的目的。</p>
 <h2 id="1-kubernetes-架构">1. kubernetes 架构</h2>
-<h3 id="11-k8s-架构图">1.1 k8s 架构图</h3>
+<h3 id="11-kubernetes-核心设计">1.1 kubernetes 核心设计</h3>
+<p>Kubernetes 从 Google Borg 系统演化而来。因此从一开始就把关注点放到了<strong>如何编排、管理、调度用户提交的作业上</strong>。这个出发点来自于 Borg 的研究人员在论文中提到的一个非常重要的观点：<strong>运行在大规模集群中的各种任务之间，实际上存在着各种各样的关系。这些关系的处理，才是作业编排和管理系统最困难的地方。</strong></p>
+<p>Kubernetes 最主要的设计思想是，从更宏观的角度，<strong>以统一的方式来定义任务之间的各种关系</strong>，并且为将来支持更多种类的关系留有余地。</p>
+<p>除了应用与应用之间的关系外，<strong>应用运行的形态</strong>是影响“如何容器化这个应用”的第二个重要因素。正是基于<strong>容器间关系和形态</strong>两个维度，Kubernetes 演化出了下面的核心功能:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/k8s/k8s_use/k8s_function.webp"
+        data-srcset="/images/k8s/k8s_use/k8s_function.webp, /images/k8s/k8s_use/k8s_function.webp 1.5x, /images/k8s/k8s_use/k8s_function.webp 2x"
+        data-sizes="auto"
+        alt="/images/k8s/k8s_use/k8s_function.webp"
+        title="k8s 核心功能" /></p>
+<p>当我们在使用这些核心功能时 Kubernetes 所推崇的使用方法是：</p>
+<ol>
+<li>首先，通过一个“编排对象”，比如 Pod、Job、CronJob 等，来描述你试图管理的应用；</li>
+<li>然后，再为它定义一些“服务对象”，比如 Service、Secret、Horizontal Pod Autoscaler（自动水平扩展器）等。这些对象，会负责具体的平台级功能。</li>
+</ol>
+<p>这种使用方法，就是所谓的<strong>声明式 API</strong>。这种 API 对应的<strong>编排对象和服务对象</strong>，都是 Kubernetes 项目中的 API 对象（API Object）。</p>
+<p>过去很多的集群管理项目（比如 Yarn、Mesos，以及 Swarm）所擅长的，都是把一个容器，按照某种规则，放置在某个最佳节点上运行起来。这种功能，我们称为“调度”。而 Kubernetes 项目所擅长的，是按照用户的意愿和整个系统的规则，完全自动化地处理好容器之间的各种关系。这种功能，就是我们经常听到的一个概念：编排。所以说，Kubernetes 项目的本质，是为用户提供一个具有普遍意义的容器编排工具。</p>
+<h3 id="12-k8s-架构图">1.2 k8s 架构图</h3>
 <p><img
         class="lazyload"
         src="/svg/loading.min.svg"
@@ -158,34 +177,95 @@
 <li>kubelet 还通过 gRPC 协议同一个叫作 <strong>Device Plugin 的插件</strong>进行交互。这个插件，是 Kubernetes 项目用来管理 GPU 等宿主机物理设备的主要组件，也是基于 Kubernetes 项目进行机器学习训练、高性能作业支持等工作必须关注的功能</li>
 <li>kubelet 的另一个重要功能，则是调用网络插件和存储插件为容器配置网络和持久化存储。这两个插件与 kubelet 进行交互的接口，分别是 <strong>CNI（Container Networking Interface）</strong> 和 <strong>CSI（Container Storage Interface）</strong> 。</li>
 </ul>
-<p>Kubernetes 从 Google Borg 系统演化而来。因此从一开始就把关注点放到了<strong>如何编排、管理、调度用户提交的作业上</strong>。这个出发点来自于 Borg 的研究人员在论文中提到的一个非常重要的观点：<strong>运行在大规模集群中的各种任务之间，实际上存在着各种各样的关系。这些关系的处理，才是作业编排和管理系统最困难的地方。</strong></p>
-<h3 id="12-kubernetes-核心设计">1.2 kubernetes 核心设计</h3>
-<p>Kubernetes 项目最主要的设计思想是，从更宏观的角度，<strong>以统一的方式来定义任务之间的各种关系</strong>，并且为将来支持更多种类的关系留有余地。除了应用与应用之间的关系外，<strong>应用运行的形态</strong>是影响“如何容器化这个应用”的第二个重要因素。</p>
-<p>正是基于<strong>容器间关系和形态</strong>两个维度，Kubernetes 演化出了下面的核心功能:</p>
 <p><img
         class="lazyload"
         src="/svg/loading.min.svg"
-        data-src="/images/k8s/k8s_use/k8s_function.webp"
-        data-srcset="/images/k8s/k8s_use/k8s_function.webp, /images/k8s/k8s_use/k8s_function.webp 1.5x, /images/k8s/k8s_use/k8s_function.webp 2x"
+        data-src="/images/k8s/k8s_use/control_plane_workflow.png"
+        data-srcset="/images/k8s/k8s_use/control_plane_workflow.png, /images/k8s/k8s_use/control_plane_workflow.png 1.5x, /images/k8s/k8s_use/control_plane_workflow.png 2x"
         data-sizes="auto"
-        alt="/images/k8s/k8s_use/k8s_function.webp"
-        title="k8s 核心功能" /></p>
-<p>当我们在使用这些核心功能时 Kubernetes 所推崇的使用方法是：</p>
-<ol>
-<li>首先，通过一个“编排对象”，比如 Pod、Job、CronJob 等，来描述你试图管理的应用；</li>
-<li>然后，再为它定义一些“服务对象”，比如 Service、Secret、Horizontal Pod Autoscaler（自动水平扩展器）等。这些对象，会负责具体的平台级功能。</li>
-</ol>
-<p>这种使用方法，就是所谓的<strong>声明式 API</strong>。这种 API 对应的<strong>编排对象和服务对象</strong>，都是 Kubernetes 项目中的 API 对象（API Object）。</p>
-<p>过去很多的集群管理项目（比如 Yarn、Mesos，以及 Swarm）所擅长的，都是把一个容器，按照某种规则，放置在某个最佳节点上运行起来。这种功能，我们称为“调度”。而 Kubernetes 项目所擅长的，是按照用户的意愿和整个系统的规则，完全自动化地处理好容器之间的各种关系。这种功能，就是我们经常听到的一个概念：编排。所以说，Kubernetes 项目的本质，是为用户提供一个具有普遍意义的容器编排工具。</p>
-<p>不过，更重要的是，Kubernetes 项目为用户提供的不仅限于一个工具。它真正的价值，乃在于提供了一套基于容器构建分布式系统的基础依赖。</p>
+        alt="/images/k8s/k8s_use/control_plane_workflow.png"
+        title="Deployment 创建流程" /></p>
 <h2 id="2-k8s-源码结构">2. k8s 源码结构</h2>
 <p>有了架构图，我们再来看看源码结构，看看架构与源码是如何对应起来。个人觉得结合代码的方式来学习 k8s 可以让我们更加结构化的理解 k8s 中的抽象概念，这样理解和记忆会更加深刻。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">目录</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">api/</td>
+<td style="text-align:left">存放 OpenAPI/</td>
+</tr>
+<tr>
+<td style="text-align:left">build/</td>
+<td style="text-align:left">存放构建相关的脚本</td>
+</tr>
+<tr>
+<td style="text-align:left">cmd/</td>
+<td style="text-align:left">存放可执行文件的入口代码，每一个可执行文件都会对应有一个 main 函数</td>
+</tr>
+<tr>
+<td style="text-align:left">docs/</td>
+<td style="text-align:left">存放设计或者用户使用文档</td>
+</tr>
+<tr>
+<td style="text-align:left">hack/</td>
+<td style="text-align:left">存放与构建、测试相关的脚本</td>
+</tr>
+<tr>
+<td style="text-align:left">pkg/</td>
+<td style="text-align:left">存放核心库代码，可被项目内部或外部，直接引用</td>
+</tr>
+<tr>
+<td style="text-align:left">plugin/</td>
+<td style="text-align:left">存放 kubernetes 的插件，例如认证插件、授权插件等</td>
+</tr>
+<tr>
+<td style="text-align:left">staging/</td>
+<td style="text-align:left">存放部分核心库的暂存代码，也就是还没有集成到 pkg 目录的代码，包括一些与云服务厂商集成的 provider</td>
+</tr>
+<tr>
+<td style="text-align:left">test/</td>
+<td style="text-align:left">存放测试工具，以及测试数据</td>
+</tr>
+<tr>
+<td style="text-align:left">third_party/</td>
+<td style="text-align:left">存放第三方工具、代码或其他组件</td>
+</tr>
+<tr>
+<td style="text-align:left">translations/</td>
+<td style="text-align:left">存放 i18n(国际化)语言包的相关文件，可以在不修改内部代码的情况下支持不同语言及地区</td>
+</tr>
+<tr>
+<td style="text-align:left">vendor/</td>
+<td style="text-align:left">存放项目依赖的库代码，一般为第三方库代码</td>
+</tr>
+</tbody>
+</table>
+<p>cmd 是可执行文件入口，与 kubernetes 提供的各个组件一一对应。cmd 中实际调用的就是 pkg 中的代码。在 pkg 中下面几个目录与我们后面学习 k8s 密切相关:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">目录</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">apis</td>
+<td style="text-align:left">kubernetes 核心对象的定义，后面我们将学习的 Pod，Deployment 等等核心对象的可定义字段都在这个目录下 go 代码中定义</td>
+</tr>
+</tbody>
+</table>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2023-02-26&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/25940a801cfb618769717a8d925af248777c9992" target="_blank" title="commit by tao(tao@example.com) 25940a801cfb618769717a8d925af248777c9992: 容器网络">
-                                    <i class="fas fa-hashtag fa-fw"></i>25940a8</a></span>
+                <span>更新于 2023-03-01&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/a87078a9057bdbf6bc55993ce4dd62e57302d826" target="_blank" title="commit by tao(tao@example.com) a87078a9057bdbf6bc55993ce4dd62e57302d826: kubeadmin 部署 k8s 更新">
+                                    <i class="fas fa-hashtag fa-fw"></i>a87078a</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>
