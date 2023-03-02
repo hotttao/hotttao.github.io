@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Pod Volume - LoveIt</title><meta name="Description" content="Pod 使用进阶"><meta property="og:title" content="Pod Volume" />
+<meta property="og:description" content="Pod 使用进阶" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-08-04T22:00:00+08:00" />
+<meta property="article:modified_time" content="2023-03-02T19:16:18+08:00" />
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Pod Volume"/>
+<meta name="twitter:description" content="Pod 使用进阶"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/k8s/k8s_use/07_secret/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/k8s/k8s_use/02_docker_net/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Pod Volume",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/k8s\/k8s_use\/08_pod_volume\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "k8s","wordcount":  4350 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/k8s\/k8s_use\/08_pod_volume\/","datePublished": "2020-08-04T22:00:00+08:00","dateModified": "2023-03-02T19:16:18+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "Pod 使用进阶"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">Pod Volume</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/architecture/"><i class="far fa-folder fa-fw"></i>architecture</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-08-04">2020-08-04</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4350 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-volume">1. Volume</a>
+      <ul>
+        <li><a href="#11-volume-定义">1.1 Volume 定义</a></li>
+        <li><a href="#11-projected-volume">1.1 Projected Volume</a>
+          <ul>
+            <li><a href="#secretprojection">SecretProjection</a></li>
+            <li><a href="#configmapprojection">ConfigMapProjection</a></li>
+            <li><a href="#downwardapiprojection">DownwardAPIProjection</a></li>
+          </ul>
+        </li>
+        <li><a href="#14-serviceaccounttokenprojection">1.4 ServiceAccountTokenProjection</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>上一节我们介绍了 Pod 的定义，Pod 包含的信息非常服务，其中，资源定义（比如 CPU、内存等），以及调度相关的字段会在后面专门讲解调度器时再进行深入的分析。本节我们来关注 Pod 的另一重要内容 Volume。</p>
+<h2 id="1-volume">1. Volume</h2>
+<h3 id="11-volume-定义">1.1 Volume 定义</h3>
+<p><a href="https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go#L36" target="_blank" rel="noopener noreffer">Volume</a>:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Volume represents a named volume in a pod that may be accessed by any container in the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Volume</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// name of the volume.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Must be a DNS_LABEL and unique within the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Name</span> <span class="kt">string</span> <span class="s">`json:&#34;name&#34; protobuf:&#34;bytes,1,opt,name=name&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// volumeSource represents the location and type of the mounted volume.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// If not specified, the Volume is implied to be an EmptyDir.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// This implied behavior is deprecated and will be removed in a future version.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">VolumeSource</span> <span class="s">`json:&#34;,inline&#34; protobuf:&#34;bytes,2,opt,name=volumeSource&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Represents the source of a volume to mount.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Only one of its members may be specified.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">VolumeSource</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// hostPath represents a pre-existing file or directory on the host
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// machine that is directly exposed to the container. This is generally
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// used for system agents or other privileged things that are allowed
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// to see the host machine. Most containers will NOT need this.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// ---
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// TODO(jonesdl) We need to restrict who can use host directory mounts and who can/can not
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// mount host directories as read/write.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">HostPath</span> <span class="o">*</span><span class="nx">HostPathVolumeSource</span> <span class="s">`json:&#34;hostPath,omitempty&#34; protobuf:&#34;bytes,1,opt,name=hostPath&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// emptyDir represents a temporary directory that shares a pod&#39;s lifetime.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">EmptyDir</span> <span class="o">*</span><span class="nx">EmptyDirVolumeSource</span> <span class="s">`json:&#34;emptyDir,omitempty&#34; protobuf:&#34;bytes,2,opt,name=emptyDir&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// gcePersistentDisk represents a GCE Disk resource that is attached to a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// kubelet&#39;s host machine and then exposed to the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">GCEPersistentDisk</span> <span class="o">*</span><span class="nx">GCEPersistentDiskVolumeSource</span> <span class="s">`json:&#34;gcePersistentDisk,omitempty&#34; protobuf:&#34;bytes,3,opt,name=gcePersistentDisk&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// awsElasticBlockStore represents an AWS Disk resource that is attached to a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// kubelet&#39;s host machine and then exposed to the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">AWSElasticBlockStore</span> <span class="o">*</span><span class="nx">AWSElasticBlockStoreVolumeSource</span> <span class="s">`json:&#34;awsElasticBlockStore,omitempty&#34; protobuf:&#34;bytes,4,opt,name=awsElasticBlockStore&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// gitRepo represents a git repository at a particular revision.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// into the Pod&#39;s container.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">GitRepo</span> <span class="o">*</span><span class="nx">GitRepoVolumeSource</span> <span class="s">`json:&#34;gitRepo,omitempty&#34; protobuf:&#34;bytes,5,opt,name=gitRepo&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// secret represents a secret that should populate this volume.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Secret</span> <span class="o">*</span><span class="nx">SecretVolumeSource</span> <span class="s">`json:&#34;secret,omitempty&#34; protobuf:&#34;bytes,6,opt,name=secret&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// nfs represents an NFS mount on the host that shares a pod&#39;s lifetime
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">NFS</span> <span class="o">*</span><span class="nx">NFSVolumeSource</span> <span class="s">`json:&#34;nfs,omitempty&#34; protobuf:&#34;bytes,7,opt,name=nfs&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// iscsi represents an ISCSI Disk resource that is attached to a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// kubelet&#39;s host machine and then exposed to the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://examples.k8s.io/volumes/iscsi/README.md
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ISCSI</span> <span class="o">*</span><span class="nx">ISCSIVolumeSource</span> <span class="s">`json:&#34;iscsi,omitempty&#34; protobuf:&#34;bytes,8,opt,name=iscsi&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// glusterfs represents a Glusterfs mount on the host that shares a pod&#39;s lifetime.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://examples.k8s.io/volumes/glusterfs/README.md
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Glusterfs</span> <span class="o">*</span><span class="nx">GlusterfsVolumeSource</span> <span class="s">`json:&#34;glusterfs,omitempty&#34; protobuf:&#34;bytes,9,opt,name=glusterfs&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// persistentVolumeClaimVolumeSource represents a reference to a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// PersistentVolumeClaim in the same namespace.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">PersistentVolumeClaim</span> <span class="o">*</span><span class="nx">PersistentVolumeClaimVolumeSource</span> <span class="s">`json:&#34;persistentVolumeClaim,omitempty&#34; protobuf:&#34;bytes,10,opt,name=persistentVolumeClaim&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// rbd represents a Rados Block Device mount on the host that shares a pod&#39;s lifetime.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://examples.k8s.io/volumes/rbd/README.md
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">RBD</span> <span class="o">*</span><span class="nx">RBDVolumeSource</span> <span class="s">`json:&#34;rbd,omitempty&#34; protobuf:&#34;bytes,11,opt,name=rbd&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// flexVolume represents a generic volume resource that is
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// provisioned/attached using an exec based plugin.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">FlexVolume</span> <span class="o">*</span><span class="nx">FlexVolumeSource</span> <span class="s">`json:&#34;flexVolume,omitempty&#34; protobuf:&#34;bytes,12,opt,name=flexVolume&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// cinder represents a cinder volume attached and mounted on kubelets host machine.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://examples.k8s.io/mysql-cinder-pd/README.md
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Cinder</span> <span class="o">*</span><span class="nx">CinderVolumeSource</span> <span class="s">`json:&#34;cinder,omitempty&#34; protobuf:&#34;bytes,13,opt,name=cinder&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// cephFS represents a Ceph FS mount on the host that shares a pod&#39;s lifetime
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">CephFS</span> <span class="o">*</span><span class="nx">CephFSVolumeSource</span> <span class="s">`json:&#34;cephfs,omitempty&#34; protobuf:&#34;bytes,14,opt,name=cephfs&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// flocker represents a Flocker volume attached to a kubelet&#39;s host machine. This depends on the Flocker control service being running
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Flocker</span> <span class="o">*</span><span class="nx">FlockerVolumeSource</span> <span class="s">`json:&#34;flocker,omitempty&#34; protobuf:&#34;bytes,15,opt,name=flocker&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// downwardAPI represents downward API about the pod that should populate this volume
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">DownwardAPI</span> <span class="o">*</span><span class="nx">DownwardAPIVolumeSource</span> <span class="s">`json:&#34;downwardAPI,omitempty&#34; protobuf:&#34;bytes,16,opt,name=downwardAPI&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// fc represents a Fibre Channel resource that is attached to a kubelet&#39;s host machine and then exposed to the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">FC</span> <span class="o">*</span><span class="nx">FCVolumeSource</span> <span class="s">`json:&#34;fc,omitempty&#34; protobuf:&#34;bytes,17,opt,name=fc&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">AzureFile</span> <span class="o">*</span><span class="nx">AzureFileVolumeSource</span> <span class="s">`json:&#34;azureFile,omitempty&#34; protobuf:&#34;bytes,18,opt,name=azureFile&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// configMap represents a configMap that should populate this volume
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ConfigMap</span> <span class="o">*</span><span class="nx">ConfigMapVolumeSource</span> <span class="s">`json:&#34;configMap,omitempty&#34; protobuf:&#34;bytes,19,opt,name=configMap&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">VsphereVolume</span> <span class="o">*</span><span class="nx">VsphereVirtualDiskVolumeSource</span> <span class="s">`json:&#34;vsphereVolume,omitempty&#34; protobuf:&#34;bytes,20,opt,name=vsphereVolume&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// quobyte represents a Quobyte mount on the host that shares a pod&#39;s lifetime
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Quobyte</span> <span class="o">*</span><span class="nx">QuobyteVolumeSource</span> <span class="s">`json:&#34;quobyte,omitempty&#34; protobuf:&#34;bytes,21,opt,name=quobyte&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">AzureDisk</span> <span class="o">*</span><span class="nx">AzureDiskVolumeSource</span> <span class="s">`json:&#34;azureDisk,omitempty&#34; protobuf:&#34;bytes,22,opt,name=azureDisk&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">PhotonPersistentDisk</span> <span class="o">*</span><span class="nx">PhotonPersistentDiskVolumeSource</span> <span class="s">`json:&#34;photonPersistentDisk,omitempty&#34; protobuf:&#34;bytes,23,opt,name=photonPersistentDisk&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// projected items for all in one resources secrets, configmaps, and downward API
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Projected</span> <span class="o">*</span><span class="nx">ProjectedVolumeSource</span> <span class="s">`json:&#34;projected,omitempty&#34; protobuf:&#34;bytes,26,opt,name=projected&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// portworxVolume represents a portworx volume attached and mounted on kubelets host machine
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">PortworxVolume</span> <span class="o">*</span><span class="nx">PortworxVolumeSource</span> <span class="s">`json:&#34;portworxVolume,omitempty&#34; protobuf:&#34;bytes,24,opt,name=portworxVolume&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ScaleIO</span> <span class="o">*</span><span class="nx">ScaleIOVolumeSource</span> <span class="s">`json:&#34;scaleIO,omitempty&#34; protobuf:&#34;bytes,25,opt,name=scaleIO&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">StorageOS</span> <span class="o">*</span><span class="nx">StorageOSVolumeSource</span> <span class="s">`json:&#34;storageos,omitempty&#34; protobuf:&#34;bytes,27,opt,name=storageos&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers (Beta feature).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">CSI</span> <span class="o">*</span><span class="nx">CSIVolumeSource</span> <span class="s">`json:&#34;csi,omitempty&#34; protobuf:&#34;bytes,28,opt,name=csi&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// ephemeral represents a volume that is handled by a cluster storage driver.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// The volume&#39;s lifecycle is tied to the pod that defines it - it will be created before the pod starts,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// and deleted when the pod is removed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Use this if:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// a) the volume is only needed while the pod runs,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// b) features of normal volumes like restoring from snapshot or capacity
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//    tracking are needed,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// c) the storage driver is specified through a storage class, and
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// d) the storage driver supports dynamic volume provisioning through
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//    a PersistentVolumeClaim (see EphemeralVolumeSource for more
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//    information on the connection between this volume type
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//    and PersistentVolumeClaim).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Use PersistentVolumeClaim or one of the vendor-specific
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// APIs for volumes that persist for longer than the lifecycle
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// of an individual pod.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// be used that way - see the documentation of the driver for
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// more information.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// A pod can use both types of ephemeral volumes and
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// persistent volumes at the same time.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Ephemeral</span> <span class="o">*</span><span class="nx">EphemeralVolumeSource</span> <span class="s">`json:&#34;ephemeral,omitempty&#34; protobuf:&#34;bytes,29,opt,name=ephemeral&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了上一节提到的 EmptyDir 和 HostPath，Pod 的 Volume 还支持很多其他类型。</p>
+<h3 id="11-projected-volume">1.1 Projected Volume</h3>
+<p>在 Kubernetes 中，有几种特殊的 Volume，它们存在的意义不是为了存放容器里的数据，也不是用来进行容器和宿主机之间的数据交换。这些特殊 Volume 的作用，是为容器提供预先定义好的数据。从容器的角度来看，这些 Volume 里的信息就是仿佛是被 Kubernetes“投射”（Project）进入容器当中的。所以它们被称作 Projected Volume(投射数据卷)。</p>
+<p>Projected Volume 由 Volume 中的 Project 字段定义类型是 <a href="https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go#L1707" target="_blank" rel="noopener noreffer">ProjectedVolumeSource</a>:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Represents a projected volume source
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">ProjectedVolumeSource</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// sources is the list of volume projections
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Sources</span> <span class="p">[]</span><span class="nx">VolumeProjection</span> <span class="s">`json:&#34;sources&#34; protobuf:&#34;bytes,1,rep,name=sources&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// defaultMode are the mode bits used to set permissions on created files by default.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Directories within the path are not affected by this setting.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// This might be in conflict with other options that affect the file
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// mode, like fsGroup, and the result can be other mode bits set.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">DefaultMode</span> <span class="o">*</span><span class="kt">int32</span> <span class="s">`json:&#34;defaultMode,omitempty&#34; protobuf:&#34;varint,2,opt,name=defaultMode&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Projection that may be projected along with other supported volume types
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">VolumeProjection</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// all types below are the supported types for projection into the same volume
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// secret information about the secret data to project
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Secret</span> <span class="o">*</span><span class="nx">SecretProjection</span> <span class="s">`json:&#34;secret,omitempty&#34; protobuf:&#34;bytes,1,opt,name=secret&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// downwardAPI information about the downwardAPI data to project
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">DownwardAPI</span> <span class="o">*</span><span class="nx">DownwardAPIProjection</span> <span class="s">`json:&#34;downwardAPI,omitempty&#34; protobuf:&#34;bytes,2,opt,name=downwardAPI&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// configMap information about the configMap data to project
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ConfigMap</span> <span class="o">*</span><span class="nx">ConfigMapProjection</span> <span class="s">`json:&#34;configMap,omitempty&#34; protobuf:&#34;bytes,3,opt,name=configMap&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// serviceAccountToken is information about the serviceAccountToken data to project
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ServiceAccountToken</span> <span class="o">*</span><span class="nx">ServiceAccountTokenProjection</span> <span class="s">`json:&#34;serviceAccountToken,omitempty&#34; protobuf:&#34;bytes,4,opt,name=serviceAccountToken&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Kubernetes 支持的 Projected Volume 一共有四种：</p>
+<ol>
+<li>Secret (SecretProjection)；</li>
+<li>ConfigMap (ConfigMapProjection)</li>
+<li>Downward API (DownwardAPIProjection)</li>
+<li>ServiceAccountToken (ServiceAccountTokenProjection)</li>
+</ol>
+<p>注意 Pod Volume 的定义中也有一个 Secret *SecretVolumeSource 与这里的类型 SecretProjection 是不一样的，这个我们后面在介绍。</p>
+<h4 id="secretprojection">SecretProjection</h4>
+<p><a href="https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go#L1235" target="_blank" rel="noopener noreffer">SecretProjection</a> 定义如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Adapts a secret into a projected volume.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// The contents of the target Secret&#39;s Data field will be presented in a
+</span></span></span><span class="line"><span class="cl"><span class="c1">// projected volume as files using the keys in the Data field as the file names.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Note that this is identical to a secret volume source without the default
+</span></span></span><span class="line"><span class="cl"><span class="c1">// mode.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">SecretProjection</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">LocalObjectReference</span> <span class="s">`json:&#34;,inline&#34; protobuf:&#34;bytes,1,opt,name=localObjectReference&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// items if unspecified, each key-value pair in the Data field of the referenced
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Secret will be projected into the volume as a file whose name is the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// key and content is the value. If specified, the listed keys will be
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// projected into the specified paths, and unlisted keys will not be
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// present. If a key is specified which is not present in the Secret,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// the volume setup will error unless it is marked optional. Paths must be
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// relative and may not contain the &#39;..&#39; path or start with &#39;..&#39;.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Items</span> <span class="p">[]</span><span class="nx">KeyToPath</span> <span class="s">`json:&#34;items,omitempty&#34; protobuf:&#34;bytes,2,rep,name=items&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// optional field specify whether the Secret or its key must be defined
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Optional</span> <span class="o">*</span><span class="kt">bool</span> <span class="s">`json:&#34;optional,omitempty&#34; protobuf:&#34;varint,4,opt,name=optional&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// LocalObjectReference contains enough information to let you locate the
+</span></span></span><span class="line"><span class="cl"><span class="c1">// referenced object inside the same namespace.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// +structType=atomic
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">LocalObjectReference</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Name of the referent.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// TODO: Add other useful fields. apiVersion, kind, uid?
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Name</span> <span class="kt">string</span> <span class="s">`json:&#34;name,omitempty&#34; protobuf:&#34;bytes,1,opt,name=name&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Maps a string key to a path within a volume.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">KeyToPath</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// key is the key to project.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Key</span> <span class="kt">string</span> <span class="s">`json:&#34;key&#34; protobuf:&#34;bytes,1,opt,name=key&#34;`</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// path is the relative path of the file to map the key to.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// May not be an absolute path.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// May not contain the path element &#39;..&#39;.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// May not start with the string &#39;..&#39;.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Path</span> <span class="kt">string</span> <span class="s">`json:&#34;path&#34; protobuf:&#34;bytes,2,opt,name=path&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// mode is Optional: mode bits used to set permissions on this file.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// If not specified, the volume defaultMode will be used.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// This might be in conflict with other options that affect the file
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// mode, like fsGroup, and the result can be other mode bits set.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Mode</span> <span class="o">*</span><span class="kt">int32</span> <span class="s">`json:&#34;mode,omitempty&#34; protobuf:&#34;varint,3,opt,name=mode&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 SecretProjection 的定义中:</p>
+<ol>
+<li>LocalObjectReference 的 Name 字段指向的是 kubernetes 保存在 ETCD 中的 Secret 对象。</li>
+<li>KeyToPath 指定将 Secret data 中哪些键值对单独保存 KeyToPath.Path 是一个相对路径。</li>
+</ol>
+<p>SecretProjection:</p>
+<ol>
+<li>作用: 通过在 Pod 的容器里挂载 SecretProjection 类型的 Project Volume，就可以访问 Secret 里保存的信息了</li>
+<li>场景: 存放数据库的认证信息</li>
+<li>更新:
+<ul>
+<li>通过挂载方式进入到容器里的 Secret，一旦其对应的 Etcd 里的数据被更新，这些 Volume 里的文件内容，同样也会被更新</li>
+<li>kubelet 组件在定时维护这些 Volume，这个更新可能会有一定的延时。所以在编写应用程序时，在发起数据库连接的代码处写好重试和超时的逻辑，绝对是个好习惯。</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Pod</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">test-projected-volume </span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">test-secret-volume</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">sleep</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="s2">&#34;86400&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">mysql-cred</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;/projected-volume&#34;</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">mysql-cred</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">projected</span><span class="p">:</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">sources</span><span class="p">:</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="nt">secret</span><span class="p">:</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">user       </span><span class="w"> </span><span class="c"># Secret 名称</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="nt">secret</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">pass</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c"># 最终 user secret会以文件的方式保存在 /projected-volume/user</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="configmapprojection">ConfigMapProjection</h4>
+<p><a href="https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go#L1666" target="_blank" rel="noopener noreffer">ConfigMapProjection</a> 定义如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">ConfigMapProjection</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">LocalObjectReference</span> <span class="s">`json:&#34;,inline&#34; protobuf:&#34;bytes,1,opt,name=localObjectReference&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// items if unspecified, each key-value pair in the Data field of the referenced
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// ConfigMap will be projected into the volume as a file whose name is the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// key and content is the value. If specified, the listed keys will be
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// projected into the specified paths, and unlisted keys will not be
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// present. If a key is specified which is not present in the ConfigMap,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// the volume setup will error unless it is marked optional. Paths must be
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// relative and may not contain the &#39;..&#39; path or start with &#39;..&#39;.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Items</span> <span class="p">[]</span><span class="nx">KeyToPath</span> <span class="s">`json:&#34;items,omitempty&#34; protobuf:&#34;bytes,2,rep,name=items&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// optional specify whether the ConfigMap or its keys must be defined
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Optional</span> <span class="o">*</span><span class="kt">bool</span> <span class="s">`json:&#34;optional,omitempty&#34; protobuf:&#34;varint,4,opt,name=optional&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从 ConfigMapProjection 的定义可以看到 ConfigMapProjection 与 SecretProjection 完全一致。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="w">  </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">mysql-cred</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">projected</span><span class="p">:</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">sources</span><span class="p">:</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="nt">configMap</span><span class="p">:</span><span class="w">             
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">user       </span><span class="w"> </span><span class="c"># ConfigMap 名称</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="nt">secret</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">pass       </span><span class="w"> </span><span class="c"># Secret 名称</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="downwardapiprojection">DownwardAPIProjection</h4>
+<p>Downward API</p>
+<ol>
+<li>作用: 让 Pod 里的容器能够直接获取到这个 Pod API 对象本身的信息</li>
+<li>范围:
+<ul>
+<li>Downward API 能够获取到的信息，一定是 Pod 里的容器进程启动之前就能够确定下来的信息</li>
+<li>如果想要获取 Pod 容器运行后才会出现的信息，比如，容器进程的 PID，应该考虑在 Pod 里定义一个 sidecar 容器</li>
+</ul>
+</li>
+</ol>
+<p>Secret、ConfigMap，以及 Downward API 这三种 Projected Volume 定义的信息，大多还可以通过环境变量的方式出现在容器里。但是，通过环境变量获取这些信息的方式，不具备自动更新的能力。所以，一般情况下，我都建议你使用 Volume 文件的方式获取这些信息。</p>
+<p><a href="https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go#L6633" target="_blank" rel="noopener noreffer">DownwardAPIProjection</a> 定义如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">DownwardAPIProjection</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Items is a list of DownwardAPIVolume file
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Items</span> <span class="p">[]</span><span class="nx">DownwardAPIVolumeFile</span> <span class="s">`json:&#34;items,omitempty&#34; protobuf:&#34;bytes,1,rep,name=items&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// DownwardAPIVolumeFile represents information to create the file containing the pod field
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">DownwardAPIVolumeFile</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Required: Path is  the relative path name of the file to be created. Must not be absolute or contain the &#39;..&#39; path. Must be utf-8 encoded. The first item of the relative path must not start with &#39;..&#39;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Path</span> <span class="kt">string</span> <span class="s">`json:&#34;path&#34; protobuf:&#34;bytes,1,opt,name=path&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Required: Selects a field of the pod: only annotations, labels, name and namespace are supported.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">FieldRef</span> <span class="o">*</span><span class="nx">ObjectFieldSelector</span> <span class="s">`json:&#34;fieldRef,omitempty&#34; protobuf:&#34;bytes,2,opt,name=fieldRef&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Selects a resource of the container: only resources limits and requests
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ResourceFieldRef</span> <span class="o">*</span><span class="nx">ResourceFieldSelector</span> <span class="s">`json:&#34;resourceFieldRef,omitempty&#34; protobuf:&#34;bytes,3,opt,name=resourceFieldRef&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Optional: mode bits used to set permissions on this file, must be an octal value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// between 0000 and 0777 or a decimal value between 0 and 511.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// YAML accepts both octal and decimal values, JSON requires decimal values for mode bits.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// If not specified, the volume defaultMode will be used.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// This might be in conflict with other options that affect the file
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// mode, like fsGroup, and the result can be other mode bits set.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Mode</span> <span class="o">*</span><span class="kt">int32</span> <span class="s">`json:&#34;mode,omitempty&#34; protobuf:&#34;varint,4,opt,name=mode&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// ObjectFieldSelector selects an APIVersioned field of an object.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// +structType=atomic
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">ObjectFieldSelector</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Version of the schema the FieldPath is written in terms of, defaults to &#34;v1&#34;.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">APIVersion</span> <span class="kt">string</span> <span class="s">`json:&#34;apiVersion,omitempty&#34; protobuf:&#34;bytes,1,opt,name=apiVersion&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Path of the field to select in the specified API version.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">FieldPath</span> <span class="kt">string</span> <span class="s">`json:&#34;fieldPath&#34; protobuf:&#34;bytes,2,opt,name=fieldPath&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// ResourceFieldSelector represents container resources (cpu, memory) and their output format
+</span></span></span><span class="line"><span class="cl"><span class="c1">// +structType=atomic
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">ResourceFieldSelector</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Container name: required for volumes, optional for env vars
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ContainerName</span> <span class="kt">string</span> <span class="s">`json:&#34;containerName,omitempty&#34; protobuf:&#34;bytes,1,opt,name=containerName&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Required: resource to select
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Resource</span> <span class="kt">string</span> <span class="s">`json:&#34;resource&#34; protobuf:&#34;bytes,2,opt,name=resource&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Specifies the output format of the exposed resources, defaults to &#34;1&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Divisor</span> <span class="nx">resource</span><span class="p">.</span><span class="nx">Quantity</span> <span class="s">`json:&#34;divisor,omitempty&#34; protobuf:&#34;bytes,3,opt,name=divisor&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Quantity</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// i is the quantity in int64 scaled form, if d.Dec == nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">i</span> <span class="nx">int64Amount</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// d is the quantity in inf.Dec form if d.Dec != nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">d</span> <span class="nx">infDecAmount</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// s is the generated value of this quantity to avoid recalculation
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">s</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// Change Format at will. See the comment for Canonicalize for
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// more details.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Format</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Format lists the three possible formattings of a quantity.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Format</span> <span class="kt">string</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 SecretProjection 的定义中:</p>
+<ol>
+<li>FieldRef: 可以获取 Pod 中的字段(仅支持注解、标签、名称和名字空间)</li>
+<li>ResourceFieldRef: 可以获取选择容器的资源，目前仅支持资源限制与请求（limits.cpu、limits.memory、requests.cpu 和 requests.memory）</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">1. 使用fieldRef可以声明使用:
+</span></span><span class="line"><span class="cl">spec.nodeName - 宿主机名字
+</span></span><span class="line"><span class="cl">status.hostIP - 宿主机IP
+</span></span><span class="line"><span class="cl">metadata.name - Pod的名字
+</span></span><span class="line"><span class="cl">metadata.namespace - Pod的Namespace
+</span></span><span class="line"><span class="cl">status.podIP - Pod的IP
+</span></span><span class="line"><span class="cl">spec.serviceAccountName - Pod的Service Account的名字
+</span></span><span class="line"><span class="cl">metadata.uid - Pod的UID
+</span></span><span class="line"><span class="cl">metadata.labels[&#39;&lt;KEY&gt;&#39;] - 指定&lt;KEY&gt;的Label值
+</span></span><span class="line"><span class="cl">metadata.annotations[&#39;&lt;KEY&gt;&#39;] - 指定&lt;KEY&gt;的Annotation值
+</span></span><span class="line"><span class="cl">metadata.labels - Pod的所有Label
+</span></span><span class="line"><span class="cl">metadata.annotations - Pod的所有Annotation
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Downward API 定义稍微有些复杂下面是一个示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Pod</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">test-downwardapi-volume</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">zone</span><span class="p">:</span><span class="w"> </span><span class="l">us-est-coast</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">cluster</span><span class="p">:</span><span class="w"> </span><span class="l">test-cluster1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">rack</span><span class="p">:</span><span class="w"> </span><span class="l">rack-22</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">client-container</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">k8s.gcr.io/busybox</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;sh&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;-c&#34;</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">args</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="l">while true; do</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="l">if [[ -e /etc/podinfo/labels ]]; then</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="l">echo -en &#39;\n\n&#39;; cat /etc/podinfo/labels; fi;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="l">sleep 5;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="l">done;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">podinfo</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/etc/podinfo</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">readOnly</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">podinfo</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">projected</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">sources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span>- <span class="nt">downwardAPI</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">items</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span>- <span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;labels&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">fieldRef</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                  </span><span class="nt">fieldPath</span><span class="p">:</span><span class="w"> </span><span class="l">metadata.labels</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c"># 当前 Pod 的 Labels 字段的值，就会被 Kubernetes 自动挂载成为容器里的 /etc/podinfo/labels 文件</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="14-serviceaccounttokenprojection">1.4 ServiceAccountTokenProjection</h3>
+<p><a href="https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go#L1686" target="_blank" rel="noopener noreffer">ServiceAccountTokenProjection</a> 定义如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">ServiceAccountTokenProjection</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// audience is the intended audience of the token. A recipient of a token
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// must identify itself with an identifier specified in the audience of the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// token, and otherwise should reject the token. The audience defaults to the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// identifier of the apiserver.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Audience</span> <span class="kt">string</span> <span class="s">`json:&#34;audience,omitempty&#34; protobuf:&#34;bytes,1,rep,name=audience&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// expirationSeconds is the requested duration of validity of the service
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// account token. As the token approaches expiration, the kubelet volume
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// plugin will proactively rotate the service account token. The kubelet will
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// start trying to rotate the token if the token is older than 80 percent of
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// its time to live or if the token is older than 24 hours.Defaults to 1 hour
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// and must be at least 10 minutes.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// +optional
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ExpirationSeconds</span> <span class="o">*</span><span class="kt">int64</span> <span class="s">`json:&#34;expirationSeconds,omitempty&#34; protobuf:&#34;varint,2,opt,name=expirationSeconds&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// path is the path relative to the mount point of the file to project the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// token into.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Path</span> <span class="kt">string</span> <span class="s">`json:&#34;path&#34; protobuf:&#34;bytes,3,opt,name=path&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>ServiceAccountTokenProjection 中:</p>
+<ol>
+<li>Path: 相对于令牌投射目标文件的挂载点的路径</li>
+<li>Audience: 是令牌的目标受众，令牌的接收方必须用令牌受众中指定的一个标识符来标识自己，否则应拒绝此令牌。 受众默认为 apiserver 的标识符。</li>
+<li>ExpirationSeconds: 是所请求的服务账号令牌的有效期。 当令牌即将到期时，kubelet 卷插件将主动轮换服务账号令牌。 如果令牌超过其生存时间的 80% 或令牌超过 24 小时，kubelet 将开始尝试轮换令牌。 默认为 1 小时且必须至少为 10 分钟。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Pod</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/run/secrets/tokens</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">vault-token</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">serviceAccountName</span><span class="p">:</span><span class="w"> </span><span class="l">build-robot</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">vault-token</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">projected</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">sources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="nt">serviceAccountToken</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">vault-token</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">expirationSeconds</span><span class="p">:</span><span class="w"> </span><span class="m">7200</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">audience</span><span class="p">:</span><span class="w"> </span><span class="l">vault</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2023-03-02&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/71d9577b3005190aab29e3c9ab7ed7c9150234f5" target="_blank" title="commit by tao(tao@example.com) 71d9577b3005190aab29e3c9ab7ed7c9150234f5: pod volume">
+                                    <i class="fas fa-hashtag fa-fw"></i>71d9577</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/k8s/k8s_use/08_pod_volume/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" data-title="Pod Volume" data-hashtags="k8s"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" data-hashtag="k8s"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" data-title="Pod Volume"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" data-title="Pod Volume"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/k8s/k8s_use/08_pod_volume/" data-title="Pod Volume" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/k8s/">k8s</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/k8s/k8s_use/07_secret/" class="prev" rel="prev" title="Secret"><i class="fas fa-angle-left fa-fw"></i>Secret</a>
+            <a href="/posts/architecture/k8s/k8s_use/02_docker_net/" class="next" rel="next" title="容器网络">容器网络<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.111.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-08-04T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Pod Volume"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
