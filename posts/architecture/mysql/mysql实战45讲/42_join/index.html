@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>23 join - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="23 join" />
+<meta property="og:description" content="join 语句是怎么执行的 1. 实验环境 1 2 3 4 5 CREATE TABLE `t2` ( `id` int(11) NOT NULL, `a` int(11) DEFAULT NULL, `b` int(11) DEFAULT NULL, PRIMARY KEY (`id`), KEY `a` (`a`)) ENGINE=InnoDB; drop procedure idata;delimiter ;;create procedure idata()begin declare i int; set i=1; while(i&lt;=1000)do insert into t2 values(i, i, i); set i=i&#43;1; end while;end;;delimiter ;call idata(); create table t1 like" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-23T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-23T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="23 join"/>
+<meta name="twitter:description" content="join 语句是怎么执行的 1. 实验环境 1 2 3 4 5 CREATE TABLE `t2` ( `id` int(11) NOT NULL, `a` int(11) DEFAULT NULL, `b` int(11) DEFAULT NULL, PRIMARY KEY (`id`), KEY `a` (`a`)) ENGINE=InnoDB; drop procedure idata;delimiter ;;create procedure idata()begin declare i int; set i=1; while(i&lt;=1000)do insert into t2 values(i, i, i); set i=i&#43;1; end while;end;;delimiter ;call idata(); create table t1 like"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/41_count/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "23 join",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/42_join\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  4727 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/42_join\/","datePublished": "2020-03-23T00:00:00+00:00","dateModified": "2020-03-23T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">23 join</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-23">2020-03-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4727 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 10 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-实验环境">1. 实验环境</a></li>
+    <li><a href="#2-join-的合并算法">2. join 的合并算法</a>
+      <ul>
+        <li><a href="#21-index-nested-loop-join">2.1 Index Nested-Loop Join</a></li>
+        <li><a href="#22-simple-nested-loop-join">2.2 Simple Nested-Loop Join</a></li>
+        <li><a href="#23-block-nested-loop-join">2.3 Block Nested-Loop Join</a>
+          <ul>
+            <li><a href="#join_buffer_size">join_buffer_size</a></li>
+          </ul>
+        </li>
+        <li><a href="#24-join-使用建议">2.4 join 使用建议</a>
+          <ul>
+            <li><a href="#小表的定义">小表的定义</a></li>
+          </ul>
+        </li>
+        <li><a href="#25-bnl算法-对缓存的影响">2.5 BNL算法 对缓存的影响</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-mrr">3. MRR</a>
+      <ul>
+        <li><a href="#4-batched-key-accessbka">4. Batched Key Access(BKA)</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-bnl-算法优化">5. BNL 算法优化</a>
+      <ul>
+        <li><a href="#51-bnl-转-bka">5.1 BNL 转 BKA</a>
+          <ul>
+            <li><a href="#使用内存临时表">使用内存临时表</a></li>
+          </ul>
+        </li>
+        <li><a href="#52-扩展--hash-join">5.2 扩展 -hash join</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-问题">6. 问题</a>
+      <ul>
+        <li><a href="#61-join-的执行顺序">6.1 join 的执行顺序</a></li>
+        <li><a href="#62-simple-nested-loop-join-为什么比-bnl-性能低">6.2 Simple Nested Loop Join 为什么比 BNL 性能低</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>join 语句是怎么执行的</p>
+<!-- more -->
+<h2 id="1-实验环境">1. 实验环境</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">CREATE TABLE <span class="sb">`</span>t2<span class="sb">`</span> <span class="o">(</span>  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,  <span class="sb">`</span>a<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,  <span class="sb">`</span>b<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,  KEY <span class="sb">`</span>a<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>a<span class="sb">`</span><span class="o">))</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">drop procedure idata<span class="p">;</span>delimiter <span class="p">;;</span>create procedure idata<span class="o">()</span>begin  <span class="nb">declare</span> i int<span class="p">;</span>  <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>1<span class="p">;</span>  <span class="k">while</span><span class="o">(</span>i&lt;<span class="o">=</span>1000<span class="o">)</span><span class="k">do</span>    insert into t2 values<span class="o">(</span>i, i, i<span class="o">)</span><span class="p">;</span>    <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>i+1<span class="p">;</span>  end <span class="k">while</span><span class="p">;</span>end<span class="p">;;</span>delimiter <span class="p">;</span>call idata<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">create table t1 like t2<span class="p">;</span>insert into t1 <span class="o">(</span><span class="k">select</span> * from t2 where id&lt;<span class="o">=</span>100<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这两个表都有一个主键索引 id 和一个索引 a，字段 b 上无索引。存储过程 idata() 往表 t2 里插入了 1000 行数据，在表 t1 里插入的是 100 行数据。</p>
+<p>如果直接使用 join 语句，MySQL 优化器可能会选择表 t1 或 t2 作为驱动表，为了便于分析执行过程中的性能问题，我们改用 <code>straight_join</code> 让 MySQL 使用固定的连接方式执行查询，这样优化器只会按照我们指定的方式去 join。</p>
+<h2 id="2-join-的合并算法">2. join 的合并算法</h2>
+<p>依据是否能使用被驱动表索引，join 合并算法分为:</p>
+<ol>
+<li>Index Nested-Loop Join(NLJ): 可以使用被驱动表的索引</li>
+<li>Simple Nested-Loop Join: 不能使用被驱动表的索引，执行过程与 Index Nested-Loop Join 类似，MySQL 并没有使用</li>
+<li>Block Nested-Loop Join(BNL): 不能使用被驱动表的索引，会将全表扫描转换为内存比较</li>
+</ol>
+<h3 id="21-index-nested-loop-join">2.1 Index Nested-Loop Join</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="k">select</span> * from t1 straight_join t2 on <span class="o">(</span>t1.a<span class="o">=</span>t2.a<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/NLJ.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/NLJ.jpg, /images/mysql/MySQL45%e8%ae%b2/NLJ.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/NLJ.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/NLJ.jpg"
+        title="NLJ" /></p>
+<p>驱动表走全表扫描，而被驱动表是走树搜索。</p>
+<p>假设被驱动表的行数是 M。每次在被驱动表查一行数据，要先搜索索引 a，再搜索主键索引。每次搜索一棵树近似复杂度是以 2 为底的 M 的对数，记为 <code>log2M</code>，所以在被驱动表上查一行的时间复杂度是 <code>2*log2M</code>。假设驱动表的行数是 N，执行过程就要扫描驱动表 N 行，然后对于每一行，到被驱动表上匹配一次。因此整个执行过程，近似复杂度是 <code>N + N*2*log2M</code>。</p>
+<h3 id="22-simple-nested-loop-join">2.2 Simple Nested-Loop Join</h3>
+<p>驱动表是走全表扫描，被驱动表也是全表扫描，因此近似时间复杂度是<code>N + N*M</code></p>
+<h3 id="23-block-nested-loop-join">2.3 Block Nested-Loop Join</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="k">select</span> * from t1 straight_join t2 on <span class="o">(</span>t1.a<span class="o">=</span>t2.b<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/BNL.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/BNL.jpg, /images/mysql/MySQL45%e8%ae%b2/BNL.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/BNL.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/BNL.jpg"
+        title="BNL" /></p>
+<p>这个算法的执行过程是这样的:</p>
+<ol>
+<li>把表 t1 的数据读入线程内存 join_buffer 中，由于我们这个语句中写的是 <code>select *</code>，因此是把整个表 t1 放入了内存；</li>
+<li>扫描表 t2，把表 t2 中的每一行取出来，跟 join_buffer 中的数据做对比，满足 join 条件的，作为结果集的一部分返回。</li>
+</ol>
+<p>假设小表的行数是 N，大表的行数是 M，那么在这个算法里：两个表都做一次全表扫描，所以总的扫描行数是 M+N；内存中的判断次数是 <code>M*N</code>。因此近似时间复杂度是<code>N + N*M</code></p>
+<p>因此，从时间复杂度上来说，Simple Nested-Loop Join 与 Block Nested-Loop Join 是一样的。但是，Block Nested-Loop Join 算法的<code>M*N</code>次判断是内存操作，速度上会快很多，性能也更好。</p>
+<h4 id="join_buffer_size">join_buffer_size</h4>
+<p><code>join_buffer</code> 的大小是由参数 <code>join_buffer_size</code> 设定的，默认值是 256k。如果放不下表 t1 的所有数据话，就会分段存在，并执行上面的过程。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/BNL_2.png"
+        data-srcset="/images/mysql/MySQL45%e8%ae%b2/BNL_2.png, /images/mysql/MySQL45%e8%ae%b2/BNL_2.png 1.5x, /images/mysql/MySQL45%e8%ae%b2/BNL_2.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45讲/BNL_2.png"
+        title="BNL_2" /></p>
+<p>假设，驱动表的数据行数是 N，需要分 K 段才能完成算法流程，被驱动表的数据行数是 M， <code>k=size of N /join_buffer_size</code></p>
+<p>所以，在这个算法的执行过程中：</p>
+<ol>
+<li>扫描行数是 <code>N+N*M/join_buffer_size</code>；</li>
+<li>内存判断 <code>N*M</code> 次。</li>
+</ol>
+<p>显然:</p>
+<ol>
+<li>使用小表作为驱动表时，扫描行数少</li>
+<li>join_buffer_size 越大，对被驱动表的全表扫描次数越少</li>
+</ol>
+<h3 id="24-join-使用建议">2.4 join 使用建议</h3>
+<ol>
+<li>如果可以使用 Index Nested-Loop Join 算法，也就是说可以用上被驱动表上的索引，其实是没问题的；</li>
+<li>如果使用 Block Nested-Loop Join 算法，扫描行数就会过多。尤其是在大表上的 join 操作，这样可能要扫描被驱动表很多次，会占用大量的系统资源。所以这种 join 尽量不要用。判断标准就是Extra 字段里面有没有出现“Block Nested Loop”字样。Explain下，没有用index nested-loop 的全要优化。</li>
+<li>总是应该使用小表做驱动表。</li>
+</ol>
+<h4 id="小表的定义">小表的定义</h4>
+<p>在决定哪个表做驱动表的时候，应该是两个表按照各自的条件过滤，过滤完成之后，计算参与 join 的各个字段的总数据量，数据量小的那个表，就是“小表”，应该作为驱动表。(<strong>NLJ 算法是先过滤，再join</strong>)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># t2 过滤只有 50 行，所以 t2 为小表</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t1 straight_join t2 on <span class="o">(</span>t1.b<span class="o">=</span>t2.b<span class="o">)</span> where t2.id&lt;<span class="o">=</span>50<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t2 straight_join t1 on <span class="o">(</span>t1.b<span class="o">=</span>t2.b<span class="o">)</span> where t2.id&lt;<span class="o">=</span>50<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># t1，t2 都是100行，但是 t1 只需要b 字段，t2 需要所有字段，所以 t1 是小表</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> t1.b,t2.* from  t1  straight_join t2 on <span class="o">(</span>t1.b<span class="o">=</span>t2.b<span class="o">)</span> where t2.id&lt;<span class="o">=</span>100<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> t1.b,t2.* from  t2  straight_join t1 on <span class="o">(</span>t1.b<span class="o">=</span>t2.b<span class="o">)</span> where t2.id&lt;<span class="o">=</span>100<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="25-bnl算法-对缓存的影响">2.5 BNL算法 对缓存的影响</h3>
+<p>如果一个使用 BNL 算法的 join 语句，多次扫描一个冷表，而且这个语句执行时间超过 1 秒，就会在再次扫描冷表的时候，把冷表的数据页移到 LRU 链表头部。这种情况对应的，是冷表的数据量小于整个 Buffer Pool 的 3/8，能够完全放入 old 区域的情况。如果这个冷表很大，就会出现另外一种情况：业务正常访问的数据页，没有机会进入 young 区域。由于优化机制的存在，一个正常访问的数据页，要进入 young 区域，需要隔 1 秒后再次被访问到。但是，由于我们的 join 语句在循环读磁盘和淘汰内存页，进入 old 区域的数据页，很可能在 1 秒之内就被淘汰了。这样，就会导致这个 MySQL 实例的 Buffer Pool 在这段时间内，young 区域的数据页没有被合理地淘汰。</p>
+<p>大表 join 操作虽然对 IO 有影响，但是在语句执行结束后，对 IO 的影响也就结束了。但是，对 Buffer Pool 的影响就是持续性的，需要依靠后续的查询请求慢慢恢复内存命中率。</p>
+<p>为了减少这种影响，你可以考虑增大 join_buffer_size 的值，减少对被驱动表的扫描次数。也就是说，BNL 算法对系统的影响主要包括三个方面：</p>
+<ol>
+<li>可能会多次扫描被驱动表，占用磁盘 IO 资源；</li>
+<li>判断 join 条件需要执行 M*N 次对比（M、N 分别是两张表的行数），如果是大表就会占用非常多的 CPU 资源；</li>
+<li>可能会导致 Buffer Pool 的热数据被淘汰，影响内存命中率。</li>
+</ol>
+<p>我们执行语句之前，需要通过理论分析和查看 explain 结果的方式，确认是否要使用 BNL 算法。如果确认优化器会使用 BNL 算法，就需要做优化。优化的常见做法是，给被驱动表的 join 字段加上索引，把 BNL 算法转成 BKA 算法。</p>
+<h2 id="3-mrr">3. MRR</h2>
+<p>Multi-Range Read 优化 (MRR)主要目的是尽量使用顺序读盘。原理是这样的，因为大多数的数据都是按照主键递增顺序插入得到的，所以我们可以认为，如果按照主键的递增顺序查询的话，对磁盘的读比较接近顺序读，能够提升读性能。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/MRR.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/MRR.jpg, /images/mysql/MySQL45%e8%ae%b2/MRR.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/MRR.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/MRR.jpg"
+        title="MRR" /></p>
+<p>对于语句 <code>select * from t1 where a&gt;=1 and a&lt;=100;</code> a 上有索引，语句的执行过程是这样的:</p>
+<ol>
+<li>根据索引 a，定位到满足条件的记录，将 id 值放入 read_rnd_buffer 中 ;</li>
+<li>将 read_rnd_buffer 中的 id 进行递增排序；</li>
+<li>排序后的 id 数组，依次到主键 id 索引中查记录，并作为结果返回。</li>
+</ol>
+<p>这里，<code>read_rnd_buffer</code> 的大小是由 <code>read_rnd_buffer_size</code> 参数控制的。如果步骤 1 中，read_rnd_buffer 放满了，就会先执行完步骤 2 和 3，然后清空 read_rnd_buffer。之后继续找索引 a 的下个记录，并继续循环。</p>
+<p>如果你想要稳定地使用 MRR 优化的话，需要设置<code>set optimizer_switch=&quot;mrr_cost_based=off&quot;</code>。（官方文档的说法，是现在的优化器策略，判断消耗的时候，会更倾向于不使用 MRR，把 <code>mrr_cost_based</code> 设置为 off，就是固定使用 MRR 了。）</p>
+<p>MRR 能够提升性能的核心在于，这条查询语句在索引 a 上做的是一个范围查询（也就是说，这是一个多值查询），可以得到足够多的主键 id。这样通过排序以后，再去主键索引查数据，才能体现出“顺序性”的优势。</p>
+<h3 id="4-batched-key-accessbka">4. Batched Key Access(BKA)</h3>
+<p>MySQL 在 5.6 版本后开始引入的 Batched Key Access(BKA) 算法了。这个 BKA 算法，其实就是对 NLJ 算法的优化。BKA 依赖的就是 MRR。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/BKA.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/BKA.png, /images/mysql/MySQL45%e8%ae%b2/BKA.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/BKA.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/BKA.png"
+        title="BKA" /></p>
+<ol>
+<li>NLJ 算法执行的逻辑是：从驱动表 t1，一行行地取出 a 的值，再到被驱动表 t2 去做 join。对于表 t2 来说，每次都是匹配一个值。这时，MRR 的优势就用不上了。</li>
+<li>我们可以把表 t1 的数据取出来一部分放入  join_buffer 中，然后应用 MRR</li>
+</ol>
+<p>要使用BKA，在SQL查询前需要设置:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nb">set</span> <span class="nv">optimizer_switch</span><span class="o">=</span><span class="s1">&#39;mrr=on,mrr_cost_based=off,batched_key_access=on&#39;</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用 BKA 算法的时候，并不是“先计算两个表 join 的结果，再跟第三个表 join”，而是直接嵌套查询的。</p>
+<h2 id="5-bnl-算法优化">5. BNL 算法优化</h2>
+<h3 id="51-bnl-转-bka">5.1 BNL 转 BKA</h3>
+<p>一些情况下，我们可以直接在被驱动表上建索引，这时就可以直接转成 BKA 算法了。但是，有时候你确实会碰到一些不适合在被驱动表上建索引的情况。比如下面这个语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># t1 有1000行，t2 过滤后有 2000 行因此小表是 t1</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t1 join t2 on <span class="o">(</span>t1.b<span class="o">=</span>t2.b<span class="o">)</span> where t2.b&gt;<span class="o">=</span><span class="m">1</span> and t2.b&lt;<span class="o">=</span>2000<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>表 t2 中插入了 100 万行数据，但是经过 where 条件过滤后，需要参与 join 的只有 2000 行数据。如果这条语句同时是一个低频的 SQL 语句，那么再为这个语句在表 t2 的字段 b 上创建一个索引就很浪费了。</p>
+<p>如果使用 BNL 算法来 join 的话，这个语句的执行流程是这样的：</p>
+<ol>
+<li>把表 t1 的所有字段取出来，存入 join_buffer 中。这个表只有 1000 行，join_buffer_size 默认值是 256k，可以完全存入。</li>
+<li>扫描表 t2，取出每一行数据跟 join_buffer 中的数据进行对比</li>
+</ol>
+<ul>
+<li>如果不满足 t1.b=t2.b，则跳过；</li>
+<li>如果满足 t1.b=t2.b, 再判断其他条件，也就是是否满足 t2.b 处于<code>[1,2000]</code>的条件，如果是，就作为结果集的一部分返回，否则跳过。</li>
+</ul>
+<p>对于表 t2 的每一行，判断 join 是否满足的时候，都需要遍历 join_buffer 中的所有行。因此判断等值条件的次数是 <code>1000*100 万 =10 亿次</code>，这个判断的工作量很大。</p>
+<p>这时候，我们可以考虑使用临时表。使用临时表的大致思路是：</p>
+<ol>
+<li>把表 t2 中满足条件的数据放在临时表 tmp_t 中；</li>
+<li>为了让 join 使用 BKA 算法，给临时表 tmp_t 的字段 b 加上索引；</li>
+<li>让表 t1 和 tmp_t 做 join 操作。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">create temporary table temp_t<span class="o">(</span>id int primary key, a int, b int, index<span class="o">(</span>b<span class="o">))</span><span class="nv">engine</span><span class="o">=</span>innodb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into temp_t <span class="k">select</span> * from t2 where b&gt;<span class="o">=</span><span class="m">1</span> and b&lt;<span class="o">=</span>2000<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t1 join temp_t on <span class="o">(</span>t1.b<span class="o">=</span>temp_t.b<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>基于临时表的改进方案，对于能够提前过滤出小数据的 join 语句来说，效果还是很好的。总体来看，不论是在原表上加索引，还是用有索引的临时表，我们的思路都是让 join 语句能够用上被驱动表上的索引，来触发 BKA 算法，提升查询性能。</p>
+<h4 id="使用内存临时表">使用内存临时表</h4>
+<p>在这个示例中，更好的方式是使用内存临时表代替 Innodb 临时表，原因有三个：</p>
+<ol>
+<li>相比于 InnoDB 表，使用内存表不需要写磁盘，往表 temp_t 的写数据的速度更快；</li>
+<li>索引 b 使用 hash 索引，查找的速度比 B-Tree 索引快；</li>
+<li>临时表数据只有 2000 行，占用的内存有限。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 将临时表 temp_t 改成内存临时表，并且在字段 b 上创建一个 hash 索引。</span>
+</span></span><span class="line"><span class="cl">create temporary table temp_t<span class="o">(</span>id int primary key, a int, b int, index <span class="o">(</span>b<span class="o">))</span><span class="nv">engine</span><span class="o">=</span>memory<span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into temp_t <span class="k">select</span> * from t2 where b&gt;<span class="o">=</span><span class="m">1</span> and b&lt;<span class="o">=</span>2000<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t1 join temp_t on <span class="o">(</span>t1.b<span class="o">=</span>temp_t.b<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="52-扩展--hash-join">5.2 扩展 -hash join</h3>
+<p>如果 join_buffer 里面维护的不是一个无序数组，而是一个哈希表的话，那么就不是 10 亿次判断，而是 100 万次 hash 查找。这，也正是 MySQL 的优化器和执行器一直被诟病的一个原因：不支持哈希 join。并且，MySQL 官方的 roadmap，也是迟迟没有把这个优化排上议程。</p>
+<p>实际上，这个优化思路，我们可以自己实现在业务端。实现流程大致如下：</p>
+<ol>
+<li>select * from t1;取得表 t1 的全部 1000 行数据，在业务端存入一个 hash 结构，比如 C++ 里的 set、PHP 的数组这样的数据结构。</li>
+<li>select * from t2 where b&gt;=1 and b&lt;=2000; 获取表 t2 中满足条件的 2000 行数据。</li>
+<li>把这 2000 行数据，一行一行地取到业务端，到 hash 结构的数据表中寻找匹配的数据。满足匹配的条件的这行数据，就作为结果集的一行</li>
+</ol>
+<h2 id="6-问题">6. 问题</h2>
+<h3 id="61-join-的执行顺序">6.1 join 的执行顺序</h3>
+<p>问题:</p>
+<ol>
+<li>如果用 left join 的话，左边的表一定是驱动表吗？</li>
+<li>如果两个表的 join 包含多个条件的等值匹配，是都要写到 on 里面呢，还是只把一个条件写到 on 里面，其他条件写到 where 部分？</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">create table a<span class="o">(</span>f1 int, f2 int, index<span class="o">(</span>f1<span class="o">))</span><span class="nv">engine</span><span class="o">=</span>innodb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">create table b<span class="o">(</span>f1 int, f2 int<span class="o">)</span><span class="nv">engine</span><span class="o">=</span>innodb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into a values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into b values<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>第二个问题，其实就是下面这两种写法的区别：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="k">select</span> * from a left join b on<span class="o">(</span>a.f1<span class="o">=</span>b.f1<span class="o">)</span> and <span class="o">(</span>a.f2<span class="o">=</span>b.f2<span class="o">)</span><span class="p">;</span> /*Q1*/
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from a left join b on<span class="o">(</span>a.f1<span class="o">=</span>b.f1<span class="o">)</span> where <span class="o">(</span>a.f2<span class="o">=</span>b.f2<span class="o">)</span><span class="p">;</span>/*Q2*/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 MySQL 里，NULL 跟任何值执行等值判断和不等值判断的结果，都是 NULL。这里包括， select NULL = NULL 的结果，也是返回 NULL。</p>
+<p>因此，语句 Q2 里面 where a.f2=b.f2 就表示“找到这两个表里面，f1、f2 对应同时存在且相同的行。”虽然用的是 left join，但是语义跟 join 是一致的。因此，优化器就把这条语句的 left join 改写成了 join，然后因为表 a 的 f1 上有索引，就把表 b 作为驱动表，这样就可以用上 NLJ 算法。</p>
+<p>因此:</p>
+<ol>
+<li>这个例子说明，即使我们在 SQL 语句中写成 left join，执行过程还是有可能不是从左到右连接的。也就是说，使用 left join 时，左边的表不一定是驱动表。</li>
+<li>如果需要 left join 的语义，就不能把被驱动表的字段放在 where 条件里面做等值判断或不等值判断，必须都写在 on 里面。</li>
+<li>join 本身表示的就是同时存在并相等，因此join 将判断条件是否全部放在 on 部分就没有区别了</li>
+</ol>
+<h3 id="62-simple-nested-loop-join-为什么比-bnl-性能低">6.2 Simple Nested Loop Join 为什么比 BNL 性能低</h3>
+<p>上面我们说 BNL 算法和 Simple Nested Loop Join 算法都是要判断 M*N 次（M 和 N 分别是 join 的两个表的行数），但是 Simple Nested Loop Join 算法的每轮判断都要走全表扫描，因此性能上 BNL 算法执行起来会快很多。</p>
+<p>疑问是，Simple Nested Loop Join 算法，其实也是把数据读到内存里，然后按照匹配条件进行判断，为什么性能差距会这么大呢？</p>
+<p>释这个问题，需要用到 MySQL 中索引结构和 Buffer Pool 的相关知识点：</p>
+<ol>
+<li>在对被驱动表做全表扫描的时候，如果数据没有在 Buffer Pool 中，就需要等待这部分数据从磁盘读入；从磁盘读入数据到内存中，会影响正常业务的 Buffer Pool 命中率，而且这个算法天然会对被驱动表的数据做多次访问，更容易将这些数据页放到 Buffer Pool 的头部；</li>
+<li>即使被驱动表数据都在内存中，每次查找“下一个记录的操作”，都是类似指针操作。而 join_buffer 中是数组，遍历的成本更低。所以说，BNL 算法的性能会更好。</li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-23</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" data-title="23 join" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" data-title="23 join"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" data-title="23 join"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/42_join/" data-title="23 join" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/41_count/" class="prev" rel="prev" title="22 常见语句的执行逻辑"><i class="fas fa-angle-left fa-fw"></i>22 常见语句的执行逻辑</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/" class="next" rel="next" title="24 临时表">24 临时表<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-23T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"23 join"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>19 MySQL 主库监测 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="19 MySQL 主库监测" />
+<meta property="og:description" content="怎么判断一个主库是否出了问题？ 1. 主库监测 在一主一备的双 M 架构里，主备切换只需要把客户端流量切到备库；而在一主多从架构里，主备切换除了要把客户" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-19T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-19T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="19 MySQL 主库监测"/>
+<meta name="twitter:description" content="怎么判断一个主库是否出了问题？ 1. 主库监测 在一主一备的双 M 架构里，主备切换只需要把客户端流量切到备库；而在一主多从架构里，主备切换除了要把客户"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/26_%E8%AF%AF%E5%88%A0%E6%81%A2%E5%A4%8D/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "19 MySQL 主库监测",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  1566 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B\/","datePublished": "2020-03-19T00:00:00+00:00","dateModified": "2020-03-19T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">19 MySQL 主库监测</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-19">2020-03-19</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1566 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-主库监测">1. 主库监测</a>
+      <ul>
+        <li><a href="#11-select-1-判断">1.1 select 1 判断</a>
+          <ul>
+            <li><a href="#innodb_thread_concurrency">innodb_thread_concurrency</a></li>
+            <li><a href="#并发连接与并发查询">并发连接与并发查询</a></li>
+          </ul>
+        </li>
+        <li><a href="#12-更新判断">1.2 更新判断</a></li>
+        <li><a href="#13-内部统计">1.3 内部统计</a>
+          <ul>
+            <li><a href="#启用-performance_schema">启用 performance_schema</a></li>
+            <li><a href="#异常检测">异常检测</a></li>
+          </ul>
+        </li>
+        <li><a href="#14-方案总结">1.4 方案总结</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>怎么判断一个主库是否出了问题？</p>
+<!-- more -->
+<h2 id="1-主库监测">1. 主库监测</h2>
+<p>在一主一备的双 M 架构里，主备切换只需要把客户端流量切到备库；而在一主多从架构里，主备切换除了要把客户端流量切到备库外，还需要把从库接到新主库上。</p>
+<p>主备切换有两种场景，一种是主动切换，一种是被动切换。而其中被动切换，往往是因为主库出问题了，由 HA 系统发起的。那怎么判断主库是否出了问题，有以下几种方案:</p>
+<ol>
+<li>select 1 判断</li>
+</ol>
+<h3 id="11-select-1-判断">1.1 select 1 判断</h3>
+<p>select 1 成功返回，只能说明这个库的进程还在，并不能说明主库没问题。</p>
+<p>innodb_thread_concurrency 参数的目的是，控制 InnoDB 的并发线程上限。也就是说，一旦并发线程数达到这个值，InnoDB 在接收到新请求的时候，就会进入等待状态，直到有线程退出。此时select 1 是能执行成功的，但是查询表 t 的语句会被堵住，系统已经处于不可用状态。</p>
+<h4 id="innodb_thread_concurrency">innodb_thread_concurrency</h4>
+<p>innodb_thread_concurrency 这个参数的默认值是 0，表示不限制并发线程数量。但是，不限制并发线程数肯定是不行的。因为，一个机器的 CPU 核数有限，线程全冲进来，上下文切换的成本就会太高。</p>
+<p>通常情况下，我们建议把 innodb_thread_concurrency 设置为 64~128 之间的值。</p>
+<p>需要注意的是</p>
+<ol>
+<li>线程处于空闲状态，不算在并发线程里面。</li>
+<li>在线程进入锁等待以后，也就是说等行锁（也包括间隙锁）的线程也不算在并发线程内</li>
+<li>对于真正执行的查询，比如 <code>select sleep(100) from t</code>，还是要算进并发线程内</li>
+</ol>
+<h4 id="并发连接与并发查询">并发连接与并发查询</h4>
+<p>show processlist 的结果指的就是并发连接。而“当前正在执行”的语句，才是我们所说的并发查询。</p>
+<ol>
+<li>并发连接数达到几千个影响并不大，就是多占一些内存而已</li>
+<li>并发查询太高才是 CPU 杀手。这也是为什么我们需要设置 innodb_thread_concurrency 参数的原因</li>
+</ol>
+<h3 id="12-更新判断">1.2 更新判断</h3>
+<p>为了能够检测 InnoDB 并发线程数过多导致的系统不可用情况，我们需要找一个访问 InnoDB 的场景。</p>
+<p>同时更新事务要写 binlog，而一旦 binlog 所在磁盘的空间占用率达到 100%，那么所有的更新语句和事务提交的 commit 语句就都会被堵住。但是，系统这时候还是可以正常读数据的。因此我们应该使用更新语句，而不是查询语句作为监控语句。更新语句类似于:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mysql&gt; update mysql.health_check <span class="nb">set</span> <span class="nv">t_modified</span><span class="o">=</span>now<span class="o">()</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>timestamp 字段，用来表示最后一次执行检测的时间。</p>
+<p>对于双主模型，如果主库 A 和备库 B 都用相同的更新命令进行监测，就可能出现行冲突。我们可以在 mysql.health_check 表上存入多行数据，并用 A、B 的 server_id 做主键:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mysql&gt; CREATE TABLE <span class="sb">`</span>health_check<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>t_modified<span class="sb">`</span> timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* 检测命令 */
+</span></span><span class="line"><span class="cl">insert into mysql.health_check<span class="o">(</span>id, t_modified<span class="o">)</span> values <span class="o">(</span>@@server_id, now<span class="o">())</span> on duplicate key update <span class="nv">t_modified</span><span class="o">=</span>now<span class="o">()</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>更新判断是一个相对比较常用的方案了，不过依然存在一些问题。其中，“判定慢”一直是让 DBA 头疼的问题。这里涉及到的是服务器 IO 资源分配的问题。检测使用的 update 命令，需要的IO资源很少，大概率可以执行成功。但可能此时系统的 IO 利用率已经达到 100%，正常的 SQL 已经执行的很慢了。</p>
+<p>根本原因是我们上面说的所有方法，都是基于外部检测的。外部检测天然有一个问题，就是随机性。因为，外部检测都需要定时轮询，所以系统可能已经出问题了，但是却需要等到下一个检测发起执行语句的时候，我们才有可能发现问题。</p>
+<h3 id="13-内部统计">1.3 内部统计</h3>
+<p>MySQL 5.6 版本以后提供的 performance_schema 库，就在 file_summary_by_event_name 表里统计了每次 IO 请求的时间。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">MariaDB <span class="o">[</span>performance_schema<span class="o">]</span>&gt; <span class="k">select</span> * from file_summary_by_event_name where event_name like <span class="s2">&#34;%innodb_log%&#34;</span> <span class="se">\G</span>
+</span></span><span class="line"><span class="cl">*************************** 1. row ***************************
+</span></span><span class="line"><span class="cl">               EVENT_NAME: wait/io/file/innodb/innodb_log_file   <span class="c1"># 统计的是 redo log 的写入时间</span>
+</span></span><span class="line"><span class="cl">               COUNT_STAR: <span class="m">94</span>                    <span class="c1"># 所有 IO 的总次数</span>
+</span></span><span class="line"><span class="cl">           SUM_TIMER_WAIT: <span class="m">247391627463</span>          <span class="c1"># 所有 IO 类型的统计，单位是皮秒</span>
+</span></span><span class="line"><span class="cl">           MIN_TIMER_WAIT: <span class="m">0</span>
+</span></span><span class="line"><span class="cl">           AVG_TIMER_WAIT: <span class="m">2631825709</span>
+</span></span><span class="line"><span class="cl">           MAX_TIMER_WAIT: <span class="m">11638807401</span>
+</span></span><span class="line"><span class="cl">               
+</span></span><span class="line"><span class="cl">               COUNT_READ: <span class="m">6</span>                     <span class="c1"># 读操作的统计     </span>
+</span></span><span class="line"><span class="cl">           SUM_TIMER_READ: <span class="m">30000390</span>
+</span></span><span class="line"><span class="cl">           MIN_TIMER_READ: <span class="m">0</span>
+</span></span><span class="line"><span class="cl">           AVG_TIMER_READ: <span class="m">5000065</span>
+</span></span><span class="line"><span class="cl">           MAX_TIMER_READ: <span class="m">13752883</span>
+</span></span><span class="line"><span class="cl"> SUM_NUMBER_OF_BYTES_READ: <span class="m">68096</span>                 <span class="c1"># 总共从 redo log 统计了多少字节</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">              COUNT_WRITE: <span class="m">43</span>                    <span class="c1"># 写操作统计</span>
+</span></span><span class="line"><span class="cl">          SUM_TIMER_WRITE: <span class="m">1621529472</span>
+</span></span><span class="line"><span class="cl">          MIN_TIMER_WRITE: <span class="m">0</span>
+</span></span><span class="line"><span class="cl">          AVG_TIMER_WRITE: <span class="m">37709927</span>
+</span></span><span class="line"><span class="cl">          MAX_TIMER_WRITE: <span class="m">73538815</span>
+</span></span><span class="line"><span class="cl">SUM_NUMBER_OF_BYTES_WRITE: <span class="m">24576</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">               COUNT_MISC: <span class="m">45</span>                    <span class="c1"># 其他类型的统计，对于redolog 就是 fsync </span>
+</span></span><span class="line"><span class="cl">           SUM_TIMER_MISC: <span class="m">245740097601</span>
+</span></span><span class="line"><span class="cl">           MIN_TIMER_MISC: <span class="m">0</span>
+</span></span><span class="line"><span class="cl">           AVG_TIMER_MISC: <span class="m">5460890834</span>
+</span></span><span class="line"><span class="cl">           MAX_TIMER_MISC: <span class="m">11638807401</span>
+</span></span><span class="line"><span class="cl"><span class="m">1</span> row in <span class="nb">set</span> <span class="o">(</span>0.001 sec<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="启用-performance_schema">启用 performance_schema</h4>
+<p>打开所有的 performance_schema 项，性能大概会下降 10% 左右。所以，我建议你只打开自己需要的项进行统计。你可以通过下面的方法打开或者关闭某个具体项的统计。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 打开 redo log 的统计项</span>
+</span></span><span class="line"><span class="cl">mysql&gt; update setup_instruments <span class="nb">set</span> <span class="nv">ENABLED</span><span class="o">=</span><span class="s1">&#39;YES&#39;</span>, <span class="nv">Timed</span><span class="o">=</span><span class="s1">&#39;YES&#39;</span> where name like <span class="s1">&#39;%wait/io/file/innodb/innodb_log_file%&#39;</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="异常检测">异常检测</h4>
+<p>比如，你可以设定阈值，单次 IO 请求时间超过 200 毫秒属于异常，然后使用类似下面这条语句作为检测逻辑。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mysql&gt; <span class="k">select</span> event_name,MAX_TIMER_WAIT  FROM performance_schema.file_summary_by_event_name where event_name in <span class="o">(</span><span class="s1">&#39;wait/io/file/innodb/innodb_log_file&#39;</span>,<span class="s1">&#39;wait/io/file/sql/binlog&#39;</span><span class="o">)</span> and MAX_TIMER_WAIT&gt;200*1000000000<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 清空统计数据，以免对下次检测产生影响</span>
+</span></span><span class="line"><span class="cl">mysql&gt; truncate table performance_schema.file_summary_by_event_name<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="14-方案总结">1.4 方案总结</h3>
+<p>建议是优先考虑 update 系统表，然后再配合增加检测 performance_schema 的信息。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-19</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" data-title="19 MySQL 主库监测" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" data-title="19 MySQL 主库监测"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" data-title="19 MySQL 主库监测"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" data-title="19 MySQL 主库监测" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" class="prev" rel="prev" title="18 MySQL 读写分离"><i class="fas fa-angle-left fa-fw"></i>18 MySQL 读写分离</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/26_%E8%AF%AF%E5%88%A0%E6%81%A2%E5%A4%8D/" class="next" rel="next" title="20 MySQL 误删恢复">20 MySQL 误删恢复<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-19T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"19 MySQL 主库监测"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

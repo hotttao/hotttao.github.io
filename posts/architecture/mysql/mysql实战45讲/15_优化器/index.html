@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>13 MYSQL 索引选择 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="13 MYSQL 索引选择" />
+<meta property="og:description" content="MySQL 如何选择索引 1. 优化器逻辑 选择索引是优化器的工作。而优化器选择索引的目的，是找到一个最优的执行方案，并用最小的代价去执行语句。优化器会考虑扫" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-13T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-13T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="13 MYSQL 索引选择"/>
+<meta name="twitter:description" content="MySQL 如何选择索引 1. 优化器逻辑 选择索引是优化器的工作。而优化器选择索引的目的，是找到一个最优的执行方案，并用最小的代价去执行语句。优化器会考虑扫"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/16_%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "13 MYSQL 索引选择",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/15_%E4%BC%98%E5%8C%96%E5%99%A8\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  1705 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/15_%E4%BC%98%E5%8C%96%E5%99%A8\/","datePublished": "2020-03-13T00:00:00+00:00","dateModified": "2020-03-13T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">13 MYSQL 索引选择</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-13">2020-03-13</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1705 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-优化器逻辑">1. 优化器逻辑</a></li>
+    <li><a href="#2-扫描行数">2. 扫描行数</a>
+      <ul>
+        <li><a href="#21-索引区分度">2.1 索引区分度</a></li>
+        <li><a href="#22-索引选择异常和处理">2.2 索引选择异常和处理</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-mysql-选错索引的示例">3. MySQL 选错索引的示例</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>MySQL 如何选择索引</p>
+<!-- more -->
+<h2 id="1-优化器逻辑">1. 优化器逻辑</h2>
+<p>选择索引是优化器的工作。而优化器选择索引的目的，是找到一个最优的执行方案，并用最小的代价去执行语句。优化器会考虑扫描行数、是否使用临时表、是否排序等因素进行综合判断。对于普通索引来说，优化器需要把回表的代价算进去。</p>
+<h2 id="2-扫描行数">2. 扫描行数</h2>
+<p>MySQL 在真正开始执行语句之前，并不能精确地知道满足这个条件的记录有多少条，而只能根据统计信息来估算记录数。这个统计信息就是索引的“区分度”。</p>
+<ol>
+<li>一个索引上不同的值越多，这个索引的区分度就越好。</li>
+<li>一个索引上不同的值的个数，我们称之为“基数”（cardinality）。这个基数越大，索引的区分度越好。</li>
+</ol>
+<h3 id="21-索引区分度">2.1 索引区分度</h3>
+<p><code>show index from t</code> 可以查看索引的基数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">MariaDB <span class="o">[</span>tsong<span class="o">]</span>&gt; show index from course <span class="se">\G</span>
+</span></span><span class="line"><span class="cl">*************************** 1. row ***************************
+</span></span><span class="line"><span class="cl">        Table: course
+</span></span><span class="line"><span class="cl">   Non_unique: <span class="m">0</span>
+</span></span><span class="line"><span class="cl">     Key_name: PRIMARY
+</span></span><span class="line"><span class="cl"> Seq_in_index: <span class="m">1</span>
+</span></span><span class="line"><span class="cl">  Column_name: id
+</span></span><span class="line"><span class="cl">    Collation: A
+</span></span><span class="line"><span class="cl">  Cardinality: <span class="m">3</span>                  <span class="c1"># 基数</span>
+</span></span><span class="line"><span class="cl">     Sub_part: NULL
+</span></span><span class="line"><span class="cl">       Packed: NULL
+</span></span><span class="line"><span class="cl">         Null:
+</span></span><span class="line"><span class="cl">   Index_type: BTREE
+</span></span><span class="line"><span class="cl">      Comment:
+</span></span><span class="line"><span class="cl">Index_comment:
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>那 mysql 是如何计算索引的基数呢？ mysql 用的采样统计的方法:</p>
+<ol>
+<li>InnoDB 默认会选择 N 个数据页，统计这些页面上的不同值，得到一个平均值，然后乘以这个索引的页面数，就得到了这个索引的基数</li>
+<li>当变更的数据行数超过 1/M 的时候，会自动触发重新做一次索引统计</li>
+<li>MySQL 中，有两种存储索引统计的方式，通过设置参数 innodb_stats_persistent 的值来选择：
+<ul>
+<li>=ON: 表示统计信息会持久化存储。这时，默认的 N 是 20，M 是 10</li>
+<li>=OFF: 表示统计信息只存储在内存中。这时，默认的 N 是 8，M 是 16</li>
+</ul>
+</li>
+</ol>
+<p>因为是采样统计，所以这个基数是很容易不准确的，如果索引统计不准确，可以使用 <code>analyze table t</code> 重新统计索引信息。在实践中，如果你发现 explain 的结果预估的 rows 值跟实际情况差距比较大，可以采用这个方法来处理。</p>
+<p>索引统计只是一个输入，对于一个具体的语句来说，优化器还要判断，执行这个语句本身要扫描多少行。</p>
+<h3 id="22-索引选择异常和处理">2.2 索引选择异常和处理</h3>
+<p>如果只是索引统计不准确，通过 analyze 命令可以解决很多问题，但优化器可不止是看扫描行数。即便索引统计准确，MySQL 照样有可能选错索引。索引选择异常有以下几种处理方法:</p>
+<ol>
+<li>采用 force index 强行选择一个索引，使用 force index 最主要的问题是变更的及时性</li>
+<li>修改语句，引导 MySQL 使用我们期望的索引</li>
+<li>我们可以新建一个更合适的索引，来提供给优化器做选择，或删掉误用的索引。</li>
+</ol>
+<h2 id="3-mysql-选错索引的示例">3. MySQL 选错索引的示例</h2>
+<p>我们创建如下表，并往表内插入10万行数据。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">CREATE TABLE <span class="sb">`</span>t<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>a<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>b<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>a<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>a<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>b<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>b<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB；
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">delimiter <span class="p">;;</span>
+</span></span><span class="line"><span class="cl">create procedure idata<span class="o">()</span>
+</span></span><span class="line"><span class="cl">begin
+</span></span><span class="line"><span class="cl">  <span class="nb">declare</span> i int<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>1<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">while</span><span class="o">(</span>i&lt;<span class="o">=</span>100000<span class="o">)</span><span class="k">do</span>
+</span></span><span class="line"><span class="cl">    insert into t values<span class="o">(</span>i, i, i<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>i+1<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  end <span class="k">while</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">end<span class="p">;;</span>
+</span></span><span class="line"><span class="cl">delimiter <span class="p">;</span>
+</span></span><span class="line"><span class="cl">call idata<span class="o">()</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们做如下操作:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/index_choose_error.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/index_choose_error.png, /images/mysql/MySQL45%e8%ae%b2/index_choose_error.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/index_choose_error.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/index_choose_error.png"
+        title="index_choose_error" /></p>
+<p>这时候，session B 的查询语句 select * from t where a between 10000 and 20000 就不会再选择索引 a 了。作为对比我们使用 force index(a) 来让优化器强制使用索引 a。下面的三条 SQL 语句，就是这个实验过程。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nb">set</span> <span class="nv">long_query_time</span><span class="o">=</span>0<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t where a between <span class="m">10000</span> and 20000<span class="p">;</span> /*Q1*/
+</span></span><span class="line"><span class="cl"><span class="k">select</span> * from t force index<span class="o">(</span>a<span class="o">)</span> where a between <span class="m">10000</span> and 20000<span class="p">;</span>/*Q2*/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以通过通过慢查询日志（slow log）查看这两个SQL的执行过程:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/index_slow_qeury.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/index_slow_qeury.png, /images/mysql/MySQL45%e8%ae%b2/index_slow_qeury.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/index_slow_qeury.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/index_slow_qeury.png"
+        title="index_slow_qeury" /></p>
+<p>前面我们说过优化器在选择索引时会考虑扫描行数、是否使用临时表、是否排序等因素进行综合判断。而扫描行数与索引区分度有关。这个简单的查询语句并没有涉及到临时表和排序，所以是扫描行数出了问题。使用 explain 可以查看优化器预估的，这两个语句的扫描行数:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/10_index_compare.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/10_index_compare.png, /images/mysql/MySQL45%e8%ae%b2/10_index_compare.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/10_index_compare.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/10_index_compare.png"
+        title="10_index_compare" /></p>
+<p>这里有两个问题:</p>
+<ol>
+<li>使用 force index(a) 的扫描行数为什么不准，达到了 37000？</li>
+<li>优化器为什么放着扫描 37000 行的执行计划不用，却选择了扫描行数是 100000 的执行计划呢？</li>
+</ol>
+<p>选择100000 的执行计划是因为使用普通索引需要把回表的代价算进去。优化器认为直接扫描主键索引更快。</p>
+<p>而扫描行数不准与我们的操作序列有关。session A 开启了事务并没有提交，所以之前插入的 10 万行数据是不能删除的。这样，之前的数据每一行数据都有两个版本，旧版本是 delete 之前的数据，新版本是标记为 deleted 的数据。这样，索引 a 上的数据其实就有两份。这个例子对应的是我们平常不断地删除历史数据和新增数据的场景。</p>
+<p>你可能觉得主键上的数据也不能删，那没有使用 force index 的语句，使用 explain 命令看到的扫描行数为什么还是 100000 左右？（潜台词，如果这个也翻倍，也许优化器还会认为选字段 a 作为索引更合适）是的，不过这个是主键，主键是直接按照表的行数来估计的。而表的行数，优化器直接用的是 show table status 的值。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/primary_key_num.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/primary_key_num.png, /images/mysql/MySQL45%e8%ae%b2/primary_key_num.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/primary_key_num.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/primary_key_num.png"
+        title="primary_key_num" /></p>
+<p>统计信息不对，我们可以使用 analyze table t 命令，重新统计索引信息。当然并不是所有的索引选择错误都是由统计信息不对导致的，这时候我们就要通过上面说到的其他方法来解决。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-13</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" data-title="13 MYSQL 索引选择" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" data-title="13 MYSQL 索引选择"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" data-title="13 MYSQL 索引选择"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" data-title="13 MYSQL 索引选择" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" class="prev" rel="prev" title="12 MySQL 问题追踪与性能优化"><i class="fas fa-angle-left fa-fw"></i>12 MySQL 问题追踪与性能优化</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/16_%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F/" class="next" rel="next" title="14 MYSQL 全表扫描">14 MYSQL 全表扫描<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-13T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"13 MYSQL 索引选择"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>18 MySQL 读写分离 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="18 MySQL 读写分离" />
+<meta property="og:description" content="读写分离，以及怎么处理主备延迟导致的读写分离问题。 1. 读写分离 读写分离的主要目标就是分摊主库的压力。一般有两种架构: 客户端（client）主动" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-18T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-18T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="18 MySQL 读写分离"/>
+<meta name="twitter:description" content="读写分离，以及怎么处理主备延迟导致的读写分离问题。 1. 读写分离 读写分离的主要目标就是分摊主库的压力。一般有两种架构: 客户端（client）主动"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/23_%E4%B8%BB%E5%A4%87%E5%88%87%E6%8D%A2/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "18 MySQL 读写分离",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  3176 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB\/","datePublished": "2020-03-18T00:00:00+00:00","dateModified": "2020-03-18T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">18 MySQL 读写分离</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-18">2020-03-18</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3176 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-读写分离">1. 读写分离</a>
+      <ul>
+        <li><a href="#11-强制走主库方案">1.1 强制走主库方案</a></li>
+        <li><a href="#12-sleep-方案">1.2 Sleep 方案</a></li>
+        <li><a href="#13-判断主备无延迟方案">1.3 判断主备无延迟方案</a>
+          <ul>
+            <li><a href="#对比位点">对比位点</a></li>
+            <li><a href="#对比-gtid-集合">对比 GTID 集合</a></li>
+          </ul>
+        </li>
+        <li><a href="#14-配合-semi-sync">1.4 配合 semi-sync</a></li>
+        <li><a href="#15-等主库位点">1.5 等主库位点</a></li>
+        <li><a href="#16-gtid-方案">1.6 GTID 方案</a></li>
+        <li><a href="#17-方案总结">1.7 方案总结</a></li>
+        <li><a href="#18-大事务的影响">1.8 大事务的影响</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>读写分离，以及怎么处理主备延迟导致的读写分离问题。</p>
+<!-- more -->
+<h2 id="1-读写分离">1. 读写分离</h2>
+<p>读写分离的主要目标就是分摊主库的压力。一般有两种架构:</p>
+<ol>
+<li>客户端（client）主动做负载均衡，即由客户端自己选择连接的 mysql 服务器</li>
+<li>在 MySQL 和客户端之间有一个中间代理层 proxy，客户端只连接 proxy， 由 proxy 根据请求类型和上下文决定请求的分发路由。</li>
+</ol>
+<p>两种架构的对比:</p>
+<ol>
+<li>客户端直连方案，因为少了一层 proxy 转发，所以查询性能稍微好一点儿，并且整体架构简单，排查问题更方便。但是这种方案，由于要了解后端部署细节，所以在出现主备切换、库迁移等操作的时候，客户端都会感知到，并且需要调整数据库连接信息。一般采用这样的架构，一定会伴随一个负责管理后端的组件，比如 Zookeeper，尽量让业务端只专注于业务逻辑开发。</li>
+<li>带 proxy 的架构，对客户端比较友好。客户端不需要关注后端细节，连接维护、后端信息维护等工作，都是由 proxy 完成的。但这样的话，对后端维护团队的要求会更高。而且，proxy 也需要有高可用架构。因此，带 proxy 架构的整体就相对比较复杂。</li>
+</ol>
+<p>但是无论那种将架构，由于主从可能存在延迟，客户端执行完一个更新事务后马上发起查询，如果查询选择的是从库的话，就有可能读到刚刚的事务更新之前的状态。</p>
+<p>主从延迟是不能 100% 避免的。不论哪种结构，客户端都希望查询从库的数据结果，跟查主库的数据结果是一样的。接下来，我们就来讨论怎么处理过期读问题。通常有下面这些解决方案:</p>
+<ol>
+<li>强制走主库方案；</li>
+<li>sleep 方案；</li>
+<li>判断主备无延迟方案；</li>
+<li>配合 semi-sync 方案；</li>
+<li>等主库位点方案；等 GTID 方案。</li>
+</ol>
+<h3 id="11-强制走主库方案">1.1 强制走主库方案</h3>
+<ol>
+<li>对于必须要拿到最新结果的请求，强制将其发到主库上。</li>
+<li>对于可以读到旧数据的请求，才将其发到从库上</li>
+</ol>
+<p>这个方案最大的问题在于，有时候你会碰到“所有查询都不能是过期读”的需求。</p>
+<h3 id="12-sleep-方案">1.2 Sleep 方案</h3>
+<p>这个方案的假设是，大多数情况下主备延迟在 1 秒之内，主库更新后，读从库之前先 sleep 一下。</p>
+<p>典型的场景是商品发布后，用 Ajax（Asynchronous JavaScript + XML，异步 JavaScript 和 XML）直接把客户端输入的内容作为“新的商品”显示在页面上，而不是真正地去数据库做查询。等到卖家再刷新页面，去查看商品的时候，其实已经过了一段时间，也就达到了 sleep 的目的，进而也就解决了过期读的问题。</p>
+<p>如果这个查询请求本来 0.5 秒就可以在从库上拿到正确结果，也会等 1 秒；如果延迟超过 1 秒，还是会出现过期读。</p>
+<h3 id="13-判断主备无延迟方案">1.3 判断主备无延迟方案</h3>
+<p>确保备库无延迟，通常有三种做法</p>
+<ol>
+<li>查询前，判断 seconds_behind_master 是否为 0</li>
+<li>采用对比位点和 GTID 的方法来确保主备无延迟</li>
+</ol>
+<p>下图是  show slave status 结果的部分截图
+<img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/show_slave_status.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/show_slave_status.png, /images/mysql/MySQL45%e8%ae%b2/show_slave_status.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/show_slave_status.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/show_slave_status.png"
+        title="show_slave_status" /></p>
+<h4 id="对比位点">对比位点</h4>
+<ol>
+<li>Master_Log_File 和 Read_Master_Log_Pos，表示的是读到的主库的最新位点；</li>
+<li>Relay_Master_Log_File 和 Exec_Master_Log_Pos，表示的是备库执行的最新位点。</li>
+</ol>
+<p>这两组值完全相同，就表示接收到的日志已经同步完成。</p>
+<h4 id="对比-gtid-集合">对比 GTID 集合</h4>
+<ol>
+<li>Auto_Position=1 ，表示这对主备关系使用了 GTID 协议。</li>
+<li>Retrieved_Gtid_Set，是备库收到的所有日志的 GTID 集合；</li>
+<li>Executed_Gtid_Set，是备库所有已经执行完成的 GTID 集合。</li>
+</ol>
+<p>对比位点和对比 GTID 这两种方法，都要比判断 seconds_behind_master 是否为 0 更准确。但还是没有达到“精确”的程度。</p>
+<p>一个事务的 binlog 在主备库之间的状态：</p>
+<ol>
+<li>主库执行完成，写入 binlog，并反馈给客户端；</li>
+<li>binlog 被从主库发送给备库，备库收到；</li>
+<li>在备库执行 binlog 完成。</li>
+</ol>
+<p>们上面判断主备无延迟的逻辑，是“备库收到的日志都执行完成了”。但是，存在客户端已经收到提交确认，而备库还没收到日志的状态。要解决这个问题，需要引入“半同步复制”。semi-sync 配合前面关于位点的判断，就能够确定在从库上执行的查询请求，可以避免过期读。</p>
+<h3 id="14-配合-semi-sync">1.4 配合 semi-sync</h3>
+<p>semi-sync 做了这样的设计：</p>
+<ol>
+<li>事务提交的时候，主库把 binlog 发给从库；</li>
+<li>从库收到 binlog 以后，发回给主库一个 ack，表示收到了；</li>
+<li>主库收到这个 ack 以后，才能给客户端返回“事务完成”的确认。</li>
+</ol>
+<p>也就是说，如果启用了 semi-sync，就表示所有给客户端发送过确认的事务，都确保了备库已经收到了这个日志。</p>
+<p>semi-sync+ 位点判断的方案，只对一主一备的场景是成立的。在一主多从场景中，主库只要等到一个从库的 ack，就开始给客户端返回确认。这时对从库的查询请求，落在这个响应了 ack 的从库上，是能够确保读到最新数据；如果不是还是有可能发生过期读。</p>
+<p>判断同步位点的方案还有另外一个潜在的问题，即：如果在业务更新的高峰期，主库的位点或者 GTID 集合更新很快，那么上面的两个位点等值判断就会一直不成立，很可能出现从库上迟迟无法响应查询请求的情况。</p>
+<p>小结一下，semi-sync 配合判断主备无延迟的方案，存在两个问题：</p>
+<ol>
+<li>一主多从的时候，在某些从库执行查询请求会存在过期读的现象；</li>
+<li>在持续延迟的情况下，可能出现过度等待的问题。</li>
+</ol>
+<p>等主库位点方案，就可以解决这两个问题。</p>
+<h3 id="15-等主库位点">1.5 等主库位点</h3>
+<p>要明白等主库位点，要先明白这条命令:
+<code>select master_pos_wait(file, pos[, timeout]);</code></p>
+<ul>
+<li>执行逻辑:
+<ol>
+<li>它是在从库执行的；</li>
+<li>参数 file 和 pos 指的是主库上的文件名和位置；</li>
+<li>timeout 可选，设置为正整数 N 表示这个函数最多等待 N 秒。</li>
+</ol>
+</li>
+<li>返回结果:
+<ul>
+<li>正常返回的结果是一个正整数 M，表示从命令开始执行，到应用完 file 和 pos 表示的 binlog 位置，执行了多少事务</li>
+<li>如果执行期间，备库同步线程发生异常，则返回 NULL；</li>
+<li>如果等待超过 N 秒，就返回 -1；</li>
+<li>如果刚开始执行的时候，就发现已经执行过这个位置了，则返回 0</li>
+</ul>
+</li>
+</ul>
+<p>使用等等主库位点，进行查询的逻辑是这样的:</p>
+<ol>
+<li>trx1 事务更新完成后，马上执行 show master status 得到当前主库执行到的 File 和 Position；</li>
+<li>选定一个从库执行查询语句；</li>
+<li>在从库上执行 select master_pos_wait(File, Position, 1)；</li>
+<li>如果返回值是 &gt;=0 的正整数，则在这个从库执行查询语句；</li>
+<li>否则，到主库执行查询语句</li>
+</ol>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/waiter_master.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/waiter_master.png, /images/mysql/MySQL45%e8%ae%b2/waiter_master.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/waiter_master.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/waiter_master.png"
+        title="waiter_master" /></p>
+<p>步骤 5 到主库执行查询语句，是这类方案常用的退化机制。因为从库的延迟时间不可控，不能无限等待，所以如果等待超时，就应该放弃，然后到主库去查。如果所有的从库都延迟超过 1 秒了，那查询压力不就都跑到主库上了吗？确实是这样。</p>
+<p>按照我们设定不允许过期读的要求，就只有两种选择，一种是超时放弃，一种是转到主库查询。具体怎么选择，就需要业务开发同学做好限流策略了。</p>
+<h3 id="16-gtid-方案">1.6 GTID 方案</h3>
+<p><code>select wait_for_executed_gtid_set(gtid_set, 1);</code></p>
+<ul>
+<li>执行逻辑:
+<ul>
+<li>等待，直到这个库执行的事务中包含传入的 gtid_set，返回 0；</li>
+<li>超时返回 1。在前面等位点的方案中</li>
+</ul>
+</li>
+</ul>
+<p>在前面等位点的方案中，我们执行完事务后，还要主动去主库执行 show master status。而 MySQL 5.7.6 版本开始，允许在执行完更新类事务后，把这个事务的 GTID 返回给客户端，这样等 GTID 的方案就可以减少一次查询。</p>
+<p>等 GTID 的执行流程就变成了：</p>
+<ol>
+<li>trx1 事务更新完成后，从返回包直接获取这个事务的 GTID，记为 gtid1；</li>
+<li>选定一个从库执行查询语句；</li>
+<li>在从库上执行 select wait_for_executed_gtid_set(gtid1, 1)；</li>
+<li>如果返回值是 0，则在这个从库执行查询语句；</li>
+<li>否则，到主库执行查询语句</li>
+</ol>
+<p>跟等主库位点的方案一样，等待超时后是否直接到主库查询，需要业务开发同学来做限流考虑。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/waiter_gtid.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/waiter_gtid.png, /images/mysql/MySQL45%e8%ae%b2/waiter_gtid.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/waiter_gtid.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/waiter_gtid.png"
+        title="waiter_gtid" /></p>
+<p>怎么能够让 MySQL 在执行事务后，返回包中带上 GTID 呢？你只需要将参数 <code>session_track_gtids=OWN_GTID</code>，然后通过 API 接口 <code>mysql_session_track_get_first</code> 从返回包解析出 GTID 的值即可。</p>
+<h3 id="17-方案总结">1.7 方案总结</h3>
+<p>在实际应用中，这几个方案是可以混合使用的。</p>
+<p>比如，先在客户端对请求做分类，区分哪些请求可以接受过期读，而哪些请求完全不能接受过期读；然后，对于不能接受过期读的语句，再使用等 GTID 或等位点的方案。</p>
+<p>但话说回来，过期读在本质上是由一写多读导致的。在实际应用中，可能会有别的不需要等待就可以水平扩展的数据库方案，但这往往是用牺牲写性能换来的，也就是需要在读性能和写性能中取权衡。</p>
+<h3 id="18-大事务的影响">1.8 大事务的影响</h3>
+<p>对大表做 DDL 的时候会怎么样。假设，这条语句在主库上要执行 10 分钟，提交后传到备库就要 10 分钟（典型的大事务）。那么，在主库 DDL 之后再提交的事务的 GTID，去备库查的时候，就会等 10 分钟才出现。</p>
+<p>这样，这个读写分离机制在这 10 分钟之内都会超时，然后走主库。</p>
+<p>这种预期内的操作，应该在业务低峰期的时候，确保主库能够支持所有业务查询，然后把读请求都切到主库，再在主库上做 DDL。等备库延迟追上以后，再把读请求切回备库。当然了，使用 gh-ost 方案来解决这个问题也是不错的选择。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-18</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" data-title="18 MySQL 读写分离" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" data-title="18 MySQL 读写分离"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" data-title="18 MySQL 读写分离"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/24_%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" data-title="18 MySQL 读写分离" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/23_%E4%B8%BB%E5%A4%87%E5%88%87%E6%8D%A2/" class="prev" rel="prev" title="17 MySQL 主备切换"><i class="fas fa-angle-left fa-fw"></i>17 MySQL 主备切换</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/25_%E4%B8%BB%E5%BA%93%E7%9B%91%E6%B5%8B/" class="next" rel="next" title="19 MySQL 主库监测">19 MySQL 主库监测<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-18T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"18 MySQL 读写分离"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

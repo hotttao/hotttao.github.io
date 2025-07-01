@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>15 MySQL 主从复制 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="15 MySQL 主从复制" />
+<meta property="og:description" content="接下来内容与 MySQL 主从复制相关的内容，包括: MySQL 如何保证主从同步的最终一致性，设计 binlog 同步过程和binlog 的格式 主备延迟，以及并行复制 由于主备延迟" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-15T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-15T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="15 MySQL 主从复制"/>
+<meta name="twitter:description" content="接下来内容与 MySQL 主从复制相关的内容，包括: MySQL 如何保证主从同步的最终一致性，设计 binlog 同步过程和binlog 的格式 主备延迟，以及并行复制 由于主备延迟"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/16_%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/22_mysql%E4%B8%BB%E5%A4%87%E5%BB%B6%E8%BF%9F/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "15 MySQL 主从复制",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  3637 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6\/","datePublished": "2020-03-15T00:00:00+00:00","dateModified": "2020-03-15T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">15 MySQL 主从复制</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-15">2020-03-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3637 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-主备的基本原理">1. 主备的基本原理</a></li>
+    <li><a href="#2-binlog-同步过程">2. binlog 同步过程</a></li>
+    <li><a href="#3-binlog-的格式">3. binlog 的格式</a>
+      <ul>
+        <li><a href="#31-binlog-查看方法">3.1 binlog 查看方法</a></li>
+        <li><a href="#32-试验环境">3.2 试验环境</a></li>
+        <li><a href="#33-statement">3.3 statement</a></li>
+        <li><a href="#34-row-格式">3.4 row 格式</a></li>
+      </ul>
+    </li>
+    <li><a href="#34-mixed-格式">3.4 mixed 格式</a>
+      <ul>
+        <li><a href="#35-数据恢复">3.5 数据恢复</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-循环复制问题">4. 循环复制问题</a>
+      <ul>
+        <li><a href="#41-场景一">4.1 场景一</a></li>
+        <li><a href="#42-场景二">4.2 场景二</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>接下来内容与 MySQL 主从复制相关的内容，包括:</p>
+<ol>
+<li>MySQL 如何保证主从同步的最终一致性，设计 binlog 同步过程和binlog 的格式</li>
+<li>主备延迟，以及并行复制</li>
+<li>由于主备延迟不可避免，因此由两种主备切换策略</li>
+<li>主从复制同步位点的判断以及GTID 模式</li>
+<li>读写分离，以及怎么处理主备延迟导致的读写分离问题</li>
+<li>主库的心跳信息监测，以便在主库故障时及时进行主备切换</li>
+</ol>
+<!-- more -->
+<h2 id="1-主备的基本原理">1. 主备的基本原理</h2>
+<p>如图 1 所示就是基本的主备切换流程</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/cluster_change.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/cluster_change.png, /images/mysql/MySQL45%e8%ae%b2/cluster_change.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/cluster_change.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/cluster_change.png"
+        title="cluster_change" /></p>
+<p>在状态 1 中，客户端的读写都直接访问节点 A，而节点 B 是 A 的备库，只是将 A 的更新都同步过来，到本地执行。这样可以保持节点 B 和 A 的数据是相同的。当需要切换的时候，就切成状态 2。</p>
+<p>在状态 1 中，虽然节点 B 没有被直接访问，但是我依然建议你把节点 B（也就是备库）设置成只读（readonly）模式。这样做，有以下几个考虑：</p>
+<ol>
+<li>有时候一些运营类的查询语句会被放到备库上去查，设置为只读可以防止误操作；</li>
+<li>防止切换逻辑有 bug，比如切换过程中出现双写，造成主备不一致；</li>
+<li>可以用 readonly 状态，来判断节点的角色</li>
+</ol>
+<p>readonly 设置对超级 (super) 权限用户是无效的，而用于同步更新的线程，拥有超级权限，因此 readonly 不会影响主从同步的写。</p>
+<h2 id="2-binlog-同步过程">2. binlog 同步过程</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/binlog_thread.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/binlog_thread.png, /images/mysql/MySQL45%e8%ae%b2/binlog_thread.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/binlog_thread.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/binlog_thread.png"
+        title="binlog_thread" /></p>
+<p>图中画出的就是一个 update 语句在节点 A 执行，然后同步到节点 B 的完整流程图。可以看到：主库接收到客户端的更新请求后，执行内部事务的更新逻辑，同时写 binlog。</p>
+<p>一个事务日志同步的完整过程是这样的：</p>
+<ol>
+<li>在备库 B 上通过 change master 命令，设置主库 A 的 IP、端口、用户名、密码，以及要从哪个位置开始请求 binlog，这个位置包含文件名和日志偏移量。</li>
+<li>在备库 B 上执行 start slave 命令，这时候备库会启动两个线程，就是图中的 io_thread 和 sql_thread。其中 io_thread 负责与主库建立连接。</li>
+<li>主库 A 校验完用户名、密码后，开始按照备库 B 传过来的位置，从本地读取 binlog，发给 B</li>
+<li>备库 B 拿到 binlog 后，写到本地文件，称为中转日志（relay log）</li>
+<li>sql_thread 读取中转日志，解析出日志里的命令，并执行。</li>
+</ol>
+<p>后来由于多线程复制方案的引入，sql_thread 演化成为了多个线程，这个我们后面在详述。</p>
+<h2 id="3-binlog-的格式">3. binlog 的格式</h2>
+<p>binlog 有两种格式，一种是 statement，一种是 row。第三种格式 mixed 是前两种格式的混合。</p>
+<h3 id="31-binlog-查看方法">3.1 binlog 查看方法</h3>
+<p>通过如下的方法我们可以查看每种binlog 格式记录的详细内容:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 查看当前系统的二进制文件</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[(</span>none<span class="o">)]</span>&gt; SHOW <span class="o">{</span>BINARY <span class="p">|</span> MASTER<span class="o">}</span> LOGS
+</span></span><span class="line"><span class="cl">+-------------------+-----------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> Log_name          <span class="p">|</span> File_size <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-------------------+-----------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000001 <span class="p">|</span>      <span class="m">1254</span> <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000002 <span class="p">|</span>       <span class="m">435</span> <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000003 <span class="p">|</span>       <span class="m">435</span> <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000004 <span class="p">|</span>      <span class="m">2389</span> <span class="p">|</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 查看 binlog 日志</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[(</span>none<span class="o">)]</span>&gt; SHOW BINLOG EVENTS <span class="o">[</span>IN <span class="s1">&#39;log_name&#39;</span><span class="o">]</span> <span class="o">[</span>FROM pos<span class="o">]</span> <span class="o">[</span>LIMIT <span class="o">[</span>offset,<span class="o">]</span> row_count<span class="o">]</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[(</span>none<span class="o">)]</span>&gt; show binlog events in <span class="s1">&#39;master-log.000004&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[(</span>none<span class="o">)]</span>&gt; show binlog events in <span class="s1">&#39;master-log.000004&#39;</span> from <span class="m">387</span> limit 3<span class="p">;</span>
+</span></span><span class="line"><span class="cl">+-------------------+-----+------------+-----------+-------------+--------------------------------------------------------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> Log_name          <span class="p">|</span> Pos <span class="p">|</span> Event_type <span class="p">|</span> Server_id <span class="p">|</span> End_log_pos <span class="p">|</span> Info                                                         <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-------------------+-----+------------+-----------+-------------+--------------------------------------------------------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000004 <span class="p">|</span> <span class="m">387</span> <span class="p">|</span> Gtid       <span class="p">|</span>         <span class="m">1</span> <span class="p">|</span>         <span class="m">429</span> <span class="p">|</span> BEGIN GTID 0-1-6                                             <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000004 <span class="p">|</span> <span class="m">429</span> <span class="p">|</span> Query      <span class="p">|</span>         <span class="m">1</span> <span class="p">|</span>         <span class="m">544</span> <span class="p">|</span> use <span class="sb">`</span>tsong<span class="sb">`</span><span class="p">;</span> insert into course values<span class="o">(</span>2, <span class="s2">&#34;计算机网络&#34;</span><span class="o">)</span>      <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span> master-log.000004 <span class="p">|</span> <span class="m">544</span> <span class="p">|</span> Xid        <span class="p">|</span>         <span class="m">1</span> <span class="p">|</span>         <span class="m">575</span> <span class="p">|</span> COMMIT /* <span class="nv">xid</span><span class="o">=</span><span class="m">205</span> */                                         <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-------------------+-----+------------+-----------+-------------+--------------------------------------------------------------+
+</span></span><span class="line"><span class="cl"><span class="m">3</span> rows in <span class="nb">set</span> <span class="o">(</span>0.000 sec<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. 通过 mysqlbinlog 解析 binlog 的具体内容</span>
+</span></span><span class="line"><span class="cl"> mysqlbinlog  -vv master-log.000004 --start-position<span class="o">=</span><span class="m">387</span> --stop-position<span class="o">=</span>390<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE<span class="o">=</span>1*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!40019 SET @@session.max_insert_delayed_threads<span class="o">=</span>0*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!50003 SET @OLD_COMPLETION_TYPE<span class="o">=</span>@@COMPLETION_TYPE,COMPLETION_TYPE<span class="o">=</span>0*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">DELIMITER /*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># at 4</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#200311 12:25:09 server id 1  end_log_pos 256 CRC32 0xe5385d26  Start: binlog v 4, server v 10.4.12-MariaDB-log created 200311 12:25:09</span>
+</span></span><span class="line"><span class="cl">BINLOG <span class="s1">&#39;
+</span></span></span><span class="line"><span class="cl"><span class="s1">JWhoXg8BAAAA/AAAAAABAAAAAAQAMTAuNC4xMi1NYXJpYURCLWxvZwAAAAAAAAAAAAAAAAAAAAAA
+</span></span></span><span class="line"><span class="cl"><span class="s1">AAAAAAAAAAAAAAAAAAAAAAAAEzgNAAgAEgAEBAQEEgAA5AAEGggAAAAICAgCAAAACgoKAAAAAAAA
+</span></span></span><span class="line"><span class="cl"><span class="s1">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+</span></span></span><span class="line"><span class="cl"><span class="s1">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+</span></span></span><span class="line"><span class="cl"><span class="s1">AAAAAAAAAAAEEwQADQgICAoKCgEmXTjl
+</span></span></span><span class="line"><span class="cl"><span class="s1">&#39;</span>/*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># at 387</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#200311 12:27:27 server id 1  end_log_pos 429 CRC32 0x75f470c3  GTID 0-1-6 trans</span>
+</span></span><span class="line"><span class="cl">/*!100101 SET @@session.skip_parallel_replication<span class="o">=</span>0*//*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!100001 SET @@session.gtid_domain_id<span class="o">=</span>0*//*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!100001 SET @@session.server_id<span class="o">=</span>1*//*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!100001 SET @@session.gtid_seq_no<span class="o">=</span>6*//*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">BEGIN
+</span></span><span class="line"><span class="cl">/*!*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">DELIMITER <span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># End of log file</span>
+</span></span><span class="line"><span class="cl">ROLLBACK /* added by mysqlbinlog */<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!50003 SET <span class="nv">COMPLETION_TYPE</span><span class="o">=</span>@OLD_COMPLETION_TYPE*/<span class="p">;</span>
+</span></span><span class="line"><span class="cl">/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE<span class="o">=</span>0*/<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="32-试验环境">3.2 试验环境</h3>
+<p>为了便于描述 binlog 的这三种格式间的区别，我们使用如下的环境，并执行最后的 delete 语句</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">mysql&gt; CREATE TABLE <span class="sb">`</span>t<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>a<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>t_modified<span class="sb">`</span> timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>a<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>a<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>t_modified<span class="sb">`</span><span class="o">(</span><span class="sb">`</span>t_modified<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>1,1,<span class="s1">&#39;2018-11-13&#39;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>2,2,<span class="s1">&#39;2018-11-12&#39;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>3,3,<span class="s1">&#39;2018-11-11&#39;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>4,4,<span class="s1">&#39;2018-11-10&#39;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>5,5,<span class="s1">&#39;2018-11-09&#39;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 用 MySQL 客户端来做这个实验的话，要记得加 -c 参数，否则客户端会自动去掉注释。</span>
+</span></span><span class="line"><span class="cl">mysql&gt; delete from t /*comment*/  where a&gt;<span class="o">=</span><span class="m">4</span> and t_modified&lt;<span class="o">=</span><span class="s1">&#39;2018-11-10&#39;</span> limit 1<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="33-statement">3.3 statement</h3>
+<p>binlog_statement
+当 binlog_format=statement 时，<code>show binlog events in 'master.000001';</code> binlog 内容如下:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/binlog_statement.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/binlog_statement.png, /images/mysql/MySQL45%e8%ae%b2/binlog_statement.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/binlog_statement.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/binlog_statement.png"
+        title="binlog_statement" /></p>
+<ol>
+<li>第一行 SET @@SESSION.GTID_NEXT=&lsquo;ANONYMOUS’与主备切换有关，后面我们在详述</li>
+<li>第二行是一个 BEGIN，跟第四行的 commit 对应，表示中间是一个事务；</li>
+<li>第三行就是真实执行的语句了，statement 格式下，记录到 binlog 里的是语句原文</li>
+<li>最后一行是一个 COMMIT，里面写着 xid=61。xid 是 binlog 和 redo log 的关联字段，同时也是 statement 格式binlog 的完整性标识。</li>
+</ol>
+<p>因为 statement 记录的原始语句，而不是具体的行，当使用 delete limit 等情况时，就有可能因为主备执行逻辑(比如执行时选择的索引)不同出现主备不一致的情况。</p>
+<h3 id="34-row-格式">3.4 row 格式</h3>
+<p>当 binlog_format=row 时，<code>show binlog events in 'master.000001';</code>binlog 内容如下:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/binlog_raw.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/binlog_raw.png, /images/mysql/MySQL45%e8%ae%b2/binlog_raw.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/binlog_raw.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/binlog_raw.png"
+        title="binlog_row" /></p>
+<p>row 格式的 binlog 里没有了 SQL 语句的原文，而是替换成了两个 event：Table_map 和 Delete_rows：</p>
+<ol>
+<li>Table_map event，用于说明接下来要操作的表是 test 库的表 t;</li>
+<li>Delete_rows event，用于定义删除的行为。</li>
+</ol>
+<p>show binlog 是无法查看 row binlog 的详细内容的，需要借助 mysqlbinlog 工具。下面是使用 mysqlbinlog 查看的 row 格式的 binlog 内容:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mysqlbinlog  -vv data/master.000001 --start-position<span class="o">=</span>8900<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/binlog_content.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/binlog_content.png, /images/mysql/MySQL45%e8%ae%b2/binlog_content.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/binlog_content.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/binlog_content.png"
+        title="binlog_content" /></p>
+<p>row 格式的 binlog 包括以下内容:</p>
+<ol>
+<li>server id 1，表示这个事务是在 server_id=1 的这个库上执行的。</li>
+<li>每个 event 都有 CRC32 的值，这是参数 binlog_checksum 设置成了 CRC32，用于检查 binlog 是否完整</li>
+<li>binlog 记录的每个 SQL 都会被翻译成多个 event:
+<ul>
+<li>Table_map event 显示了接下来要打开的表，map 到数字 226。如果要操作多张表呢？每个表都有一个对应的 Table_map event、都会 map 到一个单独的数字，用于区分对不同表的操作。</li>
+<li>Delete_rows event，用于定义删除的行为</li>
+</ul>
+</li>
+<li>mysqlbinlog 的命令中，使用了 -vv 参数是为了把内容都解析出来，所以从结果里面可以看到各个字段的值（比如，@1=4、 @2=4 这些值）</li>
+<li>binlog_row_image 的默认配置是 FULL，因此 Delete_event 里面，包含了删掉的行的所有字段的值。如果把 binlog_row_image 设置为 MINIMAL，则只会记录必要的信息，在这个例子里，就是只会记录 id=4 这个信息。</li>
+<li>最后的 Xid event，用于表示事务被正确地提交了。</li>
+</ol>
+<p>当 binlog_format 使用 row 格式的时候，binlog 里面记录了真实删除行的主键 id，这样 binlog 传到备库去的时候，就肯定会删除 id=4 的行，不会有主备删除不同行的问题。</p>
+<h2 id="34-mixed-格式">3.4 mixed 格式</h2>
+<p>为什么会有 mixed 这种 binlog 格式的存在场景？</p>
+<ol>
+<li>因为有些 statement 格式的 binlog 可能会导致主备不一致，所以要使用 row 格式。</li>
+<li>但 row 格式的缺点是，很占空间。比如你用一个 delete 语句删掉 10 万行数据，用 statement 的话就是一个 SQL 语句被记录到 binlog 中，占用几十个字节的空间。但如果用 row 格式的 binlog，就要把这 10 万条记录都写到 binlog 中。这样做，不仅会占用更大的空间，同时写 binlog 也要耗费 IO 资源，影响执行速度。</li>
+<li>所以，MySQL 就取了个折中方案，也就是有了 mixed 格式的 binlog。mixed 格式的意思是，MySQL 自己会判断这条 SQL 语句是否可能引起主备不一致，如果有可能，就用 row 格式，否则就用 statement 格式。</li>
+</ol>
+<p>也就是说，mixed 格式可以利用 statment 格式的优点，同时又避免了数据不一致的风险。</p>
+<h3 id="35-数据恢复">3.5 数据恢复</h3>
+<p>但是 MySQL 的 binlog 格式最好还是设置成 row。因为需要 binlog 做数据恢复。</p>
+<ol>
+<li>delete 语句，row 格式的 binlog 也会把被删掉的行的整行信息保存起来</li>
+<li>insert 语句的 binlog 里会记录所有的字段信息，这些信息可以用来精确定位刚刚被插入的那一行</li>
+<li>update 语句，binlog 里面会记录修改前整行的数据和修改后的整行数据。</li>
+</ol>
+<p>MariaDB 的Flashback工具正是基于 row 格式的 binlog 做数据恢复的工具。</p>
+<p>如果直接使用 binlog 做数据恢复，标准做法是，用 mysqlbinlog 工具解析出来，然后把解析结果整个发给 MySQL 执行。类似下面的命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mysqlbinlog master.000001  --start-position<span class="o">=</span><span class="m">2738</span> --stop-position<span class="o">=</span><span class="m">2973</span> <span class="p">|</span> mysql -h127.0.0.1 -P13000 -u<span class="nv">$user</span> -p<span class="nv">$pwd</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>记住，不要直接去binlog 内复制语句去执行，因为 mysql 会自动根据 sql 执行的上下文添加类似库切换，设置时间戳等命令，这些语句是需要同时被执行的。</p>
+<h2 id="4-循环复制问题">4. 循环复制问题</h2>
+<p>实际生产上使用比较多的是双 M 结构，也就是下图所示的主备切换流程。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/cluster_two.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/cluster_two.png, /images/mysql/MySQL45%e8%ae%b2/cluster_two.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/cluster_two.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/cluster_two.png"
+        title="cluster_two" /></p>
+<p>双主模型中存在循环复制的问题: 业务逻辑在节点 A 上更新了一条语句，然后再把生成的 binlog 发给节点 B，节点 B 执行完这条更新语句后也会生成 binlog。（建议把参数 log_slave_updates 设置为 on，表示备库执行 relay log 后生成 binlog，这样任意主库上的 binlog 都可以用作数据恢复）</p>
+<p>那么，如果节点 A 同时是节点 B 的备库，相当于又把节点 B 新生成的 binlog 拿过来执行了一次，然后节点 A 和 B 间，会不断地循环执行这个更新语句，也就是循环复制了。这个要怎么解决呢？</p>
+<p>MySQL 是这样解决循环复制的问题的:</p>
+<ol>
+<li>两个库的 server id 必须不同，如果相同，则它们之间不能设定为主备关系；</li>
+<li>从节点 A 更新的事务，binlog 里面记的都是 A 的 server id；</li>
+<li>传到节点 B 执行一次以后，节点 B 生成的 binlog 的 server id 也是 A 的 server id；</li>
+<li>再传回给节点 A，A 判断到这个 server id 与自己的相同，就不会再处理这个日志。所以，死循环在这里就断掉了</li>
+</ol>
+<p>按照这个逻辑，如果我们设置了双 M 结构，日志的执行流就会变成这样：</p>
+<ol>
+<li>从节点 A 更新的事务，binlog 里面记的都是 A 的 server id；</li>
+<li>传到节点 B 执行一次以后，节点 B 生成的 binlog 的 server id 也是 A 的 server id；</li>
+<li>再传回给节点 A，A 判断到这个 server id 与自己的相同，就不会再处理这个日志。所以，死循环在这里就断掉了。</li>
+</ol>
+<p>但是即便如此存在下面两种情况一样会导致循环复制问题。</p>
+<h3 id="41-场景一">4.1 场景一</h3>
+<p>在一个主库更新事务后，用命令 set global server_id=x 修改了 server_id。等日志再传回来的时候，发现 server_id 跟自己的 server_id 不同，就只能执行了。</p>
+<h3 id="42-场景二">4.2 场景二</h3>
+<p>有三个节点的时候，如图 7 所示，trx1 是在节点 B 执行的，因此 binlog 上的 server_id 就是 B，binlog 传给节点 A，然后 A 和 A’搭建了双 M 结构，就会出现循环复制。</p>
+<p>这种三节点复制的场景，做数据库迁移的时候会出现。可以在 A 或者 A’上，执行如下命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">stop slave；
+</span></span><span class="line"><span class="cl">CHANGE MASTER TO <span class="nv">IGNORE_SERVER_IDS</span><span class="o">=(</span>server_id_of_B<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">start slave<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样这个节点收到日志后就不会再执行。过一段时间后，再执行下面的命令把这个值改回来。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">stop slave；
+</span></span><span class="line"><span class="cl">CHANGE MASTER TO <span class="nv">IGNORE_SERVER_IDS</span><span class="o">=()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">start slave<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-15</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" data-title="15 MySQL 主从复制" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" data-title="15 MySQL 主从复制"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" data-title="15 MySQL 主从复制"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" data-title="15 MySQL 主从复制" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/16_%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F/" class="prev" rel="prev" title="14 MYSQL 全表扫描"><i class="fas fa-angle-left fa-fw"></i>14 MYSQL 全表扫描</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/22_mysql%E4%B8%BB%E5%A4%87%E5%BB%B6%E8%BF%9F/" class="next" rel="next" title="16 MySQL 主备延迟">16 MySQL 主备延迟<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-15T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"15 MySQL 主从复制"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

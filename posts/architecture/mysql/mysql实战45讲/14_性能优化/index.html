@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>12 MySQL 问题追踪与性能优化 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="12 MySQL 问题追踪与性能优化" />
+<meta property="og:description" content="MySQL 中怎么做问题追踪与性能优化 1. 问题排查的工具 mysql 中有以下几种问题排查的工具: show processlist show engine innodb status information_schema.innodb_trx show engine innodb status optimizer_trace 慢查询日志 performance_schema 和 sys 系统库 1.1 试验环境 接下来我们" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-12T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-12T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="12 MySQL 问题追踪与性能优化"/>
+<meta name="twitter:description" content="MySQL 中怎么做问题追踪与性能优化 1. 问题排查的工具 mysql 中有以下几种问题排查的工具: show processlist show engine innodb status information_schema.innodb_trx show engine innodb status optimizer_trace 慢查询日志 performance_schema 和 sys 系统库 1.1 试验环境 接下来我们"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/13_sql%E9%94%99%E8%AF%AF%E7%94%A8%E6%B3%95/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "12 MySQL 问题追踪与性能优化",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  5414 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96\/","datePublished": "2020-03-12T00:00:00+00:00","dateModified": "2020-03-12T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">12 MySQL 问题追踪与性能优化</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-12">2020-03-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 5414 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 11 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-问题排查的工具">1. 问题排查的工具</a>
+      <ul>
+        <li><a href="#11-试验环境">1.1 试验环境</a></li>
+        <li><a href="#12-mariadb-的差异">1.2 Mariadb 的差异</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-锁等待排查">2. 锁等待排查</a>
+      <ul>
+        <li><a href="#21-等待-mdl-锁">2.1 等待 MDL 锁</a>
+          <ul>
+            <li><a href="#mariadb">mariadb</a></li>
+          </ul>
+        </li>
+        <li><a href="#22-等-flush">2.2 等 flush</a></li>
+        <li><a href="#23-innodb-行锁">2.3 innodb 行锁</a>
+          <ul>
+            <li><a href="#mariadb-1">mariadb</a></li>
+          </ul>
+        </li>
+        <li><a href="#24-死锁查看">2.4 死锁查看</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-sql执行追踪">2. SQL执行追踪</a></li>
+    <li><a href="#3-性能优化">3. 性能优化</a></li>
+    <li><a href="#4-短连接风暴">4. 短连接风暴</a>
+      <ul>
+        <li><a href="#41-先处理掉那些占着连接但是不工作的线程">4.1 先处理掉那些占着连接但是不工作的线程</a></li>
+        <li><a href="#42-减少连接过程的消耗">4.2 减少连接过程的消耗</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-慢查询性能问题">5. 慢查询性能问题</a>
+      <ul>
+        <li><a href="#51-索引没设计好">5.1 索引没设计好</a></li>
+        <li><a href="#52-语句没写好">5.2 语句没写好</a></li>
+        <li><a href="#53-选错了索引">5.3 选错了索引</a></li>
+        <li><a href="#54-问题总结">5.4 问题总结</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-qps-突增问题">6. QPS 突增问题</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>MySQL 中怎么做问题追踪与性能优化</p>
+<!-- more -->
+<h2 id="1-问题排查的工具">1. 问题排查的工具</h2>
+<p>mysql 中有以下几种问题排查的工具:</p>
+<ol>
+<li><code>show processlist</code></li>
+<li><code>show engine innodb status</code></li>
+<li><code>information_schema.innodb_trx</code></li>
+<li><code>show engine innodb status</code></li>
+<li><code>optimizer_trace</code></li>
+<li>慢查询日志</li>
+<li><code>performance_schema 和 sys 系统库</code></li>
+</ol>
+<h3 id="11-试验环境">1.1 试验环境</h3>
+<p>接下来我们以下面的实现环境看看，如何使用这些工具排查 MySQL 的性能问题</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">mysql&gt; CREATE TABLE <span class="sb">`</span>t<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>c<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">delimiter <span class="p">;;</span>
+</span></span><span class="line"><span class="cl">create procedure idata<span class="o">()</span>
+</span></span><span class="line"><span class="cl">begin
+</span></span><span class="line"><span class="cl">  <span class="nb">declare</span> i int<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>1<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">while</span><span class="o">(</span>i&lt;<span class="o">=</span>100000<span class="o">)</span> <span class="k">do</span>
+</span></span><span class="line"><span class="cl">    insert into t values<span class="o">(</span>i,i<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>i+1<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  end <span class="k">while</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">end<span class="p">;;</span>
+</span></span><span class="line"><span class="cl">delimiter <span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">call idata<span class="o">()</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="12-mariadb-的差异">1.2 Mariadb 的差异</h3>
+<p>Mariadb 没有 sys schema 库，mysql sys schema 部分功能通过 information_schema 和 插件提供。下面是二者之间的简单对比:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">功能</th>
+<th style="text-align:left">MySQL</th>
+<th style="text-align:left">Mariadb</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">查看MDL锁</td>
+<td style="text-align:left">sys.schema_table_lock_waits</td>
+<td style="text-align:left">INSTALL SONAME &lsquo;metadata_lock_info&rsquo;<br>information_schema.metadata_lock_info</td>
+</tr>
+<tr>
+<td style="text-align:left">查看Innodb行锁</td>
+<td style="text-align:left">sys.innodb_lock_waits</td>
+<td style="text-align:left">information_schema.innodb_lock_waits<br>INNODB_LOCKS<br>INNODB_TRX</td>
+</tr>
+<tr>
+<td style="text-align:left">会话状态</td>
+<td style="text-align:left">performance_schema.session_status</td>
+<td style="text-align:left">information_schema.session_status</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-锁等待排查">2. 锁等待排查</h2>
+<p>在表 t 执行 SQL 语句 <code>select * from t where id=1;</code> 如果查询长时间不返回，一般这种情况，大概率是表 t 被锁住了。接下来分析原因的时候，一般都是首先执行一下 show processlist 命令，看看当前语句处于什么状态。然后我们再针对每种状态，去分析它们产生的原因、如何复现，以及如何处理。</p>
+<p>出现锁等待有以下几种情况:</p>
+<ol>
+<li>Waiting for table metadata lock，即 等待 MDL 锁</li>
+<li>Waiting for table flush</li>
+<li>Innodb 行锁</li>
+</ol>
+<h3 id="21-等待-mdl-锁">2.1 等待 MDL 锁</h3>
+<p>第一种情况如下图所示，查询正在等待 MDL 锁。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/show_processlist.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/show_processlist.png, /images/mysql/MySQL45%e8%ae%b2/show_processlist.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/show_processlist.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/show_processlist.png"
+        title="show_processlist" /></p>
+<p>这类问题的处理方式，就是找到谁持有 MDL 写锁，然后把它 kill 掉。但是，由于在 show processlist 的结果里面，持有 MDL 写锁线程的 Command 列可能是“Sleep”，导致查找起来很不方便。</p>
+<p>通过查询 sys.schema_table_lock_waits 这张表，我们就可以直接找出造成阻塞的 process id，把这个连接用 kill 命令断开即可。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/schema_table_lock_waits.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/schema_table_lock_waits.png, /images/mysql/MySQL45%e8%ae%b2/schema_table_lock_waits.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/schema_table_lock_waits.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/schema_table_lock_waits.png"
+        title="schema_table_lock_waits" /></p>
+<p>不过启用 performance_schema 和 sys(mariadb 中为 information_schema) 系统库需要 MySQL 在启动时设置 <code>performance_schema=on</code>，相比于设置为 off 会有 10% 左右的性能损失。</p>
+<h4 id="mariadb">mariadb</h4>
+<p>mariadb 没有 sys.schema_table_lock_waits 可以通过 METADATA_LOCK_INFO plugin 来查看MDL 锁的相关信息。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 启用 METADATA_LOCK_INFO plugin</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 临时</span>
+</span></span><span class="line"><span class="cl">INSTALL SONAME <span class="s1">&#39;metadata_lock_info&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 永久</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>mariadb<span class="o">]</span>
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl"><span class="nv">plugin_load_add</span> <span class="o">=</span> metadata_lock_info
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 查看MDL锁</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[</span>performance_schema<span class="o">]</span>&gt; SELECT * FROM information_schema.metadata_lock_info<span class="p">;</span>
+</span></span><span class="line"><span class="cl">+-----------+--------------------------+---------------+----------------------+--------------+------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> THREAD_ID <span class="p">|</span> LOCK_MODE                <span class="p">|</span> LOCK_DURATION <span class="p">|</span> LOCK_TYPE            <span class="p">|</span> TABLE_SCHEMA <span class="p">|</span> TABLE_NAME <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-----------+--------------------------+---------------+----------------------+--------------+------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span>        <span class="m">11</span> <span class="p">|</span> MDL_BACKUP_DDL           <span class="p">|</span> NULL          <span class="p">|</span> Backup lock          <span class="p">|</span>              <span class="p">|</span>            <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span>        <span class="m">11</span> <span class="p">|</span> MDL_SHARED_NO_READ_WRITE <span class="p">|</span> NULL          <span class="p">|</span> Table metadata lock  <span class="p">|</span> tsong        <span class="p">|</span> words      <span class="p">|</span>
+</span></span><span class="line"><span class="cl"><span class="p">|</span>        <span class="m">11</span> <span class="p">|</span> MDL_INTENTION_EXCLUSIVE  <span class="p">|</span> NULL          <span class="p">|</span> Schema metadata lock <span class="p">|</span> tsong        <span class="p">|</span>            <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-----------+--------------------------+---------------+----------------------+--------------+------------+
+</span></span><span class="line"><span class="cl"><span class="m">3</span> rows in <span class="nb">set</span> <span class="o">(</span>0.000 sec<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 直接查看被锁住的线程</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[</span>performance_schema<span class="o">]</span>&gt; SELECT
+</span></span><span class="line"><span class="cl">    -&gt; CONCAT<span class="o">(</span><span class="s1">&#39;Thread &#39;</span>,P.ID,<span class="s1">&#39; executing &#34;&#39;</span>,P.INFO,<span class="s1">&#39;&#34; IS LOCKED BY Thread &#39;</span>,
+</span></span><span class="line"><span class="cl">    -&gt; M.THREAD_ID<span class="o">)</span> WhoLocksWho
+</span></span><span class="line"><span class="cl">    -&gt; FROM INFORMATION_SCHEMA.PROCESSLIST P,
+</span></span><span class="line"><span class="cl">    -&gt; INFORMATION_SCHEMA.METADATA_LOCK_INFO M
+</span></span><span class="line"><span class="cl">    -&gt; WHERE LOCATE<span class="o">(</span>lcase<span class="o">(</span>LOCK_TYPE<span class="o">)</span>, lcase<span class="o">(</span>STATE<span class="o">))</span>&gt;0<span class="p">;</span>
+</span></span><span class="line"><span class="cl">+----------------------------------------------------------------------------------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> WhoLocksWho                                                                            <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+----------------------------------------------------------------------------------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> Thread <span class="m">10</span> executing <span class="s2">&#34;select * from words where id=1 for update&#34;</span> IS LOCKED BY Thread <span class="m">11</span> <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+----------------------------------------------------------------------------------------+
+</span></span><span class="line"><span class="cl"><span class="m">1</span> row in <span class="nb">set</span> <span class="o">(</span>0.002 sec<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># kill 占用锁的线程</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[</span>performance_schema<span class="o">]</span>&gt; <span class="nb">kill</span> <span class="m">11</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-等-flush">2.2 等 flush</h3>
+<p>第二种情况如下图所示，查询在等 flush</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/wait_flush.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/wait_flush.png, /images/mysql/MySQL45%e8%ae%b2/wait_flush.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/wait_flush.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/wait_flush.png"
+        title="wait_flush" /></p>
+<p>flush tables 有两种用法:</p>
+<ul>
+<li>flush tables t with read lock: 只关闭表 t</li>
+<li>flush tables with read lock: 关闭 MySQL 里所有打开的表。</li>
+<li>正常这两个语句执行起来都很快，除非它们也被别的线程堵住了</li>
+</ul>
+<p>出现上面 Waiting for table flush 状态情况是：有一个 flush tables 命令被别的语句堵住了，然后它又堵住了我们的 select 语句。</p>
+<h3 id="23-innodb-行锁">2.3 innodb 行锁</h3>
+<p>第三种情况，等待Innodb 行锁的情况如下:</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/line_lock.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/line_lock.png, /images/mysql/MySQL45%e8%ae%b2/line_lock.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/line_lock.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/line_lock.png"
+        title="line_lock" /></p>
+<p>state 为 statistics 的线程被阻塞。这个问题并不难分析，但问题是怎么查出是谁占着这个写锁。如果你用的是 MySQL 5.7 版本，可以通过 sys.innodb_lock_waits 表查到。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/innodb_lock_waits.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/innodb_lock_waits.png, /images/mysql/MySQL45%e8%ae%b2/innodb_lock_waits.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/innodb_lock_waits.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/innodb_lock_waits.png"
+        title="innodb_lock_waits" /></p>
+<p>可以看到，4 号线程是造成堵塞的罪魁祸首。而干掉这个罪魁祸首的方式，就是 KILL QUERY 4 或 KILL 4。</p>
+<ul>
+<li>不过，这里不应该显示“KILL QUERY 4”。这个命令表示停止 4 号线程当前正在执行的语句，而这个方法其实是没有用的。因为占有行锁的是 update 语句，这个语句已经是之前执行完成了的，现在执行 KILL QUERY，无法让这个事务去掉 id=1 上的行锁。</li>
+<li>实际上，KILL 4 才有效，也就是说直接断开这个连接。这里隐含的一个逻辑就是，连接被断开的时候，会自动回滚这个连接里面正在执行的线程，也就释放了 id=1 上的行锁。</li>
+</ul>
+<h4 id="mariadb-1">mariadb</h4>
+<p>mariadb innodb_lock_waits 表位于 information_schema 中。可以使用下面的方法查看等待 Innodb 行锁的线程。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 1. 查看事务持有的锁</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[</span>information_schema<span class="o">]</span>&gt; SELECT l.*, t.*
+</span></span><span class="line"><span class="cl">    FROM information_schema.INNODB_LOCKS l
+</span></span><span class="line"><span class="cl">    JOIN information_schema.INNODB_TRX t
+</span></span><span class="line"><span class="cl">        ON l.lock_trx_id <span class="o">=</span> t.trx_id
+</span></span><span class="line"><span class="cl">    WHERE <span class="nv">trx_state</span> <span class="o">=</span> <span class="s1">&#39;LOCK WAIT&#39;</span> <span class="se">\G</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. 查看行锁等待，</span>
+</span></span><span class="line"><span class="cl">MariaDB <span class="o">[</span>information_schema<span class="o">]</span>&gt;  SELECT requesting_trx_id     AS run_trx_id, 
+</span></span><span class="line"><span class="cl">       r.trx_mysql_thread_id AS run_pid, 
+</span></span><span class="line"><span class="cl">       blocking_trx_id, 
+</span></span><span class="line"><span class="cl">       z.trx_mysql_thread_id AS blocking_pid 
+</span></span><span class="line"><span class="cl">FROM   innodb_lock_waits AS l 
+</span></span><span class="line"><span class="cl">       JOIN innodb_trx AS r 
+</span></span><span class="line"><span class="cl">         ON l.requesting_trx_id <span class="o">=</span> r.trx_id 
+</span></span><span class="line"><span class="cl">       JOIN innodb_trx AS z 
+</span></span><span class="line"><span class="cl">         ON l.blocking_trx_id <span class="o">=</span> z.trx_id<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">+-----------------+---------+-----------------+--------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> run_trx_id      <span class="p">|</span> run_pid <span class="p">|</span> blocking_trx_id <span class="p">|</span> blocking_pid <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-----------------+---------+-----------------+--------------+
+</span></span><span class="line"><span class="cl"><span class="p">|</span> <span class="m">422151806689784</span> <span class="p">|</span>      <span class="m">13</span> <span class="p">|</span> <span class="m">21240</span>           <span class="p">|</span>           <span class="m">10</span> <span class="p">|</span>
+</span></span><span class="line"><span class="cl">+-----------------+---------+-----------------+--------------+
+</span></span><span class="line"><span class="cl"><span class="m">1</span> row in <span class="nb">set</span> <span class="o">(</span>0.001 sec<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="24-死锁查看">2.4 死锁查看</h3>
+<p>出现死锁后，执行 show engine innodb status，有一节 LATESTDETECTED DEADLOCK，就是记录的最后一次死锁信息。</p>
+<p>并发执行下面两个语句，产生的死锁信息如下图所示:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="k">select</span> id from t where c in<span class="o">(</span>5,20,10<span class="o">)</span> lock in share mode<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="k">select</span> id from t where c in<span class="o">(</span>5,20,10<span class="o">)</span> order by c desc <span class="k">for</span> update<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/innodb_status.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/innodb_status.png, /images/mysql/MySQL45%e8%ae%b2/innodb_status.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/innodb_status.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/innodb_status.png"
+        title="innodb_status" /></p>
+<ol>
+<li>这个结果分成三部分：</li>
+</ol>
+<ul>
+<li>(1) TRANSACTION，是第一个事务的信息；</li>
+<li>(2) TRANSACTION，是第二个事务的信息；</li>
+<li>WE ROLL BACK TRANSACTION (1)，是最终的处理结果，表示回滚了第一个事务。</li>
+</ul>
+<ol start="2">
+<li>第一个事务的信息中：</li>
+</ol>
+<ul>
+<li>WAITING FOR THIS LOCK TO BE GRANTED，表示的是这个事务在等待的锁信息；</li>
+<li>index c of table <code>test</code>.<code>t</code>，说明在等的是表 t 的索引 c 上面的锁；</li>
+<li>lock mode S waiting 表示这个语句要自己加一个读锁，当前的状态是等待中；</li>
+<li>Record lock 说明这是一个记录锁；</li>
+<li>n_fields 2 表示这个记录是两列，也就是字段 c 和主键字段 id；</li>
+<li>0: len 4; hex 0000000a; asc ;; 是第一个字段，也就是 c。值是十六进制 a，也就是 10；</li>
+<li>1: len 4; hex 0000000a; asc ;; 是第二个字段，也就是主键 id，值也是 10；</li>
+<li>这两行里面的 asc 表示的是，接下来要打印出值里面的“可打印字符”，但 10 不是可打印字符，因此就显示空格。</li>
+<li>第一个事务信息就只显示出了等锁的状态，在等待 (c=10,id=10) 这一行的锁。当然你是知道的，既然出现死锁了，就表示这个事务也占有别的锁，但是没有显示出来。别着急，我们从第二个事务的信息中推导出来。</li>
+</ul>
+<ol start="3">
+<li>第二个事务显示的信息要多一些：</li>
+</ol>
+<ul>
+<li>“ HOLDS THE LOCK(S)”用来显示这个事务持有哪些锁；</li>
+<li>index c of table <code>test</code>.<code>t</code> 表示锁是在表 t 的索引 c 上；</li>
+<li>hex 0000000a 和 hex 00000014 表示这个事务持有 c=10 和 c=20 这两个记录锁；</li>
+<li>WAITING FOR THIS LOCK TO BE GRANTED，表示在等 (c=5,id=5) 这个记录锁。</li>
+</ul>
+<ol start="4">
+<li>说明:</li>
+</ol>
+<ul>
+<li>lock_mode X/S waiting表示next-key lock；</li>
+<li>lock_mode X/S locks rec but not gap是只有行锁；</li>
+<li>locks gap before rec，就是只有间隙锁；</li>
+</ul>
+<p>从上面这些信息中，我们就知道：</p>
+<ul>
+<li>“lock in share mode”的这条语句，持有 c=5 的记录锁，在等 c=10 的锁；</li>
+<li>“for update”这个语句，持有 c=20 和 c=10 的记录锁，在等 c=5 的记录锁。</li>
+</ul>
+<p>因此导致了死锁。这里，我们可以得到两个结论：</p>
+<ul>
+<li>由于锁是一个个加的，要避免死锁，对同一组资源，要按照尽量相同的顺序访问；</li>
+<li>在发生死锁的时刻，for update 这条语句占有的资源更多，回滚成本更大，所以 InnoDB 选择了回滚成本更小的 lock in share mode 语句，来回滚。</li>
+</ul>
+<h2 id="2-sql执行追踪">2. SQL执行追踪</h2>
+<p>可以用下面介绍的方法，来确定一个排序语句是否使用了临时文件，以及使用的排序算法。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">/* 打开optimizer_trace，只对本线程有效 */
+</span></span><span class="line"><span class="cl">SET <span class="nv">optimizer_trace</span><span class="o">=</span><span class="s1">&#39;enabled=on&#39;</span><span class="p">;</span> 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* @a保存Innodb_rows_read的初始值 */
+</span></span><span class="line"><span class="cl"><span class="k">select</span> VARIABLE_VALUE into @a from  performance_schema.session_status where <span class="nv">variable_name</span> <span class="o">=</span> <span class="s1">&#39;Innodb_rows_read&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* mariadb */
+</span></span><span class="line"><span class="cl"><span class="k">select</span> VARIABLE_VALUE into @a from  information_schema.session_status where <span class="nv">variable_name</span> <span class="o">=</span> <span class="s1">&#39;Innodb_rows_read&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* 执行语句 */
+</span></span><span class="line"><span class="cl"><span class="k">select</span> city, name,age from t where <span class="nv">city</span><span class="o">=</span><span class="s1">&#39;杭州&#39;</span> order by name limit 1000<span class="p">;</span> 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* 查看 OPTIMIZER_TRACE 输出 */
+</span></span><span class="line"><span class="cl">SELECT * FROM <span class="sb">`</span>information_schema<span class="sb">`</span>.<span class="sb">`</span>OPTIMIZER_TRACE<span class="sb">`</span><span class="se">\G</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* @b保存Innodb_rows_read的当前值 */
+</span></span><span class="line"><span class="cl"><span class="k">select</span> VARIABLE_VALUE into @b from performance_schema.session_status where <span class="nv">variable_name</span> <span class="o">=</span> <span class="s1">&#39;Innodb_rows_read&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* 计算Innodb_rows_read差值 */
+</span></span><span class="line"><span class="cl"><span class="k">select</span> @b-@a<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3-性能优化">3. 性能优化</h2>
+<p>说完了 MySQL 一些常见的问题追踪，接下来，我们来看看一些在业务高峰期拿来&quot;应急&quot;的解决方案，并着重说一说它们可能存在的风险，内容包括:</p>
+<ol>
+<li>短连接风暴</li>
+<li>慢查询性能问题</li>
+<li>QPS 突增问题</li>
+</ol>
+<h2 id="4-短连接风暴">4. 短连接风暴</h2>
+<p>正常的短连接模式就是连接到数据库后，执行很少的 SQL 语句就断开，下次需要的时候再重连。如果使用的是短连接，在业务高峰期的时候，就可能出现连接数突然暴涨的情况。</p>
+<p>前面我们说过，MySQL 建立连接的过程，成本是很高的。除了正常的网络连接三次握手外，还需要做登录权限判断和获得这个连接的数据读写权限。在数据库压力比较小的时候，这些额外的成本并不明显。但是，短连接模型存在一个风险，就是一旦数据库处理得慢一些，连接数就会暴涨。</p>
+<p>max_connections 参数，用来控制一个 MySQL 实例同时存在的连接数的上限，超过这个值，系统就会拒绝接下来的连接请求，并报错提示“Too many connections”。在机器负载比较高的时候，处理现有请求的时间变长，每个连接保持的时间也更长。这时，再有新建连接的话，就可能会超过 max_connections 的限制。对于被拒绝连接的请求来说，从业务角度看就是数据库不可用。</p>
+<p>显然我们不能直接增大 max_connections 的值，让更多的连接都可以进来。因为更多的连接会进一步增大系统负载。，大量的资源耗费在权限验证等逻辑上，结果可能是适得其反，已经连接的线程拿不到 CPU 资源去执行业务的 SQL 请求。</p>
+<p>这里还有两种方法，但要注意，这些方法都是有损的:</p>
+<ol>
+<li>第一种方法：先处理掉那些占着连接但是不工作的线程。</li>
+<li>减少连接过程的消耗</li>
+</ol>
+<h3 id="41-先处理掉那些占着连接但是不工作的线程">4.1 先处理掉那些占着连接但是不工作的线程</h3>
+<p>对于那些不需要保持的连接，我们可以通过 kill connection 主动踢掉。这个行为跟事先设置 wait_timeout 的效果是一样的。设置 wait_timeout 参数表示的是，一个线程空闲 wait_timeout 这么多秒之后，就会被 MySQL 直接断开连接。</p>
+<p>但是需要注意，在 show processlist 的结果里，踢掉显示为 sleep 的线程，可能是有损的。我们来看下面这个例子。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/show_processlist_sleep.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/show_processlist_sleep.png, /images/mysql/MySQL45%e8%ae%b2/show_processlist_sleep.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/show_processlist_sleep.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/show_processlist_sleep.png"
+        title="show_processlist_sleep" /></p>
+<p>session A,B 在show processlist 中都是 Sleep，但按照优先级来说，应该优先断开像 session B 这样的事务外空闲的连接。但是，怎么判断哪些是事务外空闲的呢？可以通过 information_schema 库的 innodb_trx 表。因此，如果是连接数过多，你可以优先断开事务外空闲太久的连接；如果这样还不够，再考虑断开事务内空闲太久的连接。</p>
+<p>从服务端断开连接使用的是 kill connection + id 的命令， 一个客户端处于 sleep 状态时，它的连接被服务端主动断开后，这个客户端并不会马上知道。直到客户端在发起下一个请求的时候，才会收到这样的报错“ERROR 2013 (HY000): Lost connection to MySQL server during query”。</p>
+<p>从数据库端主动断开连接可能是有损的，尤其是有的应用端收到这个错误后，不重新连接，而是直接用这个已经不能用的句柄重试查询。这会导致从应用端看上去，“MySQL 一直没恢复”。</p>
+<h3 id="42-减少连接过程的消耗">4.2 减少连接过程的消耗</h3>
+<p>有的业务代码会在短时间内先大量申请数据库连接做备用，如果现在数据库确认是被连接行为打挂了，那么一种可能的做法，是让数据库跳过权限验证阶段。但是风险极高，非常不建议。</p>
+<p>跳过权限验证的方法是：重启数据库，并使用–skip-grant-tables 参数启动。在 MySQL 8.0 版本里，如果你启用–skip-grant-tables 参数，MySQL 会默认把 &ndash;skip-networking 参数打开，表示这时候数据库只能被本地的客户端连接。</p>
+<h2 id="5-慢查询性能问题">5. 慢查询性能问题</h2>
+<p>在 MySQL 中，会引发性能问题的慢查询，大体有以下三种可能：</p>
+<ol>
+<li>索引没有设计好；</li>
+<li>SQL 语句没写好；</li>
+<li>MySQL 选错了索引。</li>
+</ol>
+<h3 id="51-索引没设计好">5.1 索引没设计好</h3>
+<p>这种场景一般就是通过紧急创建索引来解决。MySQL 5.6 版本以后，创建索引都支持 Online DDL 了，对于那种高峰期数据库已经被这个语句打挂了的情况，最高效的做法就是直接执行 alter table 语句。</p>
+<p>比较理想的是能够在备库先执行。假设你现在的服务是一主一备，主库 A、备库 B，这个方案的大致流程是这样的：</p>
+<ol>
+<li>在备库 B 上执行 set sql_log_bin=off，也就是不写 binlog，然后执行 alter table 语句加上索引；</li>
+<li>执行主备切换；</li>
+<li>这时候主库是 B，备库是 A。在 A 上执行 set sql_log_bin=off，然后执行 alter table 语句加上索引。</li>
+</ol>
+<p>这是一个“古老”的 DDL 方案。平时在做变更的时候，你应该考虑类似 gh-ost 这样的方案，更加稳妥。但是在需要紧急处理时，上面这个方案的效率是最高的。</p>
+<h3 id="52-语句没写好">5.2 语句没写好</h3>
+<p>我们可以通过改写 SQL 语句来处理。MySQL 5.7 提供了 query_rewrite 功能，可以把输入的一种语句改写成另外一种模式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mysql&gt; insert into query_rewrite.rewrite_rules<span class="o">(</span>pattern, replacement, pattern_database<span class="o">)</span> values <span class="o">(</span><span class="s2">&#34;select * from t where id + 1 = ?&#34;</span>, <span class="s2">&#34;select * from t where id = ? - 1&#34;</span>, <span class="s2">&#34;db1&#34;</span><span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">call query_rewrite.flush_rewrite_rules<span class="o">()</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>call query_rewrite.flush_rewrite_rules() 这个存储过程，是让插入的新规则生效。</p>
+<h3 id="53-选错了索引">5.3 选错了索引</h3>
+<p>应急方案就是给这个语句加上 force index。同样地，使用查询重写功能，给原来的语句加上 force index，也可以解决这个问题。</p>
+<h3 id="54-问题总结">5.4 问题总结</h3>
+<p>慢查询导致性能问题的三种可能情况，实际上出现最多的是前两种，即：索引没设计好和语句没写好。而这两种情况，恰恰是完全可以避免的。比如，通过下面这个过程，我们就可以预先发现问题。</p>
+<ol>
+<li>上线前，在测试环境，把慢查询日志（slow log）打开，并且把 long_query_time 设置成 0，确保每个语句都会被记录入慢查询日志；</li>
+<li>在测试表里插入模拟线上的数据，做一遍回归测试；</li>
+<li>观察慢查询日志里每类语句的输出，特别留意 Rows_examined 字段是否与预期一致。</li>
+</ol>
+<p>如果新增的 SQL 语句不多，手动跑一下就可以。而如果是新项目的话，或者是修改了原有项目的 表结构设计，全量回归测试都是必要的。这时候，你需要工具帮你检查所有的 SQL 语句的返回结果。比如，你可以使用开源工具 <a href="https://www.percona.com/doc/percona-toolkit/3.0/pt-query-digest.html" target="_blank" rel="noopener noreffer">pt-query-digest</a>。</p>
+<h2 id="6-qps-突增问题">6. QPS 突增问题</h2>
+<p>有时候由于业务突然出现高峰，或者应用程序 bug，导致某个语句的 QPS 突然暴涨，也可能导致 MySQL 压力过大，影响服务。如果是bug 引起的，最理想的情况是让业务把这个功能下掉，服务自然就会恢复。</p>
+<p>而下掉一个功能，如果从数据库端处理的话，对应于不同的背景，有不同的方法可用。我这里再和你展开说明一下:</p>
+<ol>
+<li>一种是由全新业务的 bug 导致的。假设你的 DB 运维是比较规范的，也就是说白名单是一个个加的。这种情况下，如果你能够确定业务方会下掉这个功能，只是时间上没那么快，那么就可以从数据库端直接把白名单去掉。</li>
+<li>如果这个新功能使用的是单独的数据库用户，可以用管理员账号把这个用户删掉，然后断开现有连接。这样，这个新功能的连接不成功，由它引发的 QPS 就会变成 0。</li>
+<li>如果这个新增的功能跟主体功能是部署在一起的，那么我们只能通过处理语句来限制。这时，我们可以使用上面提到的查询重写功能，把压力最大的 SQL 语句直接重写成&quot;select 1&quot;返回。</li>
+</ol>
+<p>当然，这个操作的风险很高，需要你特别细致。它可能存在两个副作用：</p>
+<ol>
+<li>如果别的功能里面也用到了这个 SQL 语句模板，会有误伤；</li>
+<li>很多业务并不是靠这一个语句就能完成逻辑的，所以如果单独把这一个语句以 select 1 的结果返回的话，可能会导致后面的业务逻辑一起失败。</li>
+</ol>
+<p>所以，方案 3 是用于止血的，跟前面提到的去掉权限验证一样，应该是你所有选项里优先级最低的一个方案。</p>
+<p>同时你会发现，其实方案 1 和 2 都要依赖于规范的运维体系：虚拟化、白名单机制、业务账号分离。由此可见，更多的准备，往往意味着更稳定的系统。</p>
+<p>在实际开发中，我们也要尽量避免一些低效的方法，比如避免大量地使用短连接。同时，如果你做业务开发的话，要知道，连接异常断开是常有的事，你的代码里要有正确地重连并重试的机制。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-12</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" data-title="12 MySQL 问题追踪与性能优化" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" data-title="12 MySQL 问题追踪与性能优化"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" data-title="12 MySQL 问题追踪与性能优化"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" data-title="12 MySQL 问题追踪与性能优化" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/13_sql%E9%94%99%E8%AF%AF%E7%94%A8%E6%B3%95/" class="prev" rel="prev" title="11 SQL 一些常见的错误用法"><i class="fas fa-angle-left fa-fw"></i>11 SQL 一些常见的错误用法</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/" class="next" rel="next" title="13 MYSQL 索引选择">13 MYSQL 索引选择<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-12T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"12 MySQL 问题追踪与性能优化"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

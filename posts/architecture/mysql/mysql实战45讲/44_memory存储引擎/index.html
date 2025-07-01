@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>25 MYSQL Memory 存储引擎 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:title" content="25 MYSQL Memory 存储引擎" />
+<meta property="og:description" content="什么时候使用 Memory 存储引擎 1. 索引组织对比 假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎， 表 t2 使用 InnoDB 引擎。 1 2 3 4 create table t1(id int primary key, c int) engine=Memory; create table t2(id int primary key, c" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-03-25T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-25T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="25 MYSQL Memory 存储引擎"/>
+<meta name="twitter:description" content="什么时候使用 Memory 存储引擎 1. 索引组织对比 假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎， 表 t2 使用 InnoDB 引擎。 1 2 3 4 create table t1(id int primary key, c int) engine=Memory; create table t2(id int primary key, c"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" /><link rel="prev" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/" /><link rel="next" href="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/45_%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "25 MYSQL Memory 存储引擎",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  1864 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E\/","datePublished": "2020-03-25T00:00:00+00:00","dateModified": "2020-03-25T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">25 MYSQL Memory 存储引擎</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-25">2020-03-25</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1864 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-索引组织对比">1. 索引组织对比</a>
+      <ul>
+        <li><a href="#11-innodb-组织形式">1.1 innodb 组织形式</a></li>
+        <li><a href="#12-memory-组织形式">1.2 Memory 组织形式</a></li>
+        <li><a href="#13-对比">1.3 对比</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-memory-存储引擎">2. Memory 存储引擎</a>
+      <ul>
+        <li><a href="#21-memory-特性">2.1 Memory 特性</a></li>
+        <li><a href="#22-数据持久化">2.2 数据持久化</a></li>
+        <li><a href="#23-适用场景">2.3 适用场景</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><p>什么时候使用 Memory 存储引擎</p>
+<!-- more -->
+<h2 id="1-索引组织对比">1. 索引组织对比</h2>
+<p>假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎， 表 t2 使用 InnoDB 引擎。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">create table t1<span class="o">(</span>id int primary key, c int<span class="o">)</span> <span class="nv">engine</span><span class="o">=</span>Memory<span class="p">;</span>
+</span></span><span class="line"><span class="cl">create table t2<span class="o">(</span>id int primary key, c int<span class="o">)</span> <span class="nv">engine</span><span class="o">=</span>innodb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t1 values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span>,<span class="o">(</span>9,9<span class="o">)</span>,<span class="o">(</span>0,0<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t2 values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span>,<span class="o">(</span>9,9<span class="o">)</span>,<span class="o">(</span>0,0<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="11-innodb-组织形式">1.1 innodb 组织形式</h3>
+<p>InnoDB 表的数据放在主键索引树上，主键索引是 B+ 树。所以表 t2 的数据组织方式如下图所示：主键索引上的值是有序存储的。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/innodb_data.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/innodb_data.jpg, /images/mysql/MySQL45%e8%ae%b2/innodb_data.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/innodb_data.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/innodb_data.jpg"
+        title="innodb_data" /></p>
+<p>主键索引上的值是有序存储的。在执行 select * 的时候，就会按照叶子节点从左到右扫描，所以得到的结果里，0 就出现在第一行。</p>
+<h3 id="12-memory-组织形式">1.2 Memory 组织形式</h3>
+<p>与 InnoDB 引擎不同，Memory 引擎的数据和索引是分开的。我们来看一下表 t1 中的数据内容。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/memory_data.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/memory_data.jpg, /images/mysql/MySQL45%e8%ae%b2/memory_data.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/memory_data.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/memory_data.jpg"
+        title="memory_data" /></p>
+<p>内存表的数据部分以数组的方式单独存放，而主键 id 索引里，存的是每个数据的位置。主键 id 是 hash 索引，可以看到索引上的 key 并不是有序的。</p>
+<p>在内存表 t1 中，当我执行 select * 的时候，走的是全表扫描，也就是顺序扫描这个数组。因此，0 就是最后一个被读到，并放入结果集的数据。</p>
+<p>需要指出的是，表 t1 的这个主键索引是哈希索引，因此如果执行范围查询是用不上主键索引的，需要走全表扫描，但是等值查找的速度比 B-Tree 索引快。</p>
+<h3 id="13-对比">1.3 对比</h3>
+<p>InnoDB 和 Memory 引擎的数据组织方式是不同的：</p>
+<ol>
+<li>InnoDB 引擎把数据放在主键索引上，其他索引上保存的是主键 id。这种方式，我们称之为索引组织表（Index Organizied Table）。</li>
+<li>Memory 引擎采用的是把数据单独存放，索引上保存数据位置的数据组织形式，我们称之为堆组织表（Heap Organizied Table）。</li>
+</ol>
+<p>这两个引擎存在一些典型不同：</p>
+<ol>
+<li>InnoDB 表的数据总是有序存放的，而内存表的数据就是按照写入顺序存放的；</li>
+<li>当数据文件有空洞的时候，InnoDB 表在插入新数据的时候，为了保证数据有序性，只能在固定的位置写入新值，而内存表找到空位就可以插入新值；</li>
+<li>数据位置发生变化的时候，InnoDB 表只需要修改主键索引，而内存表需要修改所有索引；</li>
+<li>InnoDB 表用主键索引查询时需要走一次索引查找，用普通索引查询的时候，需要走两次索引查找。而内存表没有这个区别，所有索引的“地位”都是相同的。</li>
+<li>InnoDB 支持变长数据类型，不同记录的长度可能不同；内存表不支持 Blob 和 Text 字段，并且即使定义了 varchar(N)，实际也当作 char(N)，也就是固定长度字符串来存储，因此内存表的每行数据长度相同。</li>
+</ol>
+<p>由于内存表的这些特性，每个数据行被删除以后，空出的这个位置都可以被接下来要插入的数据复用。</p>
+<h2 id="2-memory-存储引擎">2. Memory 存储引擎</h2>
+<p>内存表也是支 B-Tree 索引的。在 id 列上创建一个 B-Tree 索引，SQL 语句可以这么写：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">alter table t1 add index a_btree_index using btree <span class="o">(</span>id<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这时，表 t1 的数据组织形式就变成了这样：</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/memory_btree.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/memory_btree.jpg, /images/mysql/MySQL45%e8%ae%b2/memory_btree.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/memory_btree.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/memory_btree.jpg"
+        title="memory_btree" /></p>
+<h3 id="21-memory-特性">2.1 Memory 特性</h3>
+<p>一般在我们的印象中，内存表的优势是速度快，其中的一个原因就是 Memory 引擎支持 hash 索引。当然，更重要的原因是，内存表的所有数据都保存在内存，而内存的读写速度总是比磁盘快。</p>
+<p>但不建议在生产环境上使用内存表。这里的原因主要包括两个方面：</p>
+<ol>
+<li>锁粒度问题；</li>
+<li>数据持久化问题。</li>
+</ol>
+<p>内存表不支持行锁，只支持表锁。因此，一张表只要有更新，就会堵住其他所有在这个表上的读写操作。</p>
+<h3 id="22-数据持久化">2.2 数据持久化</h3>
+<p>数据放在内存中，数据库重启的时候，所有的内存表都会被清空。在高可用架构下，内存表的这个特点简直可以当做 bug 来看待了。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/memory_ms.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/memory_ms.jpg, /images/mysql/MySQL45%e8%ae%b2/memory_ms.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/memory_ms.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/memory_ms.jpg"
+        title="memory_ms" />
+对于一个双 M 集群，我们来看一下下面这个时序：</p>
+<ol>
+<li>业务正常访问主库；</li>
+<li>备库硬件升级，备库重启，内存表 t1 内容被清空；</li>
+<li>备库重启后，客户端发送一条 update 语句，修改表 t1 的数据行，这时备库应用线程就会报错“找不到要更新的行”。</li>
+</ol>
+<p>这样就会导致主备同步停止。当然，如果这时候发生主备切换的话，客户端会看到，表 t1 的数据“丢失”了。</p>
+<p>由于 MySQL 知道重启之后，内存表的数据会丢失。所以，担心主库重启之后，出现主备不一致，MySQL 在实现上做了这样一件事儿：在数据库重启之后，往 binlog 里面写入一行 DELETE FROM t1。</p>
+<p>在备库重启的时候，备库 binlog 里的 delete 语句就会传到主库，然后把主库内存表的内容删除。这样你在使用的时候就会发现，主库的内存表数据突然被清空了。</p>
+<h3 id="23-适用场景">2.3 适用场景</h3>
+<p>因为:</p>
+<ol>
+<li>如果你的表更新量大，那么并发度是一个很重要的参考指标，InnoDB 支持行锁，并发度比内存表好；</li>
+<li>能放到内存表的数据量都不大。如果你考虑的是读的性能，一个读 QPS 很高并且数据量不大的表，即使是使用 InnoDB，数据也是都会缓存在 InnoDB Buffer Pool 里的。因此，使用 InnoDB 表的读性能也不会差。</li>
+<li>由于重启会丢数据，如果一个备库重启，会导致主备同步线程停止；如果主库跟这个备库是双 M 架构，还可能导致主库的内存表数据被删掉。</li>
+</ol>
+<p>因此建议把普通内存表都用 InnoDB 表来代替。但是，有一个场景却是例外的 &ndash; 内存临时表。</p>
+<p>内存临时表刚好可以无视内存表的两个不足，主要是下面的三个原因：</p>
+<ol>
+<li>临时表不会被其他线程访问，没有并发性的问题；</li>
+<li>临时表重启后也是需要删除的，清空数据这个问题不存在；</li>
+<li>备库的临时表也不会影响主库的用户线程。</li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2020-03-25</span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" data-title="25 MYSQL Memory 存储引擎" data-hashtags="极客时间,MySQL实战45讲"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" data-hashtag="极客时间"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" data-title="25 MYSQL Memory 存储引擎"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" data-title="25 MYSQL Memory 存储引擎"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" data-title="25 MYSQL Memory 存储引擎" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/" class="prev" rel="prev" title="24 临时表"><i class="fas fa-angle-left fa-fw"></i>24 临时表</a>
+            <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/45_%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/" class="next" rel="next" title="26 MYSQL 自增主键">26 MYSQL 自增主键<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2020-03-25T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"25 MYSQL Memory 存储引擎"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
