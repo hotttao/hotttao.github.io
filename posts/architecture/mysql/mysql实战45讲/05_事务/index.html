@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/05_%E4%BA%8B%E5%8A%A1\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  3182 ,
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  4257 ,
         "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/05_%E4%BA%8B%E5%8A%A1\/","datePublished": "2020-03-05T00:00:00+00:00","dateModified": "2020-03-05T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
@@ -111,8 +111,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">5 MYSQL 事务</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-05">2020-03-05</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3182 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-05">2020-03-05</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4257 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -144,6 +144,23 @@
             <li><a href="#视图的更新">视图的更新</a></li>
             <li><a href="#更新与两阶段锁">更新与两阶段锁</a></li>
             <li><a href="#rr-与-rc">RR 与 RC</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#3-索引上多版本数据的实现">3. 索引上多版本数据的实现</a>
+      <ul>
+        <li><a href="#31-初始状态事务开始前">3.1 初始状态（事务开始前）</a></li>
+        <li><a href="#32-删除操作-delete-id1-后的变化">3.2 删除操作 <code>DELETE id=1</code> 后的变化</a>
+          <ul>
+            <li><a href="#主键索引变化聚簇索引">主键索引变化（聚簇索引）</a></li>
+            <li><a href="#二级索引变化">二级索引变化</a></li>
+          </ul>
+        </li>
+        <li><a href="#33-插入操作-insert-id1-key1-后的变化">3.3 插入操作 <code>INSERT id=1, key=1</code> 后的变化</a>
+          <ul>
+            <li><a href="#主键索引变化">主键索引变化</a></li>
+            <li><a href="#二级索引变化-1">二级索引变化</a></li>
           </ul>
         </li>
       </ul>
@@ -180,7 +197,91 @@
         title="undo_log" /></p>
 <p>不同时刻启动的事务会有不同的 read-view。不同的 read-view 之间是不会相互影响的。同一条记录在系统中可以存在多个版本，就是数据库的多版本并发控制（MVCC）。对于 read-view A，要得到 1，就必须将当前值依次执行图中所有的回滚操作得到。</p>
 <p>系统会判断，当没有事务再需要用到这些回滚日志时，回滚日志会被删除。什么时候才不需要了呢？就是当系统里没有比这个回滚日志更早的 read-view 的时候。</p>
-<h4 id="为什么不要使用长事务">为什么不要使用长事务</h4>
+<p>在 mysql 的实现中，页头，以及每条记录的数据头如下:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="c1">// storage/innobase/include/rem0rec.h
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">struct</span> <span class="nc">rec_header_t</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint32_t</span> <span class="nl">heap_no</span><span class="p">:</span><span class="mi">13</span><span class="p">;</span>      <span class="c1">// 页内记录序号（0-8191）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">uint32_t</span> <span class="nl">status</span><span class="p">:</span><span class="mi">3</span><span class="p">;</span>        <span class="c1">// 记录状态（REC_STATUS_ORDINARY等）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">uint32_t</span> <span class="nl">next_record</span><span class="p">:</span><span class="mi">16</span><span class="p">;</span>  <span class="c1">// 下条记录相对偏移量
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">uint32_t</span> <span class="nl">n_owned</span><span class="p">:</span><span class="mi">4</span><span class="p">;</span>       <span class="c1">// 页目录槽拥有记录数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">uint32_t</span> <span class="nl">info_bits</span><span class="p">:</span><span class="mi">4</span><span class="p">;</span>     <span class="c1">// 信息位（删除标志等）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">uint32_t</span> <span class="nl">min_rec_flag</span><span class="p">:</span><span class="mi">1</span><span class="p">;</span>  <span class="c1">// 是否为最小记录（B+树非叶层）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// ... 其他位域
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 伪代码表示记录布局
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">struct</span> <span class="nc">rec_t</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">rec_header_t</span> <span class="n">header</span><span class="p">;</span>      <span class="c1">// 5字节头信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    
+</span></span><span class="line"><span class="cl">    <span class="c1">// 系统列（仅聚簇索引）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">trx_id_t</span> <span class="n">trx_id</span><span class="p">;</span>          <span class="c1">// 6字节事务ID（MVCC）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">roll_ptr_t</span> <span class="n">roll_ptr</span><span class="p">;</span>      <span class="c1">// 7字节回滚指针
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    
+</span></span><span class="line"><span class="cl">    <span class="c1">// 用户数据列
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">col1_data_t</span> <span class="n">col1</span><span class="p">;</span>         <span class="c1">// 列1数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">col2_data_t</span> <span class="n">col2</span><span class="p">;</span>         <span class="c1">// 列2数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// ...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    
+</span></span><span class="line"><span class="cl">    <span class="c1">// 变长列偏移数组（可选）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">var_offset_t</span> <span class="n">var_offsets</span><span class="p">[];</span> 
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>每个记录头都有一个 roll_ptr 指向这个事务对应的 undo_log。每个 undo_log 也有一个 roll_ptr 指向更早的 undo_log。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">struct</span> <span class="nc">undo_record</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">undo_no_t</span>  <span class="n">undo_no</span><span class="p">;</span>          <span class="c1">// undo log的序号，同一事务中递增
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">trx_id_t</span>   <span class="n">trx_id</span><span class="p">;</span>           <span class="c1">// 产生该undo记录的事务ID
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">roll_ptr_t</span>  <span class="n">prev_roll_ptr</span><span class="p">;</span>   <span class="c1">// 指向前一个版本的undo记录指针（构建版本链）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">table_id_t</span>  <span class="n">table_id</span><span class="p">;</span>        <span class="c1">// 表ID
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">uint32</span>     <span class="n">type_cmpl</span><span class="p">;</span>        <span class="c1">// 操作类型及标志位（如插入、更新、删除等）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">undo_rec_data_t</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>     <span class="c1">// 被修改前的数据（列值）
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="为什么不要使用长事务">为什么不要使用长事务</h4>
 <ol>
 <li>长事务意味着系统里面会存在很老的事务视图。由于这些事务随时可能访问数据库里面的任何数据，所以这个事务提交之前，数据库里面它可能用到的回滚记录都必须保留，这就会导致大量占用存储空间。</li>
 <li>在 MySQL 5.5 及以前的版本，回滚日志是跟数据字典一起放在 ibdata 文件里的，即使长事务最终提交，回滚段被清理，文件也不会变小。</li>
@@ -307,7 +408,148 @@
 <li>在可重复读隔离级别下，只需要在事务开始的时候创建一致性视图，之后事务里的其他查询都共用这个一致性视图；</li>
 <li>在读提交隔离级别下，每一个语句执行前都会重新算出一个新的视图。</li>
 </ol>
-</div><div class="post-footer" id="post-footer">
+<h2 id="3-索引上多版本数据的实现">3. 索引上多版本数据的实现</h2>
+<p>我们以表结构 <code>(id INT PRIMARY KEY, key INT, INDEX idx_key(key))</code> 为例，分析事务中执行 <code>DELETE id=1, key=1</code> 后立即 <code>INSERT id=1, key=1</code> 对 B+ 树结构的影响，即主键索引与二级索引在删除插入操作中的 B+ 树结构变化</p>
+<h3 id="31-初始状态事务开始前">3.1 初始状态（事务开始前）</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">  subgraph 主键索引 PK
+</span></span><span class="line"><span class="cl">    pk_root[根节点]
+</span></span><span class="line"><span class="cl">    pk_root --&gt; |id=1| pk_leaf1[叶子节点1]
+</span></span><span class="line"><span class="cl">    pk_leaf1 --&gt; id1[(id=1, key=1, data...)]
+</span></span><span class="line"><span class="cl">  end
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  subgraph 二级索引 idx_key
+</span></span><span class="line"><span class="cl">    sk_root[根节点]
+</span></span><span class="line"><span class="cl">    sk_root --&gt; |key=1| sk_leaf1[叶子节点1]
+</span></span><span class="line"><span class="cl">    sk_leaf1 --&gt; key1_1[(key=1, id=1)]
+</span></span><span class="line"><span class="cl">  end
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="32-删除操作-delete-id1-后的变化">3.2 删除操作 <code>DELETE id=1</code> 后的变化</h3>
+<h4 id="主键索引变化聚簇索引">主键索引变化（聚簇索引）</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">  subgraph PK
+</span></span><span class="line"><span class="cl">    pk_root[根节点]
+</span></span><span class="line"><span class="cl">    pk_root --&gt; pk_leaf1[叶子节点1]
+</span></span><span class="line"><span class="cl">    pk_leaf1 --&gt; id1_delete[⚠ id=1 
+</span></span><span class="line"><span class="cl">          ▸ 标记删除标志 
+</span></span><span class="line"><span class="cl">          ▸ DB_TRX_ID=当前事务ID 
+</span></span><span class="line"><span class="cl">          ▸ DB_ROLL_PTR→UNDO]
+</span></span><span class="line"><span class="cl">  end
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="二级索引变化">二级索引变化</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">  subgraph idx_key
+</span></span><span class="line"><span class="cl">    sk_root[根节点]
+</span></span><span class="line"><span class="cl">    sk_root --&gt; sk_leaf1[叶子节点1]
+</span></span><span class="line"><span class="cl">    sk_leaf1 --&gt; key1_del[[key=1, id=1
+</span></span><span class="line"><span class="cl">          ▸ 标记删除标志
+</span></span><span class="line"><span class="cl">          ▸ 物理位置保留]]
+</span></span><span class="line"><span class="cl">  end
+</span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p><strong>核心机制</strong>：</p>
+<ul>
+<li>所有索引都标记删除但<strong>保留物理位置</strong></li>
+<li>主键索引记录 <code>DB_ROLL_PTR</code> 指向 Undo Log</li>
+<li>二级索引<strong>不存储</strong>事务信息</li>
+</ul>
+</blockquote>
+<h3 id="33-插入操作-insert-id1-key1-后的变化">3.3 插入操作 <code>INSERT id=1, key=1</code> 后的变化</h3>
+<h4 id="主键索引变化">主键索引变化</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">  subgraph PK
+</span></span><span class="line"><span class="cl">    pk_root[根节点]
+</span></span><span class="line"><span class="cl">    pk_root --&gt; pk_leaf1[叶子节点1]
+</span></span><span class="line"><span class="cl">    pk_leaf1 --&gt; 
+</span></span><span class="line"><span class="cl">        id1_delete[⚠ id=1（标记删除）] &amp; 
+</span></span><span class="line"><span class="cl">        id1_new[✅ id=1（新记录）
+</span></span><span class="line"><span class="cl">          ▸ DB_TRX_ID=新事务ID
+</span></span><span class="line"><span class="cl">          ▸ DB_ROLL_PTR→新UNDO]
+</span></span><span class="line"><span class="cl">  end
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="二级索引变化-1">二级索引变化</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">  subgraph idx_key
+</span></span><span class="line"><span class="cl">    sk_root[根节点]
+</span></span><span class="line"><span class="cl">    sk_root --&gt; sk_leaf1[叶子节点1]
+</span></span><span class="line"><span class="cl">    sk_leaf1 --&gt; 
+</span></span><span class="line"><span class="cl">        key1_del[[key=1, id=1（删除标记）]] &amp; 
+</span></span><span class="line"><span class="cl">        key1_new[[✅ key=1, id=1（新记录）]]
+</span></span><span class="line"><span class="cl">  end
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
