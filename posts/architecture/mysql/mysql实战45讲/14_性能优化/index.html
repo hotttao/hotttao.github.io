@@ -29,7 +29,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  5414 ,
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "极客时间, MySQL实战45讲","wordcount":  6094 ,
         "url": "https:\/\/hotttao.github.io\/posts\/architecture\/mysql\/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2\/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96\/","datePublished": "2020-03-12T00:00:00+00:00","dateModified": "2020-03-12T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
@@ -111,8 +111,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">12 MySQL 问题追踪与性能优化</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-12">2020-03-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 5414 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 11 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2020-03-12">2020-03-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6094 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 13 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -159,6 +159,21 @@
       </ul>
     </li>
     <li><a href="#6-qps-突增问题">6. QPS 突增问题</a></li>
+    <li><a href="#7-mysql-监控">7. MySQL 监控</a>
+      <ul>
+        <li><a href="#71-死锁监控">7.1 死锁监控</a></li>
+        <li><a href="#72-事务监控">7.2 事务监控</a></li>
+        <li><a href="#73-性能监控">7.3 性能监控</a>
+          <ul>
+            <li><a href="#查询级性能">查询级性能</a></li>
+            <li><a href="#连接与会话">连接与会话</a></li>
+            <li><a href="#innodb-引擎">InnoDB 引擎</a></li>
+          </ul>
+        </li>
+        <li><a href="#74-关键配置验证">7.4 关键配置验证</a></li>
+        <li><a href="#75-容量监控">7.5 容量监控</a></li>
+      </ul>
+    </li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><p>MySQL 中怎么做问题追踪与性能优化</p>
@@ -665,6 +680,234 @@
 <p>所以，方案 3 是用于止血的，跟前面提到的去掉权限验证一样，应该是你所有选项里优先级最低的一个方案。</p>
 <p>同时你会发现，其实方案 1 和 2 都要依赖于规范的运维体系：虚拟化、白名单机制、业务账号分离。由此可见，更多的准备，往往意味着更稳定的系统。</p>
 <p>在实际开发中，我们也要尽量避免一些低效的方法，比如避免大量地使用短连接。同时，如果你做业务开发的话，要知道，连接异常断开是常有的事，你的代码里要有正确地重连并重试的机制。</p>
+<h2 id="7-mysql-监控">7. MySQL 监控</h2>
+<h3 id="71-死锁监控">7.1 死锁监控</h3>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最近一次死锁详情</td>
+<td><code>information_schema.INNODB_TRX</code></td>
+<td><code>SHOW ENGINE INNODB STATUS;</code> (查看 <strong>LATEST DETECTED DEADLOCK</strong> 部分)</td>
+</tr>
+<tr>
+<td>当前阻塞中的事务</td>
+<td><code>information_schema.INNODB_TRX</code></td>
+<td><code>SELECT * FROM information_schema.INNODB_TRX WHERE TRX_STATE = 'LOCK WAIT'\G</code></td>
+</tr>
+<tr>
+<td>锁等待关系链 (8.0+)</td>
+<td><code>performance_schema.data_lock_waits</code></td>
+<td><code>SELECT * FROM performance_schema.data_lock_waits\G</code></td>
+</tr>
+<tr>
+<td>当前持有的锁详情 (8.0+)</td>
+<td><code>performance_schema.data_locks</code></td>
+<td><code>SELECT * FROM performance_schema.data_locks\G</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="72-事务监控">7.2 事务监控</h3>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>运行时间 &gt; 60s 的长事务</td>
+<td><code>information_schema.INNODB_TRX</code></td>
+<td><code>SELECT * FROM information_schema.INNODB_TRX WHERE TIME_TO_SEC(TIMEDIFF(NOW(), trx_started)) &gt; 60\G</code></td>
+</tr>
+<tr>
+<td>事务隔离级别状态</td>
+<td><code>performance_schema.variables_by_thread</code></td>
+<td><code>SELECT * FROM variables_by_thread WHERE VARIABLE_NAME IN ('transaction_isolation','tx_isolation')\G</code></td>
+</tr>
+<tr>
+<td>未提交事务的修改行数</td>
+<td><code>information_schema.INNODB_TRX</code></td>
+<td><code>SELECT trx_id, trx_rows_modified FROM information_schema.INNODB_TRX WHERE trx_state = 'RUNNING'\G</code></td>
+</tr>
+<tr>
+<td>事务锁等待超时时间</td>
+<td><code>performance_schema.global_variables</code></td>
+<td><code>SELECT * FROM global_variables WHERE VARIABLE_NAME = 'innodb_lock_wait_timeout'\G</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="73-性能监控">7.3 性能监控</h3>
+<h4 id="查询级性能">查询级性能</h4>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>慢查询日志状态</td>
+<td><code>performance_schema.global_variables</code></td>
+<td><code>SELECT * FROM global_variables WHERE VARIABLE_NAME LIKE 'slow_query_log%'\G</code></td>
+</tr>
+<tr>
+<td>慢查询统计 (8.0+)</td>
+<td><code>sys.x$statement_analysis</code></td>
+<td><code>SELECT * FROM sys.x$statement_analysis ORDER BY avg_latency DESC LIMIT 10\G</code></td>
+</tr>
+<tr>
+<td>全表扫描的语句</td>
+<td><code>sys.schema_tables_with_full_table_scans</code></td>
+<td><code>SELECT * FROM sys.schema_tables_with_full_table_scans\G</code></td>
+</tr>
+<tr>
+<td>等待锁的语句统计</td>
+<td><code>performance_schema.events_waits_summary_by_thread_by_event_name</code></td>
+<td><code>SELECT * FROM events_waits_summary_by_thread_by_event_name WHERE SUM_TIMER_WAIT &gt; 0\G</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="连接与会话">连接与会话</h4>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>当前活跃会话详情</td>
+<td><code>performance_schema.processlist</code></td>
+<td><code>SELECT * FROM processlist WHERE COMMAND != 'Sleep'\G</code></td>
+</tr>
+<tr>
+<td>连接数统计</td>
+<td><code>performance_schema.threads</code></td>
+<td><code>SELECT USER, COUNT(*) FROM threads GROUP BY USER\G</code></td>
+</tr>
+<tr>
+<td>会话内存使用 (8.0+)</td>
+<td><code>sys.session</code></td>
+<td><code>SELECT * FROM sys.session ORDER BY current_memory DESC LIMIT 10\G</code></td>
+</tr>
+<tr>
+<td>临时表使用统计</td>
+<td><code>performance_schema.session_status</code></td>
+<td><code>SHOW GLOBAL STATUS LIKE 'Created_tmp%';</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="innodb-引擎">InnoDB 引擎</h4>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>缓冲池命中率</td>
+<td><code>performance_schema.global_status</code></td>
+<td><code>SELECT VARIABLE_VALUE FROM global_status WHERE VARIABLE_NAME = 'Innodb_buffer_pool_reads';</code><br>计算：<code>(1 - Innodb_buffer_pool_reads / Innodb_buffer_pool_read_requests) * 100</code></td>
+</tr>
+<tr>
+<td>脏页比例</td>
+<td><code>information_schema.INNODB_BUFFER_PAGE</code></td>
+<td><code>SELECT COUNT(*)/@@innodb_buffer_pool_size*100 FROM INNODB_BUFFER_PAGE WHERE OLDEST_MODIFICATION &gt; 0\G</code></td>
+</tr>
+<tr>
+<td>刷盘负载</td>
+<td><code>performance_schema.global_status</code></td>
+<td><code>SELECT VARIABLE_NAME, VARIABLE_VALUE FROM global_status WHERE VARIABLE_NAME LIKE 'Innodb_buffer_pool_wait%'\G</code></td>
+</tr>
+<tr>
+<td>IO压力指标</td>
+<td><code>information_schema.INNODB_METRICS</code></td>
+<td><code>SELECT NAME, COUNT FROM INNODB_METRICS WHERE NAME LIKE 'buffer_pool_wait%'\G</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="74-关键配置验证">7.4 关键配置验证</h3>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>事务隔离级别全局设置</td>
+<td><code>performance_schema.global_variables</code></td>
+<td><code>SELECT * FROM global_variables WHERE VARIABLE_NAME IN ('transaction_isolation','tx_isolation')\G</code></td>
+</tr>
+<tr>
+<td>Redo Log 配置状态</td>
+<td><code>performance_schema.global_variables</code></td>
+<td><code>SELECT * FROM global_variables WHERE VARIABLE_NAME LIKE 'innodb_log_file%'\G</code></td>
+</tr>
+<tr>
+<td>自动提交状态</td>
+<td><code>performance_schema.variables_by_thread</code></td>
+<td><code>SELECT * FROM variables_by_thread WHERE VARIABLE_NAME = 'autocommit'\G</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="75-容量监控">7.5 容量监控</h3>
+<table>
+<thead>
+<tr>
+<th>查询内容</th>
+<th>查询表/视图</th>
+<th>查询 SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>表空间使用率</td>
+<td><code>information_schema.FILES</code></td>
+<td><code>SELECT FILE_NAME, TOTAL_EXTENTS * EXTENT_SIZE / 1024 / 1024 AS &quot;Size(MB)&quot; FROM FILES WHERE FILE_TYPE = 'TABLESPACE'\G</code></td>
+</tr>
+<tr>
+<td>索引碎片率</td>
+<td><code>information_schema.TABLES</code></td>
+<td><code>SELECT TABLE_NAME, DATA_FREE / 1024 / 1024 AS &quot;Frag(MB)&quot; FROM TABLES WHERE DATA_FREE &gt; 10000000\G</code></td>
+</tr>
+<tr>
+<td>大表TOP10</td>
+<td><code>information_schema.TABLES</code></td>
+<td><code>SELECT TABLE_SCHEMA, TABLE_NAME, DATA_LENGTH/1024/1024 AS &quot;Size(MB)&quot; FROM TABLES ORDER BY DATA_LENGTH DESC LIMIT 10\G</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong>使用说明：</strong></p>
+<ol>
+<li><code>\G</code> 替换为 <code>;</code> 可表格化显示（适用命令行）</li>
+<li>MySQL 8.0+ 优先使用 <code>performance_schema</code> 和 <code>sys</code> 库</li>
+<li>关键指标建议定期采集（如每分钟采集 <code>SHOW GLOBAL STATUS</code> 的快照）</li>
+<li>生产环境使用 <code>sys</code> 库视图更友好：<code>sys.innodb_lock_waits</code>, <code>sys.schema_table_lock_waits</code> 等</li>
+</ol>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
