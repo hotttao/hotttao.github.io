@@ -623,7 +623,7 @@ BaseChatPromptTemplate 最常用的子类是:
 1. chat.ChatPromptTemplate
 2. structured.StructuredPrompt
 
-### 5.1 
+### 5.1 MessagesPlaceholder
 MessagesPlaceholder 定义了通过输入参数解析输出多种 Message 的能力。
 
 ```python
