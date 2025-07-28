@@ -1,4 +1,4 @@
-# LangChain Output Parser
+# LangChain Output
 
 ## 1. Outputs 和 Output Parser
 看代码会发现 langchain-core 有两个 outputs 和 output_parsers 两个包。
@@ -110,7 +110,7 @@ print(gen.message.content)
 7. RunInfo
 
 ### 2.1 提问
-让我们问问大模型这三个基类代表的语义。
+让我们问问大模型这些类代表的语义。
 
 ```bash
 我正在阅读  langchain output 子包的源代码，注意到包内，有如下类:
@@ -245,4 +245,5 @@ LLMResult
 └── run (List[RunInfo])
 ```
 
+现在我们就可以扩展在 Prompt 得到的调用链 **Prompts -> PromptValue(包含 Message) -> LLM -> Generation(包含 Message) -> Parser** 
 
