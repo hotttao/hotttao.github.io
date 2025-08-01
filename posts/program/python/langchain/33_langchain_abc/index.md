@@ -1,4 +1,4 @@
-# LangChain Cache And Memory
+# LangChain-Core 的抽象
 
 
 目前为止我们学习 langchain-core 中几乎所有的核心对象。现在我们对这些核心对象的抽象层次做一个总结，便于我们理解 Agent 中对象的传递和调用链。查看源代码时可以快速定位到每个组件核心代码的位置。
