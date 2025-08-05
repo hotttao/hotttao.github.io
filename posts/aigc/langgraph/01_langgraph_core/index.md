@@ -305,6 +305,8 @@ class PregelNode:
 ```
 
 ### 4.1 属性
+提问: 下面是 PregelNode 的定义，请以表格的形式列出每个方法名、作用、输出值类型
+
 
 | 属性名            | 类型                              | 语义作用                                  | 使用场景 / 示例                                                 |
 | -------------- | ------------------------------- | ------------------------------------- | --------------------------------------------------------- |
@@ -329,6 +331,16 @@ channel 表示节点之间的数据传输管道，有点类似 golang 中的 cha
 
 
 ### 5.1 BaseChannel 定义的接口
+
+```python
+class BaseChannel(Generic[Value, Update, Checkpoint], ABC):
+    """Base class for all channels."""
+
+    __slots__ = ("key", "typ")
+
+    # 完整代码省略
+```
+
 提问: 上面是 BaseChannel 定义的接口，请以表格的形式列出每个方法名、作用、输出值类型
 
 | 方法名                           | 返回类型                | 作用描述                                                   |
@@ -492,7 +504,7 @@ PregelScratchpad 的定义如上，请先解释他的语义，在以表格的形
 
 ---
 
-### #💡 补充说明
+#### 💡 补充说明
 
 * 这些属性的设计都是“无状态风格” —— 通过传入的函数或参数组合构建一个“只读+函数式”的上下文视图；
 * 它不是用于存储图中节点或边的结构，而是计算流控制和追踪；
@@ -518,7 +530,7 @@ Checkpointer 有多个可选值:
 | `BaseCheckpointSaver` 实例 | 自定义类实例     | **使用自定义的 checkpoint 保存器**    | 子图希望使用独立的 checkpoint 机制，如保存位置、策略不同 |
 
 
-## 7.1 BaseCheckpointSaver
+### 7.1 BaseCheckpointSaver
 BaseCheckpointSaver 是 checkpointer save 的抽象基类:
 
 ```python
@@ -617,6 +629,22 @@ BaseCheckpointSaver 中比较重要的是:
 > ✅ `store` 用于 **LangGraph 的“图中信息共享和通用持久化”能力**。
 
 ### 8.2 BaseStore 抽象方法
+提问: 请以表格的形式列出 BaseStore 每个方法名、作用、输出值类型
+
+| 方法名                | 作用描述                                   | 输出值类型                   |        |
+| ------------------ | -------------------------------------- | ----------------------- | ------ |
+| `batch`            | 同步批量执行多个操作（如 put、get、delete、search）    | `list[Result]`          |        |
+| `abatch`           | 异步批量执行多个操作                             | `list[Result]`          |        |
+| `get`              | 同步获取指定 namespace + key 的项              | \`Item                  | None\` |
+| `aget`             | 异步获取指定 namespace + key 的项              | \`Item                  | None\` |
+| `search`           | 同步在指定 namespace 前缀下进行搜索，可选支持自然语言查询、过滤等 | `list[SearchItem]`      |        |
+| `asearch`          | 异步版本的 `search`                         | `list[SearchItem]`      |        |
+| `put`              | 同步写入或更新一项数据，支持 TTL 和可选索引字段             | `None`                  |        |
+| `aput`             | 异步版本的 `put`                            | `None`                  |        |
+| `delete`           | 同步删除一项数据                               | `None`                  |        |
+| `adelete`          | 异步版本的 `delete`                         | `None`                  |        |
+| `list_namespaces`  | 同步列出命名空间（支持前缀/后缀匹配、层级过滤、分页）            | `list[tuple[str, ...]]` |        |
+| `alist_namespaces` | 异步版本的 `list_namespaces`                | `list[tuple[str, ...]]` |        |
 
 
 ## 9. BaseCache
@@ -664,3 +692,22 @@ BaseCheckpointSaver 中比较重要的是:
 
 
 ### 9.2 BaseCache 抽象方法
+
+| 方法名      | 作用描述                                                 | 输出值类型                   |
+| -------- | ---------------------------------------------------- | ----------------------- |
+| `get`    | 同步获取多个缓存项的值（根据多个 `FullKey`）                          | `dict[FullKey, ValueT]` |
+| `aget`   | 异步获取多个缓存项的值                                          | `dict[FullKey, ValueT]` |
+| `set`    | 同步设置多个缓存项的值及其 TTL（以 `FullKey` 为键，值为 `(ValueT, TTL)`） | `None`                  |
+| `aset`   | 异步设置多个缓存项的值及其 TTL                                    | `None`                  |
+| `clear`  | 同步清除指定命名空间（`Namespace`）下的缓存项，若未提供则清空所有               | `None`                  |
+| `aclear` | 异步清除指定命名空间（`Namespace`）下的缓存项，若未提供则清空所有               | `None`                  |
+
+
+## 10. 总结 
+现在我们已经总览了 pregel 中组合的所有对象，最重要的是我们了解的不同对象的之间的依赖关系，我们按照依赖关系，从最简单的抽象开始逐步学习:
+1. PregelNode
+2. Channel
+3. BaseCheckpointSaver
+5. BaseStore
+4. BaseCache
+7. Pregel 
