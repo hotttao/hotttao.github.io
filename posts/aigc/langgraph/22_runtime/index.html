@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>pregel runtime - LoveIt</title><meta name="Description" content="pregel runtime"><meta property="og:title" content="pregel runtime" />
+<meta property="og:description" content="pregel runtime" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-08-01T15:00:00+08:00" />
+<meta property="article:modified_time" content="2025-08-09T10:50:48+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="pregel runtime"/>
+<meta name="twitter:description" content="pregel runtime"/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/langgraph/07_cache/" /><link rel="next" href="https://hotttao.github.io/posts/aigc/langgraph/12_pregel_stream_mode/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "pregel runtime",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/langgraph\/22_runtime\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "langgraph 源码","wordcount":  2243 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/langgraph\/22_runtime\/","datePublished": "2025-08-01T15:00:00+08:00","dateModified": "2025-08-09T10:50:48+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "pregel runtime"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">pregel runtime</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/langchain/"><i class="far fa-folder fa-fw"></i>langchain</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2025-08-01">2025-08-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2243 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-runtime">1. Runtime</a>
+      <ul>
+        <li><a href="#11-runtime-语义">1.1 Runtime 语义</a></li>
+        <li><a href="#12-runtime-属性">1.2 Runtime 属性</a></li>
+        <li><a href="#13-泛型变量-contextt">1.3 泛型变量 ContextT</a>
+          <ul>
+            <li><a href="#statelike">StateLike</a></li>
+            <li><a href="#-基本概念回顾protocol">✅ 基本概念回顾：<code>Protocol</code></a></li>
+            <li><a href="#-1-typeddictlikev1">📘 1. <code>TypedDictLikeV1</code></a></li>
+            <li><a href="#-2-typeddictlikev2">📘 2. <code>TypedDictLikeV2</code></a></li>
+            <li><a href="#-3-dataclasslike">📘 3. <code>DataclassLike</code></a></li>
+            <li><a href="#-总结对比">✅ 总结对比</a></li>
+          </ul>
+        </li>
+        <li><a href="#14-runtime-方法">1.4 Runtime 方法</a></li>
+        <li><a href="#15-default_runtime">1.5 DEFAULT_RUNTIME</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-runtime">1. Runtime</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 提问</span>
+</span></span><span class="line"><span class="cl">上面是 Langgraph Runtime 的定义，请给我解释一下 Runtime 的语义，并以表格的形式列举 Runtime 的属性，并以另一个表格列举 Runtime 的方法
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="11-runtime-语义">1.1 Runtime 语义</h3>
+<p>LangGraph 中的 <code>Runtime</code> 类是一个用于封装运行时上下文与工具的便利类，通常会在每个图执行期间作为第二个参数注入节点函数中（第一个是 <code>state</code>，第二个是 <code>runtime</code>），以提供更强大的能力，比如：</p>
+<ul>
+<li><strong>访问上下文信息（如用户 ID）</strong></li>
+<li><strong>读写 store（用于 memory / checkpoint /缓存）</strong></li>
+<li><strong>写入流输出</strong></li>
+<li><strong>访问上一个线程的结果（functional API 下）</strong></li>
+</ul>
+<hr>
+<table>
+<thead>
+<tr>
+<th>方面</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🎯 <strong>作用</strong></td>
+<td>提供给每个节点函数的运行时环境，封装与当前运行相关的上下文、存储系统、输出流、上一次运行结果等</td>
+</tr>
+<tr>
+<td>🧩 <strong>位置</strong></td>
+<td>自动注入在每个节点函数的第二个参数中，例如：<code>def my_node(state, runtime): ...</code></td>
+</tr>
+<tr>
+<td>💡 <strong>类比</strong></td>
+<td>类似于 web 框架中的 <code>request.context</code> 或任务执行框架中的 <code>ExecutionContext</code></td>
+</tr>
+<tr>
+<td>🔧 <strong>适用场景</strong></td>
+<td>多用户图、上下文依赖节点（如需要 user_id、DB conn）、需要 store 持久化、需要流式写入输出等</td>
+</tr>
+</tbody>
+</table>
+<p>下面是 Runtime 的使用示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TypedDict</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.graph</span> <span class="kn">import</span> <span class="n">StateGraph</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.runtime</span> <span class="kn">import</span> <span class="n">Runtime</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.store.memory</span> <span class="kn">import</span> <span class="n">InMemoryStore</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nd">@dataclass</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Context</span><span class="p">:</span>  <span class="c1"># (1)!</span>
+</span></span><span class="line"><span class="cl">    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">State</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">response</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">store</span> <span class="o">=</span> <span class="n">InMemoryStore</span><span class="p">()</span>  <span class="c1"># (2)!</span>
+</span></span><span class="line"><span class="cl"><span class="n">store</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="s2">&#34;users&#34;</span><span class="p">,),</span> <span class="s2">&#34;user_123&#34;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;Alice&#34;</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">personalized_greeting</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">,</span> <span class="n">runtime</span><span class="p">:</span> <span class="n">Runtime</span><span class="p">[</span><span class="n">Context</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">State</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="s1">&#39;&#39;&#39;Generate personalized greeting using runtime context and store.&#39;&#39;&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">user_id</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">user_id</span>  <span class="c1"># (3)!</span>
+</span></span><span class="line"><span class="cl">    <span class="n">name</span> <span class="o">=</span> <span class="s2">&#34;unknown_user&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="n">memory</span> <span class="o">:=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&#34;users&#34;</span><span class="p">,),</span> <span class="n">user_id</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">            <span class="n">name</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="s2">&#34;name&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">response</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&#34;Hello </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">! Nice to see you again.&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;response&#34;</span><span class="p">:</span> <span class="n">response</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="o">=</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">StateGraph</span><span class="p">(</span><span class="n">state_schema</span><span class="o">=</span><span class="n">State</span><span class="p">,</span> <span class="n">context_schema</span><span class="o">=</span><span class="n">Context</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&#34;personalized_greeting&#34;</span><span class="p">,</span> <span class="n">personalized_greeting</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">set_entry_point</span><span class="p">(</span><span class="s2">&#34;personalized_greeting&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">set_finish_point</span><span class="p">(</span><span class="s2">&#34;personalized_greeting&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">({},</span> <span class="n">context</span><span class="o">=</span><span class="n">Context</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="s2">&#34;user_123&#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># &gt; {&#39;response&#39;: &#39;Hello Alice! Nice to see you again.&#39;}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="12-runtime-属性">1.2 Runtime 属性</h3>
+<p>下面是 Runtime 属性的说明:</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>context</code></td>
+<td><code>ContextT</code></td>
+<td>与当前运行绑定的上下文对象，通常是一个 <code>@dataclass</code>，用于传入如 <code>user_id</code>、数据库连接等依赖</td>
+</tr>
+<tr>
+<td><code>store</code></td>
+<td><code>BaseStore | None</code></td>
+<td>可选的运行时存储接口，用于访问 <code>memory</code> / <code>checkpoint</code> 等状态数据</td>
+</tr>
+<tr>
+<td><code>stream_writer</code></td>
+<td><code>StreamWriter</code></td>
+<td>自定义的输出流写入函数，通常用于增量/中间输出</td>
+</tr>
+<tr>
+<td><code>previous</code></td>
+<td><code>Any</code></td>
+<td>上一个线程的返回值，仅在启用 functional API + checkpointer 时可用</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nd">@dataclass</span><span class="p">(</span><span class="o">**</span><span class="n">_DC_KWARGS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Runtime</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">ContextT</span><span class="p">]):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="p">:</span> <span class="n">ContextT</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>  <span class="c1"># type: ignore[assignment]</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Static context for the graph run, like user_id, db_conn, etc.
+</span></span></span><span class="line"><span class="cl"><span class="s2">    
+</span></span></span><span class="line"><span class="cl"><span class="s2">    Can also be thought of as &#39;run dependencies&#39;.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">store</span><span class="p">:</span> <span class="n">BaseStore</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Store for the graph run, enabling persistence and memory.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">stream_writer</span><span class="p">:</span> <span class="n">StreamWriter</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">_no_op_stream_writer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Function that writes to the custom stream.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">previous</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;The previous return value for the given thread.
+</span></span></span><span class="line"><span class="cl"><span class="s2">    
+</span></span></span><span class="line"><span class="cl"><span class="s2">    Only available with the functional API when a checkpointer is provided.
+</span></span></span><span class="line"><span class="cl"><span class="s2">    &#34;&#34;&#34;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面是 Runtime 在 Pregel 初始化的相关代码，初始化示例有助于我们理解 Runtime 每个参数的含义:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">runtime</span> <span class="o">=</span> <span class="n">Runtime</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 对 context 做类型转换，对应示例传入的 context_schema</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="o">=</span><span class="n">_coerce_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">context_schema</span><span class="p">,</span> <span class="n">context</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># BaseStore</span>
+</span></span><span class="line"><span class="cl">    <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># def stream_writer(c: Any) -&gt; None:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 内部会调用 SyncQueue.put 方法，往消息队列提交自定义消息</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># pregel.stream 可以从 SyncQueue 读取到对应的消息</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream_writer</span><span class="o">=</span><span class="n">stream_writer</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">previous</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">parent_runtime</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="n">CONF</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">CONFIG_KEY_RUNTIME</span><span class="p">,</span> <span class="n">DEFAULT_RUNTIME</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 从 configurable 获取 __pregel_runtime 并合并</span>
+</span></span><span class="line"><span class="cl"><span class="n">runtime</span> <span class="o">=</span> <span class="n">parent_runtime</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">runtime</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 更新 runtime</span>
+</span></span><span class="line"><span class="cl"><span class="n">config</span><span class="p">[</span><span class="n">CONF</span><span class="p">][</span><span class="n">CONFIG_KEY_RUNTIME</span><span class="p">]</span> <span class="o">=</span> <span class="n">runtime</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="13-泛型变量-contextt">1.3 泛型变量 ContextT</h3>
+<p>下面是 ContextT 的声明，它是一个泛型变量，用于表示上下文对象的类型。之前对 Python 泛型关注的比较少，这里对此做个详细解释。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 是 Python 3.11+ 中 带 default 参数的 TypeVar 泛型变量定义，用于类型系统中的泛型约束。</span>
+</span></span><span class="line"><span class="cl"><span class="n">ContextT</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&#34;ContextT&#34;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Union</span><span class="p">[</span><span class="n">StateLike</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><table>
+<thead>
+<tr>
+<th>部分</th>
+<th>含义说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TypeVar(&quot;ContextT&quot;, ...)</code></td>
+<td>创建一个类型变量 <code>ContextT</code>，可用于泛型函数、类、方法中</td>
+</tr>
+<tr>
+<td><code>bound=Union[StateLike, None]</code></td>
+<td>表示 <code>ContextT</code> 必须是 <code>StateLike</code> 或 <code>None</code> 的子类（上界约束）</td>
+</tr>
+<tr>
+<td><code>default=None</code></td>
+<td>如果使用者不提供具体类型参数时，默认 <code>ContextT = None</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="statelike">StateLike</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 是 Python 中的 类型别名 定义，用来为复杂类型起一个更简洁、更语义化的名字。</span>
+</span></span><span class="line"><span class="cl"><span class="n">StateLike</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">TypedDictLikeV1</span><span class="p">,</span> <span class="n">TypedDictLikeV2</span><span class="p">,</span> <span class="n">DataclassLike</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><table>
+<thead>
+<tr>
+<th>部分</th>
+<th>含义说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StateLike</code></td>
+<td>新定义的类型别名名，用于表示“状态类”的泛型类型</td>
+</tr>
+<tr>
+<td><code>TypeAlias</code></td>
+<td>Python 3.10+ 引入的关键字，用来显式声明这是一个<strong>类型别名</strong></td>
+</tr>
+<tr>
+<td><code>Union[...]</code></td>
+<td>表示联合类型，即多个类型中的任意一个</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TypedDictLikeV1</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Protocol to represent types that behave like TypedDicts
+</span></span></span><span class="line"><span class="cl"><span class="s2">
+</span></span></span><span class="line"><span class="cl"><span class="s2">    Version 1: using `ClassVar` for keys.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">__required_keys__</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__optional_keys__</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TypedDictLikeV2</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Protocol to represent types that behave like TypedDicts
+</span></span></span><span class="line"><span class="cl"><span class="s2">
+</span></span></span><span class="line"><span class="cl"><span class="s2">    Version 2: not using `ClassVar` for keys.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">__required_keys__</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__optional_keys__</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DataclassLike</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Protocol to represent types that behave like dataclasses.
+</span></span></span><span class="line"><span class="cl"><span class="s2">
+</span></span></span><span class="line"><span class="cl"><span class="s2">    Inspired by the private _DataclassT from dataclasses that uses a similar protocol as a bound.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">__dataclass_fields__</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Field</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这三个类：</p>
+<ul>
+<li><code>TypedDictLikeV1</code></li>
+<li><code>TypedDictLikeV2</code></li>
+<li><code>DataclassLike</code></li>
+</ul>
+<p>都是使用 <code>Protocol</code> 定义的<strong>结构类型协议</strong>，用于在类型系统中判断某个对象**“长得像”某种结构（鸭子类型）**，而不要求实际继承某个类。</p>
+<h4 id="-基本概念回顾protocol">✅ 基本概念回顾：<code>Protocol</code></h4>
+<ul>
+<li><code>Protocol</code> 是 Python 的 <strong>结构子类型系统</strong>（Structural Subtyping）的一部分（PEP 544）。</li>
+<li>它允许你定义一种类型接口（签名/属性结构），只要一个类满足这些结构，就被视为是该协议的子类——<strong>即使它没显式继承</strong>。</li>
+</ul>
+<hr>
+<h4 id="-1-typeddictlikev1">📘 1. <code>TypedDictLikeV1</code></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TypedDictLikeV1</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Version 1: using `ClassVar` for keys.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__required_keys__</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__optional_keys__</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>🧠 说明：</p>
+<ul>
+<li>
+<p>表示一个<strong>行为像 TypedDict</strong> 的类，<strong>版本1</strong>。</p>
+</li>
+<li>
+<p>要求这个类具有两个<strong>类变量</strong>（<code>ClassVar</code>）：</p>
+<ul>
+<li><code>__required_keys__</code>: 所有必须字段名</li>
+<li><code>__optional_keys__</code>: 所有可选字段名</li>
+</ul>
+</li>
+<li>
+<p>这些字段是 <strong>静态定义在类上的常量</strong>。</p>
+</li>
+</ul>
+<p>✅ 用途示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MyTD</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__required_keys__</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&#34;a&#34;</span><span class="p">,</span> <span class="s2">&#34;b&#34;</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__optional_keys__</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&#34;c&#34;</span><span class="p">})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>虽然它不是 <code>TypedDict</code>，但它行为符合 <code>TypedDictLikeV1</code> 协议。</p>
+<hr>
+<h4 id="-2-typeddictlikev2">📘 2. <code>TypedDictLikeV2</code></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TypedDictLikeV2</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Version 2: not using `ClassVar` for keys.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__required_keys__</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__optional_keys__</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>🧠 说明：</p>
+<ul>
+<li>表示<strong>行为像 TypedDict</strong> 的类，<strong>版本2</strong>。</li>
+<li>与 V1 不同，它要求这两个字段是<strong>实例属性</strong>（不是 <code>ClassVar</code>）。</li>
+</ul>
+<p>✅ 用途区别：</p>
+<table>
+<thead>
+<tr>
+<th>属性声明方式</th>
+<th>V1 要求</th>
+<th>V2 要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ClassVar</code></td>
+<td>✅ 必须是类属性</td>
+<td>❌ 不能是类属性</td>
+</tr>
+<tr>
+<td>实例属性</td>
+<td>❌ 非预期</td>
+<td>✅ 必须是实例属性</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ 一般真实 <code>TypedDict</code> 更接近 V1，因为其元信息是定义在类上的。</p>
+</blockquote>
+<hr>
+<h4 id="-3-dataclasslike">📘 3. <code>DataclassLike</code></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">DataclassLike</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;行为类似 dataclass 的类型&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">__dataclass_fields__</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Field</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>🧠 说明：</p>
+<ul>
+<li>表示一个行为类似 <code>@dataclass</code> 的类。</li>
+<li>要求该类拥有一个类属性 <code>__dataclass_fields__</code>，是字段名到 <code>Field</code> 的映射（<code>Field</code> 是 dataclasses 内部表示字段的类型）。</li>
+</ul>
+<p>✅ 满足条件的示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nd">@dataclass</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">User</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">age</span><span class="p">:</span> <span class="nb">int</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># User 类自动有 __dataclass_fields__ 属性</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><hr>
+<h4 id="-总结对比">✅ 总结对比</h4>
+<table>
+<thead>
+<tr>
+<th>协议名</th>
+<th>检查属性</th>
+<th>属性类型</th>
+<th>目标结构</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TypedDictLikeV1</code></td>
+<td><code>__required_keys__</code>, <code>__optional_keys__</code></td>
+<td>类属性（ClassVar）</td>
+<td>模拟 TypedDict v1</td>
+</tr>
+<tr>
+<td><code>TypedDictLikeV2</code></td>
+<td>同上</td>
+<td>实例属性</td>
+<td>模拟 TypedDict v2</td>
+</tr>
+<tr>
+<td><code>DataclassLike</code></td>
+<td><code>__dataclass_fields__</code></td>
+<td>类属性</td>
+<td>Python dataclass</td>
+</tr>
+</tbody>
+</table>
+<p>这些协议可以用于泛型约束（如 <code>StateLike</code>）、静态类型检查、LangGraph 状态推导等场景。</p>
+<h3 id="14-runtime-方法">1.4 Runtime 方法</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="nd">@dataclass</span><span class="p">(</span><span class="o">**</span><span class="n">_DC_KWARGS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Runtime</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">ContextT</span><span class="p">]):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Runtime</span><span class="p">[</span><span class="n">ContextT</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Runtime</span><span class="p">[</span><span class="n">ContextT</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;Merge two runtimes together.
+</span></span></span><span class="line"><span class="cl"><span class="s2">
+</span></span></span><span class="line"><span class="cl"><span class="s2">        If a value is not provided in the other runtime, the value from the current runtime is used.
+</span></span></span><span class="line"><span class="cl"><span class="s2">        &#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">Runtime</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="n">context</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">context</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="n">store</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">store</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="n">stream_writer</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">stream_writer</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">stream_writer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_no_op_stream_writer</span>
+</span></span><span class="line"><span class="cl">            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_writer</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="n">previous</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">previous</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">previous</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">override</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">overrides</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">_RuntimeOverrides</span><span class="p">[</span><span class="n">ContextT</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Runtime</span><span class="p">[</span><span class="n">ContextT</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;Replace the runtime with a new runtime with the given overrides.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">overrides</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><table>
+<thead>
+<tr>
+<th>方法名</th>
+<th>输入参数</th>
+<th>返回值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>merge</code></td>
+<td><code>other: Runtime[ContextT]</code></td>
+<td><code>Runtime[ContextT]</code></td>
+<td>合并两个 Runtime：优先使用 <code>other</code> 中非空值，否则用当前实例的值（类似配置叠加）</td>
+</tr>
+<tr>
+<td><code>override</code></td>
+<td><code>**overrides</code></td>
+<td><code>Runtime[ContextT]</code></td>
+<td>使用 <code>dataclasses.replace</code> 创建一个带 override 的新 Runtime 实例</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15-default_runtime">1.5 DEFAULT_RUNTIME</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">DEFAULT_RUNTIME</span> <span class="o">=</span> <span class="n">Runtime</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">store</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream_writer</span><span class="o">=</span><span class="n">_no_op_stream_writer</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">previous</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_no_op_stream_writer</span><span class="p">(</span><span class="n">_</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2025-08-09&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/393317c0d6f1b62543d725a0702c4122550aa82b" target="_blank" title="commit by tao(tao@example.com) 393317c0d6f1b62543d725a0702c4122550aa82b: langgraph pregel">
+                                    <i class="fas fa-hashtag fa-fw"></i>393317c</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/langgraph/22_runtime/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" data-title="pregel runtime" data-hashtags="langgraph 源码"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" data-hashtag="langgraph 源码"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" data-title="pregel runtime"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" data-title="pregel runtime"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/langgraph/22_runtime/" data-title="pregel runtime" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/langgraph-%E6%BA%90%E7%A0%81/">langgraph 源码</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/langgraph/07_cache/" class="prev" rel="prev" title="pregel cache"><i class="fas fa-angle-left fa-fw"></i>pregel cache</a>
+            <a href="/posts/aigc/langgraph/12_pregel_stream_mode/" class="next" rel="next" title="pregel stream mode">pregel stream mode<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2025-08-01T15:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"pregel runtime"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
