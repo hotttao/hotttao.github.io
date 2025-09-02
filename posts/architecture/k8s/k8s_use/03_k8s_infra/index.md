@@ -39,27 +39,79 @@ Kubernetes 的架构由 Master 和 Node 两种节点组成，而这两种角色�
 ![Deployment 创建流程](/images/k8s/k8s_use/control_plane_workflow.png)
 
 ## 2. k8s 源码结构
-有了架构图，我们再来看看源码结构，看看架构与源码是如何对应起来。个人觉得结合代码的方式来学习 k8s 可以让我们更加结构化的理解 k8s 中的抽象概念，这样理解和记忆会更加深刻。
+有了架构图，我们再来看看源码结构，看看架构与源码是如何对应起来。个人觉得结合代码的方式来学习 k8s 可以让我们更加结构化的理解 k8s 中的抽象概念，这样理解和记忆会更加深刻。对于 k8s 来说最终的就是源码下的 pkg 和 staging 两个目录。pkg 比较好理解，就是 k8s 的代码库，那 staging 是什么呢？k8s 允许我们做很多自定义开发，比如自定义控制器、webhook，staging 保存的就是为 k8s 做扩展开发时会用到的功能代码。[staging](https://github.com/kubernetes/kubernetes/tree/master/staging) 内的代码会被定义同步到其他 repo。pkg 也同样依赖 staging。
 
-|目录 |作用|
-|:---|:---|
-|api/ |	存放 OpenAPI/ |Swagger 的 spec 文件，包括 JSON、Protocol 的定义等|
-|build/ |	存放构建相关的脚本|
-|cmd/ |	存放可执行文件的入口代码，每一个可执行文件都会对应有一个 main 函数|
-|docs/ |	存放设计或者用户使用文档|
-|hack/ |	存放与构建、测试相关的脚本|
-|pkg/ |	存放核心库代码，可被项目内部或外部，直接引用|
-|plugin/ |	存放 kubernetes 的插件，例如认证插件、授权插件等|
-|staging/ |	存放部分核心库的暂存代码，也就是还没有集成到 pkg 目录的代码，包括一些与云服务厂商集成的 provider|
-|test/ |	存放测试工具，以及测试数据|
-|third_party/ |	存放第三方工具、代码或其他组件|
-|translations/ |	存放 i18n(国际化)语言包的相关文件，可以在不修改内部代码的情况下支持不同语言及地区|
-|vendor/ |	存放项目依赖的库代码，一般为第三方库代码|
 
-cmd 是可执行文件入口，与 kubernetes 提供的各个组件一一对应。cmd 中实际调用的就是 pkg 中的代码。在 pkg 中下面几个目录与我们后面学习 k8s 密切相关:
+```bash
+$ ll pkg/
+总用量 40
+drwxrwxr-x. 12 tao tao  188 3月   4 22:08 api
+drwxrwxr-x. 27 tao tao 4096 2月  28 20:32 apis
+drwxrwxr-x.  4 tao tao   60 2月  28 20:32 auth
+drwxrwxr-x.  2 tao tao   71 2月  28 20:32 capabilities
+drwxrwxr-x.  5 tao tao   67 2月  28 20:32 client
+drwxrwxr-x.  3 tao tao   68 2月  28 20:32 cloudprovider
+drwxrwxr-x.  3 tao tao   19 2月  28 20:32 cluster
+drwxrwxr-x. 33 tao tao 4096 2月  28 20:32 controller
+drwxrwxr-x.  5 tao tao 4096 2月  28 20:32 controlplane
+drwxrwxr-x.  7 tao tao  239 2月  28 20:32 credentialprovider
+drwxrwxr-x.  2 tao tao   44 2月  28 20:32 features
+drwxrwxr-x.  2 tao tao   65 2月  28 20:32 fieldpath
+drwxrwxr-x.  3 tao tao   35 2月  28 20:32 generated
+drwxrwxr-x.  6 tao tao  147 2月  28 20:32 kubeapiserver
+drwxrwxr-x.  3 tao tao   73 2月  28 20:32 kubectl
+drwxrwxr-x. 44 tao tao 4096 2月  28 20:32 kubelet
+drwxrwxr-x.  2 tao tao  117 2月  28 20:32 kubemark
+-rw-rw-r--.  1 tao tao  366 2月  28 20:32 OWNERS
+drwxrwxr-x.  4 tao tao  161 2月  28 20:32 printers
+drwxrwxr-x.  6 tao tao  181 2月  28 20:32 probe
+drwxrwxr-x. 11 tao tao 4096 2月  28 20:32 proxy
+drwxrwxr-x.  3 tao tao   16 2月  28 20:32 quota
+drwxrwxr-x. 23 tao tao 4096 2月  28 20:32 registry
+drwxrwxr-x.  2 tao tao  140 2月  28 20:32 routes
+drwxrwxr-x.  9 tao tao 4096 2月  28 20:32 scheduler
+drwxrwxr-x.  3 tao tao   36 2月  28 20:32 security
+drwxrwxr-x.  2 tao tao  115 2月  28 20:32 securitycontext
+drwxrwxr-x.  2 tao tao  182 2月  28 20:32 serviceaccount
+drwxrwxr-x. 29 tao tao 4096 2月  28 20:32 util
+drwxrwxr-x. 27 tao tao 4096 2月  28 20:32 volume
+drwxrwxr-x.  3 tao tao   21 2月  28 20:32 windows
 
-|目录|作用|
-|:---|:---|
-|apis|kubernetes 核心对象的定义，后面我们将学习的 Pod，Deployment 等等核心对象的可定义字段都在这个目录下 go 代码中定义|
+ll staging/src/k8s.io/
+总用量 32
+drwxrwxr-x. 28 tao tao 4096 2月  28 20:32 api
+drwxrwxr-x.  8 tao tao  252 2月  28 20:32 apiextensions-apiserver
+drwxrwxr-x.  5 tao tao  213 2月  28 20:32 apimachinery
+drwxrwxr-x.  5 tao tao  236 2月  28 20:32 apiserver
+drwxrwxr-x. 24 tao tao 4096 2月  28 20:32 client-go
+drwxrwxr-x.  5 tao tao  211 2月  28 20:32 cli-runtime
+drwxrwxr-x. 14 tao tao 4096 2月  28 20:32 cloud-provider
+drwxrwxr-x.  5 tao tao  208 2月  28 20:32 cluster-bootstrap
+drwxrwxr-x.  8 tao tao 4096 2月  28 20:32 code-generator
+drwxrwxr-x. 13 tao tao 4096 2月  28 20:32 component-base
+drwxrwxr-x.  9 tao tao  272 2月  28 20:32 component-helpers
+drwxrwxr-x.  8 tao tao  252 2月  28 20:32 controller-manager
+drwxrwxr-x.  4 tao tao  194 2月  28 20:32 cri-api
+drwxrwxr-x.  4 tao tao  229 2月  28 20:32 csi-translation-lib
+drwxrwxr-x.  7 tao tao  265 2月  28 20:32 dynamic-resource-allocation
+drwxrwxr-x.  6 tao tao  222 2月  28 20:32 kms
+drwxrwxr-x.  6 tao tao  224 2月  28 20:32 kube-aggregator
+drwxrwxr-x.  4 tao tao  197 2月  28 20:32 kube-controller-manager
+drwxrwxr-x.  7 tao tao  236 2月  28 20:32 kubectl
+drwxrwxr-x.  5 tao tao  208 2月  28 20:32 kubelet
+drwxrwxr-x.  4 tao tao  197 2月  28 20:32 kube-proxy
+drwxrwxr-x.  5 tao tao  213 2月  28 20:32 kube-scheduler
+drwxrwxr-x.  7 tao tao  210 2月  28 20:32 legacy-cloud-providers
+drwxrwxr-x.  5 tao tao  206 2月  28 20:32 metrics
+drwxrwxr-x.  3 tao tao 4096 2月  28 20:32 mount-utils
+drwxrwxr-x.  5 tao tao  212 2月  28 20:32 noderesourcetopology-api
+drwxrwxr-x. 10 tao tao 4096 2月  28 20:32 pod-security-admission
+drwxrwxr-x.  7 tao tao  236 2月  28 20:32 sample-apiserver
+drwxrwxr-x.  5 tao tao  232 2月  28 20:32 sample-cli-plugin
+drwxrwxr-x.  7 tao tao 4096 2月  28 20:32 sample-controller
+```
+
+### 2.1 staging
+#### apimachinery
 
 
