@@ -10,7 +10,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://hotttao.github.io/posts/aigc/langgraph/21_pregel_base/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2025-08-01T11:00:00+08:00" />
-<meta property="article:modified_time" content="2025-08-09T10:50:48+08:00" />
+<meta property="article:modified_time" content="2025-09-02T16:15:49+08:00" />
 
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
@@ -29,8 +29,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/langgraph\/21_pregel_base\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "langgraph 源码","wordcount":  6779 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/langgraph\/21_pregel_base\/","datePublished": "2025-08-01T11:00:00+08:00","dateModified": "2025-08-09T10:50:48+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "langgraph 源码","wordcount":  6960 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/langgraph\/21_pregel_base\/","datePublished": "2025-08-01T11:00:00+08:00","dateModified": "2025-09-02T16:15:49+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -111,7 +111,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animated flipInX">pregel - 1</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/langchain/"><i class="far fa-folder fa-fw"></i>langchain</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2025-08-01">2025-08-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6779 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2025-08-01">2025-08-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 6960 字&nbsp;
                 <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 14 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  kept="">
                 <div class="details-summary toc-title">
@@ -141,6 +141,7 @@
         <li><a href="#24-command">2.4 Command</a>
           <ul>
             <li><a href="#command-属性">Command 属性</a></li>
+            <li><a href="#command-示例">Command 示例</a></li>
             <li><a href="#_update_as_tuples">_update_as_tuples</a></li>
           </ul>
         </li>
@@ -1348,6 +1349,11 @@
 </tr>
 </tbody>
 </table>
+<p>总结:</p>
+<ol>
+<li>updates: 发生在 Loop.put_writes，每个task 在 Pregel Runner 中执行完毕后，调用 Loop.put_writes 生成 updates model 的数据</li>
+<li>values: 发生在 Loop._first 和 Loop.after_tick 当 updated_channel 与 loop.output_keys 没有交集时，会输出所有 所有 loop.output_keys 对应 channel 中的数据。</li>
+</ol>
 <h3 id="24-command">2.4 Command</h3>
 <p>Command 的泛型数据类，是 LangGraph 中用于 控制图状态更新和节点跳转的核心指令对象。你可以把它理解为图执行中的“一次行动指令”，在一个节点执行后返回，用于告诉引擎下一步干什么。后面我们讲解 interrupt 时，就能理解 Command 的作用了。我们先看它的实现。</p>
 <div class="highlight"><div class="chroma">
@@ -1498,7 +1504,27 @@
 </tr>
 </tbody>
 </table>
-<h4 id="_update_as_tuples">_update_as_tuples</h4>
+<h4 id="command-示例">Command 示例</h4>
+<p>如果你正在使用子图，你可能希望从子图中的一个节点导航到另一个子图（即父图中的另一个节点）。为此，你可以在 Command 中指定 graph=Command.PARENT</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">my_node</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Command</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="s2">&#34;other_subgraph&#34;</span><span class="p">]]:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">Command</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&#34;foo&#34;</span><span class="p">:</span> <span class="s2">&#34;bar&#34;</span><span class="p">},</span> <span class="c1"># 要更新的参数</span>
+</span></span><span class="line"><span class="cl">        <span class="n">goto</span><span class="o">=</span><span class="s2">&#34;other_subgraph&#34;</span><span class="p">,</span>  <span class="c1"># `other_subgraph` 是父图的节点</span>
+</span></span><span class="line"><span class="cl">        <span class="n">graph</span><span class="o">=</span><span class="n">Command</span><span class="o">.</span><span class="n">PARENT</span> <span class="c1"># 跳转到父图</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="_update_as_tuples">_update_as_tuples</h4>
 <p>_update_as_tuples 用于统一 Command update 值，其用到了 get_cached_annotated_keys 和 get_update_as_tuples 两个函数。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -2104,8 +2130,8 @@
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2025-08-09&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/393317c0d6f1b62543d725a0702c4122550aa82b" target="_blank" title="commit by tao(tao@example.com) 393317c0d6f1b62543d725a0702c4122550aa82b: langgraph pregel">
-                                    <i class="fas fa-hashtag fa-fw"></i>393317c</a></span>
+                <span>更新于 2025-09-02&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/34acd15f31a7c48fa298da661c32fdcd609e4f84" target="_blank" title="commit by tao(tao@example.com) 34acd15f31a7c48fa298da661c32fdcd609e4f84: blog 同步">
+                                    <i class="fas fa-hashtag fa-fw"></i>34acd15</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>

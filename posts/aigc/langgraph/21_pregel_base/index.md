@@ -519,6 +519,10 @@ StreamMode = Literal[
 | `"debug"`       | 是 `"checkpoints"` 和 `"tasks"` 的组合，便于调试。            | 调试模式，获取完整运行过程         |
 
 
+总结:
+1. updates: 发生在 Loop.put_writes，每个task 在 Pregel Runner 中执行完毕后，调用 Loop.put_writes 生成 updates model 的数据
+2. values: 发生在 Loop._first 和 Loop.after_tick 当 updated_channel 与 loop.output_keys 没有交集时，会输出所有 所有 loop.output_keys 对应 channel 中的数据。
+
 ### 2.4 Command
 
 Command 的泛型数据类，是 LangGraph 中用于 控制图状态更新和节点跳转的核心指令对象。你可以把它理解为图执行中的“一次行动指令”，在一个节点执行后返回，用于告诉引擎下一步干什么。后面我们讲解 interrupt 时，就能理解 Command 的作用了。我们先看它的实现。
@@ -590,6 +594,21 @@ class Command(Generic[N], ToolOutputMixin):
 | `resume` | `dict[str, Any] \| Any \| None`    | 恢复中断执行的值，用于与 `interrupt()` 配合。可为：<br>- 中断 ID 到恢复值的映射<br>- 单一恢复值，应用于最近的中断                              |
 | `goto`   | `Send \| Sequence[Send \| N] \| N` | 指定接下来要跳转执行的节点（或节点序列）或发送命令。可以是：<br>- 节点名（`str` 或 `Literal`）<br>- `Send` 对象（含输入数据）<br>- 上述任意组合的列表       |
 
+
+#### Command 示例
+
+如果你正在使用子图，你可能希望从子图中的一个节点导航到另一个子图（即父图中的另一个节点）。为此，你可以在 Command 中指定 graph=Command.PARENT
+
+
+
+```python
+def my_node(state: State) -> Command[Literal["other_subgraph"]]:
+    return Command(
+        update={"foo": "bar"}, # 要更新的参数
+        goto="other_subgraph",  # `other_subgraph` 是父图的节点
+        graph=Command.PARENT # 跳转到父图
+    )
+```
 
 #### _update_as_tuples 
 _update_as_tuples 用于统一 Command update 值，其用到了 get_cached_annotated_keys 和 get_update_as_tuples 两个函数。

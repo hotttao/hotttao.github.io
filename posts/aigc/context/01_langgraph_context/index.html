@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Context Engineering - LoveIt</title><meta name="Description" content="Agent Context "><meta property="og:title" content="Context Engineering" />
+<meta property="og:description" content="Agent Context " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-08-20T08:00:00+08:00" />
+<meta property="article:modified_time" content="2025-09-02T16:15:49+08:00" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Context Engineering"/>
+<meta name="twitter:description" content="Agent Context "/>
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/mcp/12_abcoder_mcp/" /><link rel="next" href="https://hotttao.github.io/posts/aigc/context/02_langmem/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Context Engineering",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/context\/01_langgraph_context\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Context Engineering","wordcount":  1997 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/context\/01_langgraph_context\/","datePublished": "2025-08-20T08:00:00+08:00","dateModified": "2025-09-02T16:15:49+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "Agent Context "
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animated flipInX">Context Engineering</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/langchain/"><i class="far fa-folder fa-fw"></i>langchain</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2025-08-20">2025-08-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 1997 字&nbsp;
+                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-context-engineering">1. Context Engineering</a>
+      <ul>
+        <li><a href="#11-agent-中的上下文工程">1.1 Agent 中的上下文工程</a>
+          <ul>
+            <li><a href="#1-记忆类型">(1) <strong>记忆类型</strong></a></li>
+            <li><a href="#2-记忆管理">(2) <strong>记忆管理</strong></a></li>
+            <li><a href="#3-动态上下文构建">(3) <strong>动态上下文构建</strong></a></li>
+            <li><a href="#4-多层上下文">(4) <strong>多层上下文</strong></a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-langgraph-中的上下文工程">2. LangGraph 中的上下文工程</a>
+      <ul>
+        <li><a href="#21-message-管理">2.1 message 管理</a>
+          <ul>
+            <li><a href="#修剪">修剪</a></li>
+            <li><a href="#删除">删除</a></li>
+            <li><a href="#摘要">摘要</a></li>
+          </ul>
+        </li>
+        <li><a href="#22-store-语义搜索">2.2 store 语义搜索</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-langmem">3. langmem</a>
+      <ul>
+        <li><a href="#31-记忆类型">3.1 记忆类型</a></li>
+        <li><a href="#32-写入记忆">3.2 写入记忆</a></li>
+        <li><a href="#33-存储系统">3.3 存储系统</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-使用示例">4. 使用示例</a>
+      <ul>
+        <li><a href="#41-集合类型记忆">4.1 集合类型记忆</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="1-context-engineering">1. Context Engineering</h2>
+<p>Context Engineering 本质上是 <strong>如何设计和管理 LLM 的上下文窗口，让模型在有限的 token 内得到正确的记忆、知识和状态</strong>。</p>
+<p>因为 LLM 的上下文窗口有限（比如 8K/32K/200K tokens），一个复杂的 Agent 需要：</p>
+<ul>
+<li>保持对话记忆（历史消息）</li>
+<li>注入外部知识（RAG 检索结果）</li>
+<li>维护任务状态（工具调用结果、变量）</li>
+<li>遵守系统约束（persona、目标、规则）</li>
+</ul>
+<p>这就需要有一套“上下文管理工程化方法”。</p>
+<hr>
+<h3 id="11-agent-中的上下文工程">1.1 Agent 中的上下文工程</h3>
+<p>在 Agent 系统里，上下文工程通常包括以下几个方面：</p>
+<h4 id="1-记忆类型">(1) <strong>记忆类型</strong></h4>
+<ul>
+<li>短期记忆：对话的最近几轮消息（用来保持连贯性）</li>
+<li>长期记忆：通过向量检索/知识库加载出来的历史经验</li>
+<li>工作记忆：任务当前步骤的状态（变量、草稿、partial results）</li>
+</ul>
+<h4 id="2-记忆管理">(2) <strong>记忆管理</strong></h4>
+<ul>
+<li>上下文压缩，用 LLM 对长历史进行摘要（conversation summarization）</li>
+<li>使用 embedding 做语义压缩，只检索相关部分</li>
+<li>利用结构化 state（而不是原始自然语言）减少 token 占用</li>
+</ul>
+<h4 id="3-动态上下文构建">(3) <strong>动态上下文构建</strong></h4>
+<ul>
+<li>
+<p>每次调用 LLM 时，根据 <em>任务需要</em> 动态拼装上下文：</p>
+<ul>
+<li>系统提示（system prompt）</li>
+<li>当前用户输入</li>
+<li>相关的历史对话</li>
+<li>相关的知识或工具结果</li>
+</ul>
+</li>
+<li>
+<p>这个过程就像“上下文路由”，决定“哪些信息进入上下文，哪些舍弃”。</p>
+</li>
+</ul>
+<h4 id="4-多层上下文">(4) <strong>多层上下文</strong></h4>
+<ul>
+<li><strong>全局上下文</strong>：角色、规则、目标（persona / policy）</li>
+<li><strong>会话上下文</strong>：当前对话的历史、摘要</li>
+<li><strong>任务上下文</strong>：当前 task 的状态、变量</li>
+<li><strong>外部上下文</strong>：检索知识、外部 API 结果</li>
+</ul>
+<h2 id="2-langgraph-中的上下文工程">2. LangGraph 中的上下文工程</h2>
+<p>在 Langgraph 中:</p>
+<ol>
+<li>记忆类型:
+<ul>
+<li>短期记忆: 用 State</li>
+<li>长期记忆: 用 Store</li>
+</ul>
+</li>
+<li>记忆管理:
+<ul>
+<li>短期记忆: 可以对 message 进行修剪、删除、总结</li>
+<li>长期记忆: Store 支持 embedding，可以通过语义搜索查找相关记忆</li>
+</ul>
+</li>
+<li>多层上下文:
+<ul>
+<li>Langgraph 中没有区分多层上下文</li>
+</ul>
+</li>
+</ol>
+<h3 id="21-message-管理">2.1 message 管理</h3>
+<h4 id="修剪">修剪</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 修剪</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langchain_core.messages.utils</span> <span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">trim_messages</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">count_tokens_approximately</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.prebuilt</span> <span class="kn">import</span> <span class="n">create_react_agent</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># This function will be called every time before the node that calls LLM</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">pre_model_hook</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">trimmed_messages</span> <span class="o">=</span> <span class="n">trim_messages</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">state</span><span class="p">[</span><span class="s2">&#34;messages&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="n">strategy</span><span class="o">=</span><span class="s2">&#34;last&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">token_counter</span><span class="o">=</span><span class="n">count_tokens_approximately</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">max_tokens</span><span class="o">=</span><span class="mi">384</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">start_on</span><span class="o">=</span><span class="s2">&#34;human&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">end_on</span><span class="o">=</span><span class="p">(</span><span class="s2">&#34;human&#34;</span><span class="p">,</span> <span class="s2">&#34;tool&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;llm_input_messages&#34;</span><span class="p">:</span> <span class="n">trimmed_messages</span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="删除">删除</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langchain_core.messages</span> <span class="kn">import</span> <span class="n">RemoveMessage</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.graph.message</span> <span class="kn">import</span> <span class="n">REMOVE_ALL_MESSAGES</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 删除</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">delete_messages</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">messages</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&#34;messages&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># remove the earliest two messages</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="p">[</span><span class="n">RemoveMessage</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span><span class="p">[:</span><span class="mi">2</span><span class="p">]]}</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 删除所有</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">delete_messages</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="p">[</span><span class="n">RemoveMessage</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">REMOVE_ALL_MESSAGES</span><span class="p">)]}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="摘要">摘要</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">TypedDict</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langchain.chat_models</span> <span class="kn">import</span> <span class="n">init_chat_model</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langchain_core.messages</span> <span class="kn">import</span> <span class="n">AnyMessage</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langchain_core.messages.utils</span> <span class="kn">import</span> <span class="n">count_tokens_approximately</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.graph</span> <span class="kn">import</span> <span class="n">StateGraph</span><span class="p">,</span> <span class="n">START</span><span class="p">,</span> <span class="n">MessagesState</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.checkpoint.memory</span> <span class="kn">import</span> <span class="n">InMemorySaver</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langmem.short_term</span> <span class="kn">import</span> <span class="n">SummarizationNode</span><span class="p">,</span> <span class="n">RunningSummary</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">model</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span><span class="s2">&#34;anthropic:claude-3-7-sonnet-latest&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">summarization_model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">max_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">State</span><span class="p">(</span><span class="n">MessagesState</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">RunningSummary</span><span class="p">]</span>  
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">LLMInputState</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>  
+</span></span><span class="line"><span class="cl">    <span class="n">summarized_messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">AnyMessage</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">RunningSummary</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">summarization_node</span> <span class="o">=</span> <span class="n">SummarizationNode</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token_counter</span><span class="o">=</span><span class="n">count_tokens_approximately</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">model</span><span class="o">=</span><span class="n">summarization_model</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">max_tokens_before_summary</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">max_summary_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">call_model</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">LLMInputState</span><span class="p">):</span>  
+</span></span><span class="line"><span class="cl">    <span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">&#34;summarized_messages&#34;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="p">[</span><span class="n">response</span><span class="p">]}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">InMemorySaver</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span> <span class="o">=</span> <span class="n">StateGraph</span><span class="p">(</span><span class="n">State</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">call_model</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. 添加 summary node</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&#34;summarize&#34;</span><span class="p">,</span> <span class="n">summarization_node</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">START</span><span class="p">,</span> <span class="s2">&#34;summarize&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. summary node 连接到 call_model</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&#34;summarize&#34;</span><span class="p">,</span> <span class="s2">&#34;call_model&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">checkpointer</span><span class="o">=</span><span class="n">checkpointer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Invoke the graph</span>
+</span></span><span class="line"><span class="cl"><span class="n">config</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&#34;configurable&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;thread_id&#34;</span><span class="p">:</span> <span class="s2">&#34;1&#34;</span><span class="p">}}</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">({</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="s2">&#34;hi, my name is bob&#34;</span><span class="p">},</span> <span class="n">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">({</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="s2">&#34;write a short poem about cats&#34;</span><span class="p">},</span> <span class="n">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">({</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="s2">&#34;now do the same but for dogs&#34;</span><span class="p">},</span> <span class="n">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">final_response</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">({</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="s2">&#34;what&#39;s my name?&#34;</span><span class="p">},</span> <span class="n">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">final_response</span><span class="p">[</span><span class="s2">&#34;messages&#34;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pretty_print</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="s2">&#34;</span><span class="se">\n</span><span class="s2">Summary:&#34;</span><span class="p">,</span> <span class="n">final_response</span><span class="p">[</span><span class="s2">&#34;context&#34;</span><span class="p">][</span><span class="s2">&#34;running_summary&#34;</span><span class="p">]</span><span class="o">.</span><span class="n">summary</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-store-语义搜索">2.2 store 语义搜索</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langchain.embeddings</span> <span class="kn">import</span> <span class="n">init_embeddings</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">store</span> <span class="o">=</span> <span class="n">InMemoryStore</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">index</span><span class="o">=</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;embed&#34;</span><span class="p">:</span> <span class="n">init_embeddings</span><span class="p">(</span><span class="s2">&#34;openai:text-embedding-3-small&#34;</span><span class="p">),</span>  <span class="c1"># Embedding provider</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;dims&#34;</span><span class="p">:</span> <span class="mi">1536</span><span class="p">,</span>                              <span class="c1"># Embedding dimensions</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;fields&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;food_preference&#34;</span><span class="p">,</span> <span class="s2">&#34;$&#34;</span><span class="p">]</span>              <span class="c1"># Fields to embed</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">memories</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">namespace_for_memory</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">query</span><span class="o">=</span><span class="s2">&#34;What does the user like to eat?&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">limit</span><span class="o">=</span><span class="mi">3</span>  <span class="c1"># Return top 3 matches</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3-langmem">3. langmem</h2>
+<p>langchain 生态提供了 langmem 库用于智能体记忆管理。</p>
+<p>记忆的核心有三个部分组成:</p>
+<ol>
+<li>记忆类型: 记忆的类型，其决定了记忆如何更新和使用
+<ul>
+<li>语义记忆</li>
+<li>情景记忆</li>
+<li>程序性记忆</li>
+</ul>
+</li>
+<li>写入记忆: 何时（以及由谁）应该形成记忆</li>
+<li>存储系统: 记忆应该存储在何处？</li>
+</ol>
+<h3 id="31-记忆类型">3.1 记忆类型</h3>
+<p>下面是关于记忆类型的总结:</p>
+<table>
+<thead>
+<tr>
+<th>记忆类型</th>
+<th>目的</th>
+<th>Agent 示例</th>
+<th>人类示例</th>
+<th>典型存储方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>语义记忆 (Semantic)</td>
+<td>事实与知识</td>
+<td>用户偏好；知识三元组</td>
+<td>知道 Python 是一种编程语言</td>
+<td>画像或集合</td>
+</tr>
+<tr>
+<td>情景记忆 (Episodic)</td>
+<td>过去的经历</td>
+<td>少样本示例；过往对话的摘要</td>
+<td>记得你第一天上班的情景</td>
+<td>集合</td>
+</tr>
+<tr>
+<td>程序性记忆 (Procedural)</td>
+<td>系统行为</td>
+<td>核心人格与响应模式</td>
+<td>知道如何骑自行车</td>
+<td>Prompt 规则或集合</td>
+</tr>
+</tbody>
+</table>
+<p>关于记忆类型的理解很重要，建议多阅读几次<a href="https://github.langchain.ac.cn/langmem/concepts/conceptual_guide/#memory-types" target="_blank" rel="noopener noreffer">核心概念的文档</a>。</p>
+<p>我们可以做如下类型:</p>
+<ol>
+<li>集合:
+<ul>
+<li>类似知识库，每一条记录代表一个知识要点</li>
+<li>知识更新时，需要考虑已有知识，比如说旧知识已经失效需要删除、或者新知识是对旧知识的补充</li>
+<li>类似知识库，从集合中检索知识存在召回率和准确率的问题</li>
+<li></li>
+</ul>
+</li>
+<li>资料卡:
+<ul>
+<li>代表独立实体的描述信息，比如说个人资料，唯一</li>
+</ul>
+</li>
+<li>情景记忆:
+<ul>
+<li>代表成功回答的过程，捕捉了互动的完整上下文——情境、导致成功的思考过程以及该方法为何有效。</li>
+<li>在提示词中作为 example 优化 LLM 输出</li>
+</ul>
+</li>
+<li>程序性记忆:
+<ul>
+<li>根据反馈优化提示，基于历史 message，使用 meta prompt 优化 prompt</li>
+</ul>
+</li>
+</ol>
+<p>文档里总结了几幅图，帮助我们理解记忆类型的关系。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">记忆类型</th>
+<th style="text-align:left">更新方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">集合</td>
+<td style="text-align:left"><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/langgraph/update-list.png"
+        data-srcset="/images/langgraph/update-list.png, /images/langgraph/update-list.png 1.5x, /images/langgraph/update-list.png 2x"
+        data-sizes="auto"
+        alt="/images/langgraph/update-list.png"
+        title="集合" /></td>
+</tr>
+<tr>
+<td style="text-align:left">资料卡</td>
+<td style="text-align:left"><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/langgraph/update-profile.png"
+        data-srcset="/images/langgraph/update-profile.png, /images/langgraph/update-profile.png 1.5x, /images/langgraph/update-profile.png 2x"
+        data-sizes="auto"
+        alt="/images/langgraph/update-profile.png"
+        title="资料卡" /></td>
+</tr>
+<tr>
+<td style="text-align:left">情景记忆</td>
+<td style="text-align:left">无</td>
+</tr>
+<tr>
+<td style="text-align:left">程序性记忆</td>
+<td style="text-align:left"><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/langgraph/update-instructions.png"
+        data-srcset="/images/langgraph/update-instructions.png, /images/langgraph/update-instructions.png 1.5x, /images/langgraph/update-instructions.png 2x"
+        data-sizes="auto"
+        alt="/images/langgraph/update-instructions.png"
+        title="程序性记忆" /></td>
+</tr>
+</tbody>
+</table>
+<p>记忆管理在 Langmem 中的核心抽象是 <code>MemoryManager</code>，有两种创建方式:</p>
+<ol>
+<li><code>create_memory_manager</code>: 不支持后端存储</li>
+<li><code>create_memory_store_manager</code>: 支持后端存储</li>
+</ol>
+<p>提示词更新的核心抽象是:</p>
+<ol>
+<li><code>MetaPromptOptimizer</code></li>
+<li><code>MultiPromptOptimizer</code></li>
+</ol>
+<p>统一的创建入口是 <code>create_prompt_optimizer</code></p>
+<h3 id="32-写入记忆">3.2 写入记忆</h3>
+<p>写入记忆指的是记忆更新的时机</p>
+<table>
+<thead>
+<tr>
+<th>形成类型</th>
+<th>延迟影响</th>
+<th>更新速度</th>
+<th>处理负载</th>
+<th>用例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主动</td>
+<td>较高</td>
+<td>立即</td>
+<td>响应期间</td>
+<td>关键上下文更新</td>
+</tr>
+<tr>
+<td>后台</td>
+<td>无</td>
+<td>延迟</td>
+<td>调用之间/之后</td>
+<td>模式分析、摘要</td>
+</tr>
+</tbody>
+</table>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/langgraph/hot_path_vs_background.png"
+        data-srcset="/images/langgraph/hot_path_vs_background.png, /images/langgraph/hot_path_vs_background.png 1.5x, /images/langgraph/hot_path_vs_background.png 2x"
+        data-sizes="auto"
+        alt="/images/langgraph/hot_path_vs_background.png"
+        title="写入时机" /></p>
+<p>Langmem 中后台更新的核心抽象是 <code>ReflectionExecutor</code></p>
+<h3 id="33-存储系统">3.3 存储系统</h3>
+<p>Langmem 的存储系统建立在 Langgraph 的 Store 上。提供了命名空间的抽象: <code>NamespaceTemplate</code></p>
+<p>现在我们来一一介绍这些核心抽象的实现。</p>
+<h2 id="4-使用示例">4. 使用示例</h2>
+<h3 id="41-集合类型记忆">4.1 集合类型记忆</h3>
+<p>介绍源码之前，我们先来看一下文档里，给出了集合类型记忆的示例:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langmem</span> <span class="kn">import</span> <span class="n">create_memory_manager</span> 
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Triple</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span> 
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Store all new facts, preferences, and relationships as triples.&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subject</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">predicate</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">object</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">PreferenceMemory</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;Store preferences about the user.&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">preference</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">context</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Configure extraction</span>
+</span></span><span class="line"><span class="cl"><span class="n">manager</span> <span class="o">=</span> <span class="n">create_memory_store_manager</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;anthropic:claude-3-5-sonnet-latest&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">namespace</span><span class="o">=</span><span class="p">(</span><span class="s2">&#34;chat&#34;</span><span class="p">,</span> <span class="s2">&#34;</span><span class="si">{user_id}</span><span class="s2">&#34;</span><span class="p">,</span> <span class="s2">&#34;triples&#34;</span><span class="p">),</span>  
+</span></span><span class="line"><span class="cl">    <span class="n">schemas</span><span class="o">=</span><span class="p">[</span><span class="n">Triple</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">    <span class="n">instructions</span><span class="o">=</span><span class="s2">&#34;Extract all user information and events as triples.&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">enable_inserts</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">enable_deletes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">my_llm</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span><span class="s2">&#34;anthropic:claude-3-5-sonnet-latest&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># Define app with store context</span>
+</span></span><span class="line"><span class="cl"><span class="nd">@entrypoint</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">app</span><span class="p">(</span><span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">response</span> <span class="o">=</span> <span class="n">my_llm</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span>
+</span></span><span class="line"><span class="cl">            <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="s2">&#34;role&#34;</span><span class="p">:</span> <span class="s2">&#34;system&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="s2">&#34;content&#34;</span><span class="p">:</span> <span class="s2">&#34;You are a helpful assistant.&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="o">*</span><span class="n">messages</span>
+</span></span><span class="line"><span class="cl">        <span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># Extract and store triples (Uses store from @entrypoint context)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">manager</span><span class="o">.</span><span class="n">invoke</span><span class="p">({</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="n">messages</span><span class="p">})</span> 
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">response</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2025-09-02&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/34acd15f31a7c48fa298da661c32fdcd609e4f84" target="_blank" title="commit by tao(tao@example.com) 34acd15f31a7c48fa298da661c32fdcd609e4f84: blog 同步">
+                                    <i class="fas fa-hashtag fa-fw"></i>34acd15</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/context/01_langgraph_context/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" data-title="Context Engineering" data-hashtags="Context Engineering"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" data-hashtag="Context Engineering"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" data-title="Context Engineering"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" data-title="Context Engineering"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/context/01_langgraph_context/" data-title="Context Engineering" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/context-engineering/">Context Engineering</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/mcp/12_abcoder_mcp/" class="prev" rel="prev" title="ABcoder MCP"><i class="fas fa-angle-left fa-fw"></i>ABcoder MCP</a>
+            <a href="/posts/aigc/context/02_langmem/" class="next" rel="next" title="LangMem 源码解析">LangMem 源码解析<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2025-08-20T08:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Context Engineering"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
