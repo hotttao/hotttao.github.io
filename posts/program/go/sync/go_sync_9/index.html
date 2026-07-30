@@ -5,18 +5,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
-        <title>线程安全的 map - LoveIt</title><meta name="Description" content="线程安全的 map"><meta property="og:title" content="线程安全的 map" />
-<meta property="og:description" content="线程安全的 map" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_9/" /><meta property="og:image" content="https://hotttao.github.io/logo.png"/><meta property="article:section" content="posts" />
-<meta property="article:published_time" content="2021-05-08T22:00:00+08:00" />
-<meta property="article:modified_time" content="2023-01-11T18:58:39+08:00" />
+        <title>线程安全的 map - LoveIt</title><meta name="Description" content="线程安全的 map"><meta property="og:url" content="https://hotttao.github.io/posts/program/go/sync/go_sync_9/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="线程安全的 map">
+	<meta property="og:description" content="线程安全的 map">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2021-05-08T22:00:00+08:00">
+		<meta property="article:modified_time" content="2023-01-11T18:58:39+08:00">
+		<meta property="article:tag" content="Go 并发">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
 
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://hotttao.github.io/logo.png"/>
-
-<meta name="twitter:title" content="线程安全的 map"/>
-<meta name="twitter:description" content="线程安全的 map"/>
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="线程安全的 map">
+	<meta name="twitter:description" content="线程安全的 map">
 <meta name="application-name" content="宋涛的个人博客">
 <meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -51,7 +55,7 @@
             <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
         </div>
         <div class="menu">
-            <div class="menu-inner"><a class="menu-item" href="/posts/"> 所有文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/distributed/"> 架构 </a><a class="menu-item" href="/posts/about/"> 关于 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
                         <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
                         <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
                             <i class="fas fa-search fa-fw"></i>
@@ -94,7 +98,7 @@
                     <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
                         取消
                     </a>
-                </div><a class="menu-item" href="/posts/" title="">所有文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/distributed/" title="">架构</a><a class="menu-item" href="/posts/about/" title="">关于</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
                 <i class="fas fa-adjust fa-fw"></i>
             </a></div>
     </div>
@@ -109,16 +113,180 @@
                 <div class="container"><div class="toc" id="toc-auto">
             <h2 class="toc-title">目录</h2>
             <div class="toc-content" id="toc-content-auto"></div>
-        </div><article class="page single"><h1 class="single-title animated flipInX">线程安全的 map</h1><div class="post-meta">
-            <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-08">2021-05-08</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 5368 字&nbsp;
-                <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 11 分钟&nbsp;</div>
-        </div><div class="details toc" id="toc-static"  kept="">
-                <div class="details-summary toc-title">
-                    <span>目录</span>
-                    <span><i class="details-icon fas fa-angle-right"></i></span>
-                </div>
-                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/go/"><i class="far fa-folder-open fa-fw"></i>&nbsp;Go</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">go 并发</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/program/go/sync/go_sync_1/">go 并发编程入门指南</a></li><li><a href="/posts/program/go/sync/go_sync_2/">Go Mutex 设计与实现</a></li><li><a href="/posts/program/go/sync/go_sync_4/">Mutex 扩展</a></li><li><a href="/posts/program/go/sync/go_sync_5/">RWMutex</a></li><li><a href="/posts/program/go/sync/go_sync_6/">WaitGroup</a></li><li><a href="/posts/program/go/sync/go_sync_7/">Cond 条件变量</a></li><li><a href="/posts/program/go/sync/go_sync_8/">Once 实现单例</a></li><li><a href="/posts/program/go/sync/go_sync_9/" class="active">线程安全的 map</a></li><li><a href="/posts/program/go/sync/go_sync_10/">go Pool</a></li><li><a href="/posts/program/go/sync/go_sync_11/">go Context</a></li><li><a href="/posts/program/go/sync/go_sync_12/">Atomic 原子操作</a></li><li><a href="/posts/program/go/sync/go_sync_13/">Channel 使用与实现</a></li><li><a href="/posts/program/go/sync/go_sync_14/">Channel 应用</a></li><li><a href="/posts/program/go/sync/go_sync_15/">go 内存模型</a></li><li><a href="/posts/program/go/sync/go_sync_16/">go 信号量</a></li><li><a href="/posts/program/go/sync/go_sync_17/">go SingleFlight 请求合并</a></li><li><a href="/posts/program/go/sync/go_sync_18/">go CyclicBarrier 循环栅栏</a></li><li><a href="/posts/program/go/sync/go_sync_19/">go 分组操作的并发控制</a></li><li><a href="/posts/program/go/sync/go_sync_20/">go 分布式并发原语一</a></li><li><a href="/posts/program/go/sync/go_sync_21/">go 分布式并发原语二</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">线程安全的 map</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2021-05-08">2021-05-08</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 5368 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 11 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
   <ul>
     <li><a href="#1-线程安全的-map-概述">1. 线程安全的 map 概述</a>
       <ul>
@@ -155,7 +323,7 @@
     <li><a href="#参考">参考</a></li>
   </ul>
 </nav></div>
-            </div><div class="content" id="content"><p>线程安全的 map</p>
+                </div><div class="content" id="content"><p>线程安全的 map</p>
 <!-- more -->
 <h2 id="1-线程安全的-map-概述">1. 线程安全的 map 概述</h2>
 <h3 id="11-map-的基本使用">1.1 map 的基本使用</h3>
@@ -166,8 +334,8 @@
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">map</span><span class="p">[</span><span class="nx">K</span><span class="p">]</span><span class="nx">V</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">map</span><span class="p">[</span><span class="nx">K</span><span class="p">]</span><span class="nx">V</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>其中，key 类型的 K 必须是可比较的（comparable），在 Go 语言中，bool、整数、浮点数、复数、字符串、指针、Channel、接口都是可比较的，包含可比较元素的 struct 和数组，这俩也是可比较的，而 slice、map、函数值都是不可比较的。通常情况下，我们会选择内建的基本类型，比如整数、字符串做 key 的类型，因为这样最方便。</p>
 <p>这里有一点需要注意，如果使用 struct 类型做 key 其实是有坑的，因为如果 struct 的某个字段值修改了，查询 map 时无法获取它 add 进去的值，如下面的例子。如果要使用 struct 作为 key，我们要保证 struct 对象在逻辑上是不可变的，这样才会保证 map 的逻辑没有问题。</p>
@@ -193,25 +361,25 @@
 </span><span class="lnt">18
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">mapKey</span> <span class="kd">struct</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">key</span> <span class="kt">int</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">m</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">mapKey</span><span class="p">]</span><span class="kt">string</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">key</span> <span class="p">=</span> <span class="nx">mapKey</span><span class="p">{</span><span class="mi">10</span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="s">&#34;hello&#34;</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;m[key]=%s\n&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">])</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// 修改key的字段的值后再次查询map，无法获取刚才add进去的值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">key</span><span class="p">.</span><span class="nx">key</span> <span class="p">=</span> <span class="mi">100</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;再次查询m[key]=%s\n&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">])</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">mapKey</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">key</span><span class="w"> </span><span class="kt">int</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">mapKey</span><span class="p">]</span><span class="kt">string</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">key</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mapKey</span><span class="p">{</span><span class="mi">10</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#34;hello&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;m[key]=%s\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">])</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 修改key的字段的值后再次查询map，无法获取刚才add进去的值</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">key</span><span class="p">.</span><span class="nx">key</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">100</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;再次查询m[key]=%s\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">])</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><h4 id="索引返回值">索引返回值</h4>
 <p>在 Go 中，<code>map[key]</code>函数返回结果可以是一个值，也可以是两个值。原因在于，如果获取一个不存在的 key 对应的值时，会返回零值。为了区分真正的零值和 key 不存在这两种情况，可以根据第二个返回值来区分</p>
@@ -229,17 +397,17 @@
 </span><span class="lnt">10
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">m</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">[</span><span class="s">&#34;a&#34;</span><span class="p">]</span> <span class="p">=</span> <span class="mi">0</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;a=%d; b=%d\n&#34;</span><span class="p">,</span> <span class="nx">m</span><span class="p">[</span><span class="s">&#34;a&#34;</span><span class="p">],</span> <span class="nx">m</span><span class="p">[</span><span class="s">&#34;b&#34;</span><span class="p">])</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="nx">av</span><span class="p">,</span> <span class="nx">aexisted</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">[</span><span class="s">&#34;a&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">bv</span><span class="p">,</span> <span class="nx">bexisted</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">[</span><span class="s">&#34;b&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;a=%d, existed: %t; b=%d, existed: %t\n&#34;</span><span class="p">,</span> <span class="nx">av</span><span class="p">,</span> <span class="nx">aexisted</span><span class="p">,</span> <span class="nx">bv</span><span class="p">,</span> <span class="nx">bexisted</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">[</span><span class="s">&#34;a&#34;</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;a=%d; b=%d\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="s">&#34;a&#34;</span><span class="p">],</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="s">&#34;b&#34;</span><span class="p">])</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">av</span><span class="p">,</span><span class="w"> </span><span class="nx">aexisted</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="s">&#34;a&#34;</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">bv</span><span class="p">,</span><span class="w"> </span><span class="nx">bexisted</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="s">&#34;b&#34;</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;a=%d, existed: %t; b=%d, existed: %t\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">av</span><span class="p">,</span><span class="w"> </span><span class="nx">aexisted</span><span class="p">,</span><span class="w"> </span><span class="nx">bv</span><span class="p">,</span><span class="w"> </span><span class="nx">bexisted</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><h4 id="遍历无序">遍历无序</h4>
 <p>map 是无序的，如果我们想要保证遍历 map 时元素有序，可以使用辅助的数据结构，比如<a href="https://github.com/elliotchance/orderedmap" target="_blank" rel="noopener noreffer">orderedmap</a>。</p>
@@ -256,13 +424,13 @@
 </span><span class="lnt">6
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">m</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">m</span><span class="p">[</span><span class="mi">100</span><span class="p">])</span> <span class="c1">// 返回 0
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">[</span><span class="mi">100</span><span class="p">]</span> <span class="p">=</span> <span class="mi">100</span> <span class="c1">// panic
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">m</span><span class="p">[</span><span class="mi">100</span><span class="p">])</span><span class="w"> </span><span class="c1">// 返回 0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">[</span><span class="mi">100</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="c1">// panic</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>Go 内建的 map 对象不是线程（goroutine）安全的，并发读写的时候运行时会有检查，遇到并发问题就会导致 panic。解决方法就是实现一个线程安全的 map。</p>
 <h2 id="2-线程安全-map-实现">2. 线程安全 map 实现</h2>
@@ -324,53 +492,53 @@
 </span><span class="lnt">46
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">RWMap</span> <span class="kd">struct</span> <span class="p">{</span> <span class="c1">// 一个读写锁保护的线程安全的map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span> <span class="c1">// 读写锁保护下面的map字段
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// 新建一个RWMap
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewRWMap</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="o">*</span><span class="nx">RWMap</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">RWMap</span><span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">n</span><span class="p">),</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span> <span class="nf">Get</span><span class="p">(</span><span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span> <span class="c1">//从map中读取一个值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">v</span><span class="p">,</span> <span class="nx">existed</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span> <span class="c1">// 在锁的保护下从map中读取
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">return</span> <span class="nx">v</span><span class="p">,</span> <span class="nx">existed</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span> <span class="nf">Set</span><span class="p">(</span><span class="nx">k</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">v</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 设置一个键值对
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>              <span class="c1">// 锁保护
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span> <span class="p">=</span> <span class="nx">v</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span> <span class="nf">Delete</span><span class="p">(</span><span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span> <span class="c1">//删除一个键
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>                   <span class="c1">// 锁保护
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="nb">delete</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">,</span> <span class="nx">k</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span> <span class="nf">Len</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span> <span class="c1">// map的长度
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>   <span class="c1">// 锁保护
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span> <span class="nf">Each</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">(</span><span class="nx">k</span><span class="p">,</span> <span class="nx">v</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 遍历map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>             <span class="c1">//遍历期间一直持有读锁
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">defer</span> <span class="nx">m</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">m</span><span class="p">.</span><span class="nx">m</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">!</span><span class="nf">f</span><span class="p">(</span><span class="nx">k</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">return</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">RWMap</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 一个读写锁保护的线程安全的map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span><span class="w"> </span><span class="c1">// 读写锁保护下面的map字段</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 新建一个RWMap</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">NewRWMap</span><span class="p">(</span><span class="nx">n</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">RWMap</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">RWMap</span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">:</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="nx">n</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Get</span><span class="p">(</span><span class="nx">k</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cp">//从map中读取一个值</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">v</span><span class="p">,</span><span class="w"> </span><span class="nx">existed</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span><span class="w"> </span><span class="c1">// 在锁的保护下从map中读取</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">v</span><span class="p">,</span><span class="w"> </span><span class="nx">existed</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Set</span><span class="p">(</span><span class="nx">k</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 设置一个键值对</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span><span class="w">              </span><span class="c1">// 锁保护</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">v</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Delete</span><span class="p">(</span><span class="nx">k</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cp">//删除一个键</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span><span class="w">                   </span><span class="c1">// 锁保护</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">delete</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">k</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Len</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// map的长度</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span><span class="w">   </span><span class="c1">// 锁保护</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">RWMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Each</span><span class="p">(</span><span class="nx">f</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">k</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 遍历map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span><span class="w">             </span><span class="cp">//遍历期间一直持有读锁</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">k</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">m</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nf">f</span><span class="p">(</span><span class="nx">k</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="22-分片加锁">2.2 分片加锁</h2>
 <p>虽然使用读写锁可以提供线程安全的 map，但是在大量并发读写的情况下，锁的竞争会非常激烈。在并发编程中，我们的一条原则就是尽量减少锁的使用。即<strong>尽量减少锁的粒度和锁的持有时间</strong>。你可以优化业务处理的代码，以此来减少锁的持有时间，比如将串行的操作变成并行的子任务执行。这是业务相关的优化，在线程安全 map 的实现上，重点是<strong>如何减少锁的粒度</strong></p>
@@ -422,50 +590,50 @@
 </span><span class="lnt">43
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">SHARD_COUNT</span> <span class="p">=</span> <span class="mi">32</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 分成SHARD_COUNT个分片的map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">ConcurrentMap</span> <span class="p">[]</span><span class="o">*</span><span class="nx">ConcurrentMapShared</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 通过RWMutex保护的线程安全的分片，包含一个map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">ConcurrentMapShared</span> <span class="kd">struct</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl"><span class="nx">items</span>        <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{}</span>
-</span></span><span class="line"><span class="cl"><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span> <span class="c1">// Read Write mutex, guards access to internal map.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 创建并发map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">New</span><span class="p">()</span> <span class="nx">ConcurrentMap</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="nx">ConcurrentMap</span><span class="p">,</span> <span class="nx">SHARD_COUNT</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">SHARD_COUNT</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">ConcurrentMapShared</span><span class="p">{</span><span class="nx">items</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{})}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">m</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 根据key计算分片索引
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="nx">ConcurrentMap</span><span class="p">)</span> <span class="nf">GetShard</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">ConcurrentMapShared</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">m</span><span class="p">[</span><span class="nb">uint</span><span class="p">(</span><span class="nf">fnv32</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span><span class="o">%</span><span class="nb">uint</span><span class="p">(</span><span class="nx">SHARD_COUNT</span><span class="p">)]</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="nx">ConcurrentMap</span><span class="p">)</span> <span class="nf">Set</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 根据key计算出对应的分片
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">shard</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">GetShard</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">shard</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span> <span class="c1">//对这个分片加锁，执行业务操作
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">shard</span><span class="p">.</span><span class="nx">items</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">value</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">shard</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="nx">ConcurrentMap</span><span class="p">)</span> <span class="nf">Get</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 根据key计算出对应的分片
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">shard</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">GetShard</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">shard</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 从这个分片读取key的值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">val</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">shard</span><span class="p">.</span><span class="nx">items</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">shard</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">val</span><span class="p">,</span> <span class="nx">ok</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">var</span><span class="w"> </span><span class="nx">SHARD_COUNT</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">32</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 分成SHARD_COUNT个分片的map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">ConcurrentMap</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">ConcurrentMapShared</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 通过RWMutex保护的线程安全的分片，包含一个map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">ConcurrentMapShared</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="nx">items</span><span class="w">        </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span><span class="w"> </span><span class="c1">// Read Write mutex, guards access to internal map.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 创建并发map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">New</span><span class="p">()</span><span class="w"> </span><span class="nx">ConcurrentMap</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="nx">ConcurrentMap</span><span class="p">,</span><span class="w"> </span><span class="nx">SHARD_COUNT</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">SHARD_COUNT</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">ConcurrentMapShared</span><span class="p">{</span><span class="nx">items</span><span class="p">:</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{})}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 根据key计算分片索引</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">ConcurrentMap</span><span class="p">)</span><span class="w"> </span><span class="nf">GetShard</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">ConcurrentMapShared</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="nb">uint</span><span class="p">(</span><span class="nf">fnv32</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span><span class="o">%</span><span class="nb">uint</span><span class="p">(</span><span class="nx">SHARD_COUNT</span><span class="p">)]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">ConcurrentMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Set</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 根据key计算出对应的分片</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">GetShard</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span><span class="w"> </span><span class="cp">//对这个分片加锁，执行业务操作</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="p">.</span><span class="nx">items</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">value</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="nx">ConcurrentMap</span><span class="p">)</span><span class="w"> </span><span class="nf">Get</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 根据key计算出对应的分片</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nf">GetShard</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 从这个分片读取key的值</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">val</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">shard</span><span class="p">.</span><span class="nx">items</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">shard</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">val</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="23-syncmap">2.3 sync.Map</h3>
 <p>Go 内建的 map 类型不是线程安全的，所以 Go 1.9 中增加了一个线程安全的 map，也就是 sync.Map。但是，这个 sync.Map 并不是用来替换内建的 map 类型的，它只能被应用在一些特殊的场景里。</p>
@@ -537,47 +705,47 @@
 </span><span class="lnt">40
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Map</span> <span class="kd">struct</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">mu</span> <span class="nx">Mutex</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 基本上你可以把它看成一个安全的只读的map
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 它包含的元素其实也是通过原子操作更新的，但是已删除的entry就需要加锁操作了
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">read</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">Value</span> <span class="c1">// readOnly
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 包含需要加锁才能访问的元素
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 包括所有在read字段中但未被expunged（删除）的元素以及新加的元素
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">dirty</span> <span class="kd">map</span><span class="p">[</span><span class="kd">interface</span><span class="p">{}]</span><span class="o">*</span><span class="nx">entry</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// 记录从read中读取miss的次数，一旦miss数和dirty长度一样了，就会把dirty提升为read，并把dirty置空
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">misses</span> <span class="kt">int</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">readOnly</span> <span class="kd">struct</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span>       <span class="kd">map</span><span class="p">[</span><span class="kd">interface</span><span class="p">{}]</span><span class="o">*</span><span class="nx">entry</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">amended</span> <span class="kt">bool</span> <span class="c1">// 当dirty中包含read没有的数据时为true，比如新增一条数据
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// expunged是用来标识此项已经删掉的指针
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 当map中的一个项目被删除了，只是把它的值标记为expunged，以后才有机会真正删除此项
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">expunged</span> <span class="p">=</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nb">new</span><span class="p">(</span><span class="kd">interface</span><span class="p">{}))</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// entry代表一个值
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">entry</span> <span class="kd">struct</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">p</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span> <span class="c1">// *interface{}
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nf">load</span><span class="p">()</span> <span class="p">(</span><span class="nx">value</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">ok</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">p</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">p</span> <span class="o">==</span> <span class="nx">expunged</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="kd">interface</span><span class="p">{})(</span><span class="nx">p</span><span class="p">),</span> <span class="kc">true</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newEntry</span><span class="p">(</span><span class="nx">i</span> <span class="kd">interface</span><span class="p">{})</span> <span class="o">*</span><span class="nx">entry</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">entry</span><span class="p">{</span><span class="nx">p</span><span class="p">:</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">i</span><span class="p">)}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">Map</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">mu</span><span class="w"> </span><span class="nx">Mutex</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 基本上你可以把它看成一个安全的只读的map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 它包含的元素其实也是通过原子操作更新的，但是已删除的entry就需要加锁操作了</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">read</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nx">Value</span><span class="w"> </span><span class="c1">// readOnly</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 包含需要加锁才能访问的元素</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 包括所有在read字段中但未被expunged（删除）的元素以及新加的元素</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">dirty</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kd">interface</span><span class="p">{}]</span><span class="o">*</span><span class="nx">entry</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 记录从read中读取miss的次数，一旦miss数和dirty长度一样了，就会把dirty提升为read，并把dirty置空</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">misses</span><span class="w"> </span><span class="kt">int</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">readOnly</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="w">       </span><span class="kd">map</span><span class="p">[</span><span class="kd">interface</span><span class="p">{}]</span><span class="o">*</span><span class="nx">entry</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">amended</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="c1">// 当dirty中包含read没有的数据时为true，比如新增一条数据</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// expunged是用来标识此项已经删掉的指针</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 当map中的一个项目被删除了，只是把它的值标记为expunged，以后才有机会真正删除此项</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">var</span><span class="w"> </span><span class="nx">expunged</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nb">new</span><span class="p">(</span><span class="kd">interface</span><span class="p">{}))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// entry代表一个值</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">entry</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">p</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="w"> </span><span class="c1">// *interface{}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nf">load</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">expunged</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="kd">interface</span><span class="p">{})(</span><span class="nx">p</span><span class="p">),</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">newEntry</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">entry</span><span class="p">{</span><span class="nx">p</span><span class="p">:</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">i</span><span class="p">)}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>通过 <a href="https://pkg.go.dev/sync" target="_blank" rel="noopener noreffer">go doc</a> 可以轻松看到 sync.Map 具有如下方法:</p>
 <div class="highlight"><div class="chroma">
@@ -591,14 +759,14 @@
 </span><span class="lnt">7
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Map</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Delete</span><span class="p">(</span><span class="nx">key</span> <span class="kd">interface</span><span class="p">{})</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Load</span><span class="p">(</span><span class="nx">key</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="nx">value</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">ok</span> <span class="kt">bool</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">LoadAndDelete</span><span class="p">(</span><span class="nx">key</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="nx">value</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">loaded</span> <span class="kt">bool</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">LoadOrStore</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">value</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="nx">actual</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">loaded</span> <span class="kt">bool</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Range</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">value</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">bool</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Store</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">value</span> <span class="kd">interface</span><span class="p">{})</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span><span class="w"> </span><span class="nx">Map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Delete</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Load</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">LoadAndDelete</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">loaded</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">LoadOrStore</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">(</span><span class="nx">actual</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">loaded</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Range</span><span class="p">(</span><span class="nx">f</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Store</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>Store、Load 和 Delete 这三个核心函数的操作都是先从 read 字段中处理的，因为读取 read 字段的时候不用加锁。</p>
 <h4 id="store-方法">Store 方法</h4>
@@ -689,90 +857,90 @@
 </span><span class="lnt">83
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Store</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">value</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 如果read字段包含这个项，说明是更新，cas更新项目的值即可
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span> <span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">e</span><span class="p">.</span><span class="nf">tryStore</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="c1">// read中不存在，或者cas更新失败，就需要加锁访问dirty了
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span> <span class="c1">// 双检查，看看read是否已经存在了
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">if</span> <span class="nx">e</span><span class="p">.</span><span class="nf">unexpungeLocked</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="c1">// 此项目先前已经被删除了，通过将它的值设置为nil，标记为unexpunged
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// 注: 属于重用删除的对象，必须先把 read 中的 unexpunged 重置为 nil，否则重用的 key 会一直被标记为已经删除
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// e.unexpungeLocked 执行后，read 和 dirty 中 e.p 的指向就不一样了，
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// read 中 e.p 已经被置为 nil，所以这里需要设置 dirty
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">e</span> 
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">e</span><span class="p">.</span><span class="nf">storeLocked</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span> <span class="c1">// 更新
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span> <span class="c1">// 如果dirty中有此项
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">e</span><span class="p">.</span><span class="nf">storeLocked</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span> <span class="c1">// 直接更新
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="c1">// 否则就是一个新的key
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">if</span> <span class="p">!</span><span class="nx">read</span><span class="p">.</span><span class="nx">amended</span> <span class="p">{</span> <span class="c1">//如果dirty为nil
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// 需要创建dirty对象，并且标记read的amended为true,
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// 说明有元素它不包含而dirty包含
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">m</span><span class="p">.</span><span class="nf">dirtyLocked</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">            <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">readOnly</span><span class="p">{</span><span class="nx">m</span><span class="p">:</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">,</span> <span class="nx">amended</span><span class="p">:</span> <span class="kc">true</span><span class="p">})</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nf">newEntry</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="c1">//将新值增加到dirty对象中
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// 新加的元素需要放入到 dirty 中，如果 dirty 为 nil，那么需要从 read 字段中复制出来一个 dirty 对象：
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">dirtyLocked</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="k">return</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">	<span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">	<span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kd">interface</span><span class="p">{}]</span><span class="o">*</span><span class="nx">entry</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">!</span><span class="nx">e</span><span class="p">.</span><span class="nf">tryExpungeLocked</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">			<span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span> <span class="p">=</span> <span class="nx">e</span>
-</span></span><span class="line"><span class="cl">		<span class="p">}</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="c1">// unexpungeLocked ensures that the entry is not marked as expunged.
-</span></span></span><span class="line"><span class="cl"><span class="c1">//
-</span></span></span><span class="line"><span class="cl"><span class="c1">// If the entry was previously expunged, it must be added to the dirty map
-</span></span></span><span class="line"><span class="cl"><span class="c1">// before m.mu is unlocked.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nf">unexpungeLocked</span><span class="p">()</span> <span class="p">(</span><span class="nx">wasExpunged</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span> <span class="nx">expunged</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="c1">// The entry must be known not to be expunged.
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nf">storeLocked</span><span class="p">(</span><span class="nx">i</span> <span class="o">*</span><span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="nx">atomic</span><span class="p">.</span><span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nf">tryStore</span><span class="p">(</span><span class="nx">i</span> <span class="o">*</span><span class="kd">interface</span><span class="p">{})</span> <span class="kt">bool</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="nx">p</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">p</span> <span class="o">==</span> <span class="nx">expunged</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">false</span>
-</span></span><span class="line"><span class="cl">		<span class="p">}</span>
-</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span> <span class="nx">p</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">true</span>
-</span></span><span class="line"><span class="cl">		<span class="p">}</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nf">tryExpungeLocked</span><span class="p">()</span> <span class="p">(</span><span class="nx">isExpunged</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">p</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">expunged</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">true</span>
-</span></span><span class="line"><span class="cl">		<span class="p">}</span>
-</span></span><span class="line"><span class="cl">		<span class="nx">p</span> <span class="p">=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">p</span> <span class="o">==</span> <span class="nx">expunged</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Store</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 如果read字段包含这个项，说明是更新，cas更新项目的值即可</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nf">tryStore</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// read中不存在，或者cas更新失败，就需要加锁访问dirty了</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 双检查，看看read是否已经存在了</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nf">unexpungeLocked</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// 此项目先前已经被删除了，通过将它的值设置为nil，标记为unexpunged</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// 注: 属于重用删除的对象，必须先把 read 中的 unexpunged 重置为 nil，否则重用的 key 会一直被标记为已经删除</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// e.unexpungeLocked 执行后，read 和 dirty 中 e.p 的指向就不一样了，</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// read 中 e.p 已经被置为 nil，所以这里需要设置 dirty</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">e</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">e</span><span class="p">.</span><span class="nf">storeLocked</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span><span class="w"> </span><span class="c1">// 更新</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 如果dirty中有此项</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">e</span><span class="p">.</span><span class="nf">storeLocked</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span><span class="w"> </span><span class="c1">// 直接更新</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 否则就是一个新的key</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">read</span><span class="p">.</span><span class="nx">amended</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cp">//如果dirty为nil</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// 需要创建dirty对象，并且标记read的amended为true,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// 说明有元素它不包含而dirty包含</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">m</span><span class="p">.</span><span class="nf">dirtyLocked</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">readOnly</span><span class="p">{</span><span class="nx">m</span><span class="p">:</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">amended</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">})</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nf">newEntry</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span><span class="w"> </span><span class="cp">//将新值增加到dirty对象中</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 新加的元素需要放入到 dirty 中，如果 dirty 为 nil，那么需要从 read 字段中复制出来一个 dirty 对象：</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">dirtyLocked</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kd">interface</span><span class="p">{}]</span><span class="o">*</span><span class="nx">entry</span><span class="p">,</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">for</span><span class="w"> </span><span class="nx">k</span><span class="p">,</span><span class="w"> </span><span class="nx">e</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">e</span><span class="p">.</span><span class="nf">tryExpungeLocked</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">k</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">e</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// unexpungeLocked ensures that the entry is not marked as expunged.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">//</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// If the entry was previously expunged, it must be added to the dirty map</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// before m.mu is unlocked.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nf">unexpungeLocked</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">wasExpunged</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">expunged</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">// The entry must be known not to be expunged.</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nf">storeLocked</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="o">*</span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nx">atomic</span><span class="p">.</span><span class="nf">StorePointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nf">tryStore</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="o">*</span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">for</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">expunged</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nf">tryExpungeLocked</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">isExpunged</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">for</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">if</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">expunged</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">			</span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="nx">p</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">expunged</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>在 Store 方法的实现中:</p>
 <ol>
@@ -826,48 +994,48 @@
 </span><span class="lnt">41
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Load</span><span class="p">(</span><span class="nx">key</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="nx">value</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">ok</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 首先从read处理
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">read</span><span class="p">.</span><span class="nx">amended</span> <span class="p">{</span> <span class="c1">// 如果不存在并且dirty不为nil(有新的元素)
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">        <span class="c1">// 双检查，看看read中现在是否存在此key
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="p">=</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">read</span><span class="p">.</span><span class="nx">amended</span> <span class="p">{</span><span class="c1">//依然不存在，并且dirty不为nil
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="c1">// 从dirty中读取
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// 不管dirty中存不存在，miss数都加1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">m</span><span class="p">.</span><span class="nf">missLocked</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">e</span><span class="p">.</span><span class="nf">load</span><span class="p">()</span> <span class="c1">//返回读取的对象，e既可能是从read中获得的，也可能是从dirty中获得的
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nf">load</span><span class="p">()</span> <span class="p">(</span><span class="nx">value</span> <span class="nx">any</span><span class="p">,</span> <span class="nx">ok</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">p</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">p</span> <span class="o">==</span> <span class="nx">expunged</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span>
-</span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="kd">interface</span><span class="p">{})(</span><span class="nx">p</span><span class="p">),</span> <span class="kc">true</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">missLocked</span><span class="p">()</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">misses</span><span class="o">++</span> <span class="c1">// misses计数加一
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="nx">m</span><span class="p">.</span><span class="nx">misses</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 如果没达到阈值(dirty字段的长度),返回
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="k">return</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">readOnly</span><span class="p">{</span><span class="nx">m</span><span class="p">:</span> <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">})</span> <span class="c1">//把dirty字段的内存提升为read字段
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span> <span class="p">=</span> <span class="kc">nil</span> <span class="c1">// 清空dirty
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">m</span><span class="p">.</span><span class="nx">misses</span> <span class="p">=</span> <span class="mi">0</span>  <span class="c1">// misses数重置为0
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Load</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">// 首先从read处理</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">amended</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 如果不存在并且dirty不为nil(有新的元素)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">// 双检查，看看read中现在是否存在此key</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">amended</span><span class="w"> </span><span class="p">{</span><span class="cp">//依然不存在，并且dirty不为nil</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="c1">// 从dirty中读取</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// 不管dirty中存不存在，miss数都加1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">m</span><span class="p">.</span><span class="nf">missLocked</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nf">load</span><span class="p">()</span><span class="w"> </span><span class="cp">//返回读取的对象，e既可能是从read中获得的，也可能是从dirty中获得的</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nf">load</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kt">any</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">expunged</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">		</span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="kd">interface</span><span class="p">{})(</span><span class="nx">p</span><span class="p">),</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">missLocked</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">misses</span><span class="o">++</span><span class="w"> </span><span class="c1">// misses计数加一</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">misses</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// 如果没达到阈值(dirty字段的长度),返回</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">readOnly</span><span class="p">{</span><span class="nx">m</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">})</span><span class="w"> </span><span class="cp">//把dirty字段的内存提升为read字段</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="c1">// 清空dirty</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">misses</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="w">  </span><span class="c1">// misses数重置为0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>在 Load 方法的实现中:</p>
 <ol>
@@ -918,45 +1086,45 @@
 </span><span class="lnt">38
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">LoadAndDelete</span><span class="p">(</span><span class="nx">key</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">(</span><span class="nx">value</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">loaded</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">read</span><span class="p">.</span><span class="nx">amended</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">        <span class="c1">// 双检查
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">read</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="p">=</span> <span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">read</span><span class="p">.</span><span class="nx">amended</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">            <span class="c1">// 这一行长坤在1.15中实现的时候忘记加上了，导致在特殊的场景下有些key总是没有被回收
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nb">delete</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">            <span class="c1">// miss数加1
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">m</span><span class="p">.</span><span class="nf">missLocked</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">ok</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nx">e</span><span class="p">.</span><span class="nb">delete</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Map</span><span class="p">)</span> <span class="nf">Delete</span><span class="p">(</span><span class="nx">key</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">m</span><span class="p">.</span><span class="nf">LoadAndDelete</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">entry</span><span class="p">)</span> <span class="nb">delete</span><span class="p">()</span> <span class="p">(</span><span class="nx">value</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">ok</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">        <span class="nx">p</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">p</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">p</span> <span class="o">==</span> <span class="nx">expunged</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">false</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span> <span class="nx">p</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="kd">interface</span><span class="p">{})(</span><span class="nx">p</span><span class="p">),</span> <span class="kc">true</span>
-</span></span><span class="line"><span class="cl">        <span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">LoadAndDelete</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">loaded</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">amended</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="c1">// 双检查</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">read</span><span class="p">.</span><span class="nf">Load</span><span class="p">().(</span><span class="nx">readOnly</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">m</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">read</span><span class="p">.</span><span class="nx">amended</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">e</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// 这一行长坤在1.15中实现的时候忘记加上了，导致在特殊的场景下有些key总是没有被回收</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nb">delete</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">dirty</span><span class="p">,</span><span class="w"> </span><span class="nx">key</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="c1">// miss数加1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nx">m</span><span class="p">.</span><span class="nf">missLocked</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nb">delete</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Map</span><span class="p">)</span><span class="w"> </span><span class="nf">Delete</span><span class="p">(</span><span class="nx">key</span><span class="w"> </span><span class="kd">interface</span><span class="p">{})</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nf">LoadAndDelete</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">entry</span><span class="p">)</span><span class="w"> </span><span class="nb">delete</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="nx">value</span><span class="w"> </span><span class="kd">interface</span><span class="p">{},</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nx">p</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">expunged</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapPointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">e</span><span class="p">.</span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="kd">interface</span><span class="p">{})(</span><span class="nx">p</span><span class="p">),</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>在 LoadDelete 方法的实现中:</p>
 <ol>
@@ -996,7 +1164,7 @@
     </div>
 
     <div class="post-info-more">
-        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">go 并发</a></section>
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">Go 并发</a></section>
         <section>
             <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
         </section>
@@ -1007,9 +1175,10 @@
 </div>
 <div id="comments"><div id="gitalk" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
-            </noscript></div></article></div>
+            </noscript></div></article>
+    </div></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.120.2">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
                 </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
