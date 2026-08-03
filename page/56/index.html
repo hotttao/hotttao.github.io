@@ -104,56 +104,124 @@
         alt="/images/hugo/avatar.png"
         title="/images/hugo/avatar.png" /></a></div><h2 class="home-subtitle"><div id="id-1" class="typeit"></div></h2><div class="links"><a href="https://github.com/hotttao" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github-alt fa-fw"></i></a><a href="https://weibo.com/xxxx" title="微博" target="_blank" rel="noopener noreffer me"><i class="fab fa-weibo fa-fw"></i></a><a href="https://steamcommunity.com/id/xxxx" title="Steam" target="_blank" rel="noopener noreffer me"><i class="fab fa-steam fa-fw"></i></a><a href="https://www.zhihu.com/people/xxxx" title="知乎" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/zhihu.svg"></i></a><a href="https://www.douban.com/people/xxxx" title="豆瓣" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/douban.svg"></i></a><a href="https://dev.to/xxxx" title="Dev.To" target="_blank" rel="noopener noreffer me"><i class="fab fa-dev fa-fw"></i></a><a href="https://space.bilibili.com/xxxx" title="bilibili" target="_blank" rel="noopener noreffer me"><i data-svg-src="/svg/icons/bilibili.min.svg"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel=" me"><i class="far fa-envelope fa-fw"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/sync/go_sync_4/">Mutex 扩展</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2021-05-03">2021-05-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>如何基于 Mutex 实现一个可重入锁</p>
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/61_%E5%88%86%E5%8C%BA%E8%A1%A8/">29 MYSQL 分区表</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-29">2020-03-29</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>要不要使用分区表</p>
 <!-- more -->
-<h2 id="1-mutex-的扩展">1. Mutex 的扩展</h2>
-<p>上一节我们介绍了 Mutex 的实现原理，这一节我们来看看如何基于标准库的 Mutex 来扩展 Mutex 提供的并发原语，包括:</p>
+<h2 id="1-分区表">1. 分区表</h2>
+<p>为了说明分区表的组织形式，先创建一个表 t：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">CREATE TABLE <span class="sb">`</span>t<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>ftime<span class="sb">`</span> datetime NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>c<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  KEY <span class="o">(</span><span class="sb">`</span>ftime<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB DEFAULT <span class="nv">CHARSET</span><span class="o">=</span>latin1
+</span></span><span class="line"><span class="cl">PARTITION BY RANGE <span class="o">(</span>YEAR<span class="o">(</span>ftime<span class="o">))</span>
+</span></span><span class="line"><span class="cl"><span class="o">(</span>PARTITION p_2017 VALUES LESS THAN <span class="o">(</span>2017<span class="o">)</span> <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB,
+</span></span><span class="line"><span class="cl"> PARTITION p_2018 VALUES LESS THAN <span class="o">(</span>2018<span class="o">)</span> <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB,
+</span></span><span class="line"><span class="cl"> PARTITION p_2019 VALUES LESS THAN <span class="o">(</span>2019<span class="o">)</span> <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB,
+</span></span><span class="line"><span class="cl">PARTITION p_others VALUES LESS THAN MAXVALUE <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span><span class="s1">&#39;2017-4-1&#39;</span>,1<span class="o">)</span>,<span class="o">(</span><span class="s1">&#39;2018-4-1&#39;</span>,1<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>表 t 将包含了一个.frm 文件和 4 个.ibd 文件，每个分区对应一个.ibd 文件。也就是说：</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/61_%E5%88%86%E5%8C%BA%E8%A1%A8/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/52_%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86/">28 MySQL 连接管理</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-28">2020-03-28</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>MySQL 的连接管理</p>
+<!-- more -->
+<h2 id="2-mysql-连接管理">2. mysql 连接管理</h2>
+<p>在 MySQL 中有两个 kill 命令：</p>
 <ol>
-<li>实现一个可重入锁</li>
-<li>TryLock</li>
-<li>获取等待者的数量</li>
-<li>实现一个线程安全的队列</li>
+<li><code>kill query + 线程 id</code>: 表示终止这个线程中正在执行的语句；</li>
+<li><code>kill connection + 线程 id</code>: connection 可缺省，表示断开这个线程的连接，如果这个线程有语句正在执行，也是要先停止正在执行的语句。</li>
 </ol>
-<h2 id="2-可重入锁">2. 可重入锁</h2>
-<p>实现可重入锁的关键是要锁能记住当前哪个 goroutine 持有锁，这里有两个方案:</p></div><div class="post-footer">
-        <a href="/posts/program/go/sync/go_sync_4/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">Go 并发</a></div></div>
+<h3 id="21-收到-kill-以后线程做什么">2.1 收到 kill 以后，线程做什么</h3>
+<p>当用户执行 kill query thread_id_B 时，MySQL 里处理 kill 命令的线程做了两件事：</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/52_%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/sync/go_sync_2/">Go Mutex 设计与实现</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2021-05-02">2021-05-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>Go 第一个并发原语 Mutex 互斥锁</p>
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/51_grant_privileges/">27 MYSQL flush privileges</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-27">2020-03-27</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>grant 之后要不要跟 flush privileges</p>
 <!-- more -->
-<h2 id="1-mutex-的使用">1. Mutex 的使用</h2>
-<p>互斥锁是最基本的并发原语，使用互斥锁，限定临界区只能同时由一个线程持有。基本上所有编程语言都会提供，Go 中互斥锁为 Mutex，Mutex 位于标准库 sync 中，其实现了 sync 中的 Locker 接口:</p></div><div class="post-footer">
-        <a href="/posts/program/go/sync/go_sync_2/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">Go 并发</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/sync/go_sync_1/">go 并发编程入门指南</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2021-05-01">2021-05-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>这个系列我们开始学习 Go 语言的第四个部分: 并发编程。</p>
-<!-- more -->
-<h2 id="1-学习内容">1. 学习内容</h2>
-<p>Go 语言的并发编程，我们学习的核心内容来自于极客时间的专栏<a href="https://time.geekbang.org/column/intro/355" target="_blank" rel="noopener noreffer">Go 并发编程实战课</a>，作者网名<a href="https://colobu.com/" target="_blank" rel="noopener noreffer">鸟窝</a>。这个专栏在极客时间上的订阅并不多，但绝对是五星推荐。</p></div><div class="post-footer">
-        <a href="/posts/program/go/sync/go_sync_1/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E5%B9%B6%E5%8F%91/">Go 并发</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/practice/engineering/project_api/">go API 设计</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2021-04-03">2021-04-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>前面我们介绍 Go 项目工程化提到了 /api 目录。这目录是协议定义目录，用于存放约定项目接口的 IDL 文件。按照现在的主流基本都是 Protobuf 文件。Protobuf 的管理和共享就是今天的话题。</p></div><div class="post-footer">
-        <a href="/posts/program/go/practice/engineering/project_api/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E6%83%AF%E4%BE%8B/">Go 惯例</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/practice/engineering/project_config/">go 配置管理</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2021-04-03">2021-04-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><h2 id="参考">参考</h2>
+<h2 id="1-用户权限">1. 用户权限</h2>
+<p>MySQL 使用 <code>create user</code> 来创建用户。</p>
+<p><code>create user 'ua'@'%' identified by 'pa';</code> 的执行过程如下:</p>
 <ol>
-<li><a href="https://u.geekbang.org/subject/intro/100107201" target="_blank" rel="noopener noreffer">极客时间-毛剑老师的 Go 工程化实践</a></li>
-<li><a href="https://github.com/golang-standards/project-layout/blob/master/README_zh-CN.md" target="_blank" rel="noopener noreffer">Go项目标准布局</a></li>
-</ol></div><div class="post-footer">
-        <a href="/posts/program/go/practice/engineering/project_config/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E6%83%AF%E4%BE%8B/">Go 惯例</a></div></div>
+<li>磁盘上，往 mysql.user 表里插入一行，由于没有指定权限，所以这行数据上所有表示权限的字段的值都是 N；</li>
+<li>内存里，往数组 acl_users 里插入一个 acl_user 对象，这个对象的 access 字段值为 0。</li>
+</ol>
+<p>在 MySQL 中，用户权限是有不同的范围的。从大到小的顺序依次是:</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/51_grant_privileges/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/practice/engineering/project_structure/">go 工程化项目结构</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2021-04-01">2021-04-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>最近几篇文章与 Go 工程化方面有关，算是我们 Go 语言学习的第二部分，了解一门语言的惯例，即最佳实践。无论是做什么开发，在做之前先 google 一下 best practice 是一个非常好的习惯。今天这篇文章与 go 工程化项目结构有关，知识来自于 <a href="https://u.geekbang.org/subject/intro/100107201" target="_blank" rel="noopener noreffer">极客时间-毛剑老师的 Go 工程化实践</a>。</p></div><div class="post-footer">
-        <a href="/posts/program/go/practice/engineering/project_structure/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E6%83%AF%E4%BE%8B/">Go 惯例</a></div></div>
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/45_%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/">26 MYSQL 自增主键</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-26">2020-03-26</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>自增主键为什么不连续</p>
+<!-- more -->
+<h2 id="1-自增值">1. 自增值</h2>
+<h3 id="11-自增值的保存">1.1 自增值的保存</h3>
+<p>表的结构定义存放在后缀名为.frm 的文件中，但是并不会保存自增值。不同的引擎对于自增值的保存策略不同。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/45_%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/">25 MYSQL Memory 存储引擎</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-25">2020-03-25</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>什么时候使用 Memory 存储引擎</p>
+<!-- more -->
+<h2 id="1-索引组织对比">1. 索引组织对比</h2>
+<p>假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎， 表 t2 使用 InnoDB 引擎。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">create table t1<span class="o">(</span>id int primary key, c int<span class="o">)</span> <span class="nv">engine</span><span class="o">=</span>Memory<span class="p">;</span>
+</span></span><span class="line"><span class="cl">create table t2<span class="o">(</span>id int primary key, c int<span class="o">)</span> <span class="nv">engine</span><span class="o">=</span>innodb<span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t1 values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span>,<span class="o">(</span>9,9<span class="o">)</span>,<span class="o">(</span>0,0<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t2 values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span>,<span class="o">(</span>9,9<span class="o">)</span>,<span class="o">(</span>0,0<span class="o">)</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="11-innodb-组织形式">1.1 innodb 组织形式</h3>
+<p>InnoDB 表的数据放在主键索引树上，主键索引是 B+ 树。所以表 t2 的数据组织方式如下图所示：主键索引上的值是有序存储的。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/">24 临时表</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-24">2020-03-24</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>什么时候会使用临时表</p>
+<!-- more -->
+<h2 id="1-临时表">1. 临时表</h2>
+<h3 id="11-临时表跟内存表">1.1 临时表跟内存表</h3>
+<ol>
+<li>内存表，指的是使用 Memory 引擎的表，建表语法是 <code>create table … engine=memory</code>。这种表的数据都保存在内存里，系统重启的时候会被清空，但是表结构还在。除了这两个特性看上去比较“奇怪”外，从其他的特征上看，它就是一个正常的表。</li>
+<li>而临时表，可以使用各种引擎类型 。如果是使用 InnoDB 引擎或者 MyISAM 引擎的临时表，写数据的时候是写到磁盘上的。当然，临时表也可以使用 Memory 引擎</li>
+</ol>
+<h3 id="12-临时表的特征">1.2 临时表的特征</h3>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/temporary_table_feature.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/temporary_table_feature.png, /images/mysql/MySQL45%e8%ae%b2/temporary_table_feature.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/temporary_table_feature.png 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/temporary_table_feature.png"
+        title="temporary_table_feature" /></p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
 </article><ul class="pagination"><li class="page-item ">
                     <span class="page-link">
                         <a href="/">1</a>
@@ -184,7 +252,7 @@
                     <span class="page-link" aria-hidden="true">&hellip;</span>
                 </li><li class="page-item ">
                     <span class="page-link">
-                        <a href="/page/63/">63</a>
+                        <a href="/page/60/">60</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">

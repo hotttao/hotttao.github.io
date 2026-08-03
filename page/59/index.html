@@ -104,11 +104,11 @@
         alt="/images/hugo/avatar.png"
         title="/images/hugo/avatar.png" /></a></div><h2 class="home-subtitle"><div id="id-1" class="typeit"></div></h2><div class="links"><a href="https://github.com/hotttao" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github-alt fa-fw"></i></a><a href="https://weibo.com/xxxx" title="微博" target="_blank" rel="noopener noreffer me"><i class="fab fa-weibo fa-fw"></i></a><a href="https://steamcommunity.com/id/xxxx" title="Steam" target="_blank" rel="noopener noreffer me"><i class="fab fa-steam fa-fw"></i></a><a href="https://www.zhihu.com/people/xxxx" title="知乎" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/zhihu.svg"></i></a><a href="https://www.douban.com/people/xxxx" title="豆瓣" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/douban.svg"></i></a><a href="https://dev.to/xxxx" title="Dev.To" target="_blank" rel="noopener noreffer me"><i class="fab fa-dev fa-fw"></i></a><a href="https://space.bilibili.com/xxxx" title="bilibili" target="_blank" rel="noopener noreffer me"><i data-svg-src="/svg/icons/bilibili.min.svg"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel=" me"><i class="far fa-envelope fa-fw"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/61_%E5%88%86%E5%8C%BA%E8%A1%A8/">29 MYSQL 分区表</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-29">2020-03-29</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>要不要使用分区表</p>
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/13_sql%E9%94%99%E8%AF%AF%E7%94%A8%E6%B3%95/">11 SQL 一些常见的错误用法</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-11">2020-03-11</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>对索引字段做函数操作，可能会破坏索引值的有序性，因此优化器就决定放弃走树搜索功能。</p>
 <!-- more -->
-<h2 id="1-分区表">1. 分区表</h2>
-<p>为了说明分区表的组织形式，先创建一个表 t：</p>
+<h2 id="试验环境">试验环境</h2>
+<p>我们用下面两张表作为我们测试 SQL 用法的试验环境:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -122,105 +122,185 @@
 </span><span class="lnt"> 9
 </span><span class="lnt">10
 </span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 交易信息表</span>
+</span></span><span class="line"><span class="cl">mysql&gt; CREATE TABLE <span class="sb">`</span>tradelog<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>tradeid<span class="sb">`</span> varchar<span class="o">(</span>32<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>operator<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>t_modified<span class="sb">`</span> datetime DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>tradeid<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>tradeid<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>t_modified<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>t_modified<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB DEFAULT <span class="nv">CHARSET</span><span class="o">=</span>utf8mb4<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 交易详情表</span>
+</span></span><span class="line"><span class="cl">mysql&gt; CREATE TABLE <span class="sb">`</span>trade_detail<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>tradeid<span class="sb">`</span> varchar<span class="o">(</span>32<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>trade_step<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL, /*操作步骤*/
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>step_info<span class="sb">`</span> varchar<span class="o">(</span>32<span class="o">)</span> DEFAULT NULL, /*步骤信息*/
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  KEY <span class="sb">`</span>tradeid<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>tradeid<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB DEFAULT <span class="nv">CHARSET</span><span class="o">=</span>utf8<span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="1条件字段函数操作">1.条件字段函数操作</h2>
+<p>类似下面的 SQL，对索引字段做了函数操作，可能会破坏索引值的有序性，因此优化器就决定放弃走树搜索功能。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/13_sql%E9%94%99%E8%AF%AF%E7%94%A8%E6%B3%95/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/12_%E9%9A%8F%E6%9C%BA/">10 MySQL如何显示随机消息</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-10">2020-03-10</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>random 存在哪些问题</p>
+<!-- more -->
+<h2 id="背景">背景</h2>
+<p>从一个单词表中随机选出三个单词。这个表的建表语句和初始数据的命令如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">mysql&gt; CREATE TABLE <span class="sb">`</span>words<span class="sb">`</span> <span class="o">(</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL AUTO_INCREMENT,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>word<span class="sb">`</span> varchar<span class="o">(</span>64<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">delimiter <span class="p">;;</span>
+</span></span><span class="line"><span class="cl">create procedure idata<span class="o">()</span>
+</span></span><span class="line"><span class="cl">begin
+</span></span><span class="line"><span class="cl">  <span class="nb">declare</span> i int<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>0<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">while</span> i&lt;<span class="m">10000</span> <span class="k">do</span>
+</span></span><span class="line"><span class="cl">    insert into words<span class="o">(</span>word<span class="o">)</span> values<span class="o">(</span>concat<span class="o">(</span>char<span class="o">(</span>97+<span class="o">(</span>i div 1000<span class="o">))</span>, char<span class="o">(</span>97+<span class="o">(</span>i % <span class="m">1000</span> div 100<span class="o">))</span>, char<span class="o">(</span>97+<span class="o">(</span>i % <span class="m">100</span> div 10<span class="o">))</span>, char<span class="o">(</span>97+<span class="o">(</span>i % 10<span class="o">))))</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">set</span> <span class="nv">i</span><span class="o">=</span>i+1<span class="p">;</span>
+</span></span><span class="line"><span class="cl">  end <span class="k">while</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">end<span class="p">;;</span>
+</span></span><span class="line"><span class="cl">delimiter <span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">call idata<span class="o">()</span><span class="p">;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="1-方法一-order-by-rand">1. 方法一: order by rand()</h2>
+<h3 id="11-内存临时表">1.1 内存临时表</h3>
+<p><code>select word from words order by rand() limit 3;</code> 这个语句的意思很直白，但执行流程却有点复杂的。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/12_%E9%9A%8F%E6%9C%BA/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/09_%E8%87%AA%E5%A2%9E%E5%80%BC%E4%B8%8A%E7%BA%BF/">9 MYSQL 自增值的上限</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-09">2020-03-09</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>MySQL 里面的几种自增 id，它们的值达到上限以后，会出现什么情况。</p>
+<!-- more -->
+<h2 id="1-表定义自增值-id">1. 表定义自增值 id</h2>
+<p>表定义的自增值达到上限后的逻辑是：再申请下一个 id 时，得到的值保持不变。因此就会出现主键冲突错误。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/09_%E8%87%AA%E5%A2%9E%E5%80%BC%E4%B8%8A%E7%BA%BF/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/08_insert%E9%94%81/">8 insert 语句的锁</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-08">2020-03-08</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>insert select 为什么有这么多锁？</p>
+<!-- more -->
+<p>本节我们会介绍一些特殊的 insert 语句产生的锁:</p>
+<ol>
+<li>insert … select 是很常见的在两个表之间拷贝数据的方法。你需要注意，在可重复读隔离级别下，这个语句会给 select 的表里扫描到的记录和间隙加读锁</li>
+<li>如果 insert 和 select 的对象是同一个表，则有可能会造成循环写入。这种情况下，我们需要引入用户临时表来做优化。</li>
+<li>insert 语句如果出现唯一键冲突，会在冲突的唯一值上加共享的 next-key lock(S 锁)。因此，碰到由于唯一键约束导致报错后，要尽快提交或回滚事务，避免加锁时间过长。</li>
+</ol>
+<h2 id="1-insert--select-语句">1. insert … select 语句</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">CREATE TABLE <span class="sb">`</span>t<span class="sb">`</span> <span class="o">(</span>
-</span></span><span class="line"><span class="cl">  <span class="sb">`</span>ftime<span class="sb">`</span> datetime NOT NULL,
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL AUTO_INCREMENT,
 </span></span><span class="line"><span class="cl">  <span class="sb">`</span>c<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
-</span></span><span class="line"><span class="cl">  KEY <span class="o">(</span><span class="sb">`</span>ftime<span class="sb">`</span><span class="o">)</span>
-</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB DEFAULT <span class="nv">CHARSET</span><span class="o">=</span>latin1
-</span></span><span class="line"><span class="cl">PARTITION BY RANGE <span class="o">(</span>YEAR<span class="o">(</span>ftime<span class="o">))</span>
-</span></span><span class="line"><span class="cl"><span class="o">(</span>PARTITION p_2017 VALUES LESS THAN <span class="o">(</span>2017<span class="o">)</span> <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB,
-</span></span><span class="line"><span class="cl"> PARTITION p_2018 VALUES LESS THAN <span class="o">(</span>2018<span class="o">)</span> <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB,
-</span></span><span class="line"><span class="cl"> PARTITION p_2019 VALUES LESS THAN <span class="o">(</span>2019<span class="o">)</span> <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB,
-</span></span><span class="line"><span class="cl">PARTITION p_others VALUES LESS THAN MAXVALUE <span class="nv">ENGINE</span> <span class="o">=</span> InnoDB<span class="o">)</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span><span class="s1">&#39;2017-4-1&#39;</span>,1<span class="o">)</span>,<span class="o">(</span><span class="s1">&#39;2018-4-1&#39;</span>,1<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="sb">`</span>d<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
+</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,
+</span></span><span class="line"><span class="cl">  UNIQUE KEY <span class="sb">`</span>c<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>c<span class="sb">`</span><span class="o">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 1,1<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 2,2<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 3,3<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 4,4<span class="o">)</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">create table t2 like t
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>表 t 将包含了一个.frm 文件和 4 个.ibd 文件，每个分区对应一个.ibd 文件。也就是说：</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/61_%E5%88%86%E5%8C%BA%E8%A1%A8/">阅读全文</a><div class="post-tags">
+</div><p>在可重复读隔离级别下，binlog_format=statement 时, <code>insert into t2(c,d) select c,d from t;</code> 需要对表 t 的所有行和间隙加锁。原因还是日志和数据的一致性。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/08_insert%E9%94%81/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/52_%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86/">28 MySQL 连接管理</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-28">2020-03-28</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>MySQL 的连接管理</p>
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/07_%E7%B4%A2%E5%BC%95/">7 MYSQL 索引</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-07">2020-03-07</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>B+树索引</p>
 <!-- more -->
-<h2 id="2-mysql-连接管理">2. mysql 连接管理</h2>
-<p>在 MySQL 中有两个 kill 命令：</p>
-<ol>
-<li><code>kill query + 线程 id</code>: 表示终止这个线程中正在执行的语句；</li>
-<li><code>kill connection + 线程 id</code>: connection 可缺省，表示断开这个线程的连接，如果这个线程有语句正在执行，也是要先停止正在执行的语句。</li>
-</ol>
-<h3 id="21-收到-kill-以后线程做什么">2.1 收到 kill 以后，线程做什么</h3>
-<p>当用户执行 kill query thread_id_B 时，MySQL 里处理 kill 命令的线程做了两件事：</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/52_%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/51_grant_privileges/">27 MYSQL flush privileges</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-27">2020-03-27</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>grant 之后要不要跟 flush privileges</p>
-<!-- more -->
-<h2 id="1-用户权限">1. 用户权限</h2>
-<p>MySQL 使用 <code>create user</code> 来创建用户。</p>
-<p><code>create user 'ua'@'%' identified by 'pa';</code> 的执行过程如下:</p>
-<ol>
-<li>磁盘上，往 mysql.user 表里插入一行，由于没有指定权限，所以这行数据上所有表示权限的字段的值都是 N；</li>
-<li>内存里，往数组 acl_users 里插入一个 acl_user 对象，这个对象的 access 字段值为 0。</li>
-</ol>
-<p>在 MySQL 中，用户权限是有不同的范围的。从大到小的顺序依次是:</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/51_grant_privileges/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/45_%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/">26 MYSQL 自增主键</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-26">2020-03-26</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>自增主键为什么不连续</p>
-<!-- more -->
-<h2 id="1-自增值">1. 自增值</h2>
-<h3 id="11-自增值的保存">1.1 自增值的保存</h3>
-<p>表的结构定义存放在后缀名为.frm 的文件中，但是并不会保存自增值。不同的引擎对于自增值的保存策略不同。</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/45_%E8%87%AA%E5%A2%9E%E4%B8%BB%E9%94%AE/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/">25 MYSQL Memory 存储引擎</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-25">2020-03-25</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>什么时候使用 Memory 存储引擎</p>
-<!-- more -->
-<h2 id="1-索引组织对比">1. 索引组织对比</h2>
-<p>假设有以下的两张表 t1 和 t2，其中表 t1 使用 Memory 引擎， 表 t2 使用 InnoDB 引擎。</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">create table t1<span class="o">(</span>id int primary key, c int<span class="o">)</span> <span class="nv">engine</span><span class="o">=</span>Memory<span class="p">;</span>
-</span></span><span class="line"><span class="cl">create table t2<span class="o">(</span>id int primary key, c int<span class="o">)</span> <span class="nv">engine</span><span class="o">=</span>innodb<span class="p">;</span>
-</span></span><span class="line"><span class="cl">insert into t1 values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span>,<span class="o">(</span>9,9<span class="o">)</span>,<span class="o">(</span>0,0<span class="o">)</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">insert into t2 values<span class="o">(</span>1,1<span class="o">)</span>,<span class="o">(</span>2,2<span class="o">)</span>,<span class="o">(</span>3,3<span class="o">)</span>,<span class="o">(</span>4,4<span class="o">)</span>,<span class="o">(</span>5,5<span class="o">)</span>,<span class="o">(</span>6,6<span class="o">)</span>,<span class="o">(</span>7,7<span class="o">)</span>,<span class="o">(</span>8,8<span class="o">)</span>,<span class="o">(</span>9,9<span class="o">)</span>,<span class="o">(</span>0,0<span class="o">)</span><span class="p">;</span>
-</span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="11-innodb-组织形式">1.1 innodb 组织形式</h3>
-<p>InnoDB 表的数据放在主键索引树上，主键索引是 B+ 树。所以表 t2 的数据组织方式如下图所示：主键索引上的值是有序存储的。</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/44_memory%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/">24 临时表</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-24">2020-03-24</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>什么时候会使用临时表</p>
-<!-- more -->
-<h2 id="1-临时表">1. 临时表</h2>
-<h3 id="11-临时表跟内存表">1.1 临时表跟内存表</h3>
-<ol>
-<li>内存表，指的是使用 Memory 引擎的表，建表语法是 <code>create table … engine=memory</code>。这种表的数据都保存在内存里，系统重启的时候会被清空，但是表结构还在。除了这两个特性看上去比较“奇怪”外，从其他的特征上看，它就是一个正常的表。</li>
-<li>而临时表，可以使用各种引擎类型 。如果是使用 InnoDB 引擎或者 MyISAM 引擎的临时表，写数据的时候是写到磁盘上的。当然，临时表也可以使用 Memory 引擎</li>
-</ol>
-<h3 id="12-临时表的特征">1.2 临时表的特征</h3>
 <p><img
         class="lazyload"
         src="/svg/loading.min.svg"
-        data-src="/images/mysql/MySQL45%e8%ae%b2/temporary_table_feature.png"
-        data-srcset="/images/mysql/MySQL45%E8%AE%B2/temporary_table_feature.png, /images/mysql/MySQL45%e8%ae%b2/temporary_table_feature.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/temporary_table_feature.png 2x"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/innodb_index.png"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/innodb_index.png, /images/mysql/MySQL45%e8%ae%b2/innodb_index.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/innodb_index.png 2x"
         data-sizes="auto"
-        alt="/images/mysql/MySQL45%E8%AE%B2/temporary_table_feature.png"
-        title="temporary_table_feature" /></p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/43_%E4%B8%B4%E6%97%B6%E8%A1%A8/">阅读全文</a><div class="post-tags">
+        alt="/images/mysql/MySQL45%E8%AE%B2/innodb_index.png"
+        title="innodb_index" /></p>
+<h2 id="1-innodb-的索引模型">1. InnoDB 的索引模型</h2>
+<p>实现索引的方式有很多方式，N 叉树由于在读写上的性能优点，以及适配磁盘的访问模式，已经被广泛应用在数据库引擎中了。在 InnoDB 中，表都是根据主键顺序以索引的形式存放的，这种存储方式的表称为索引组织表。InnoDB 使用了 B+ 树索引模型，所以数据都是存储在 B+ 树中的。每一个索引在 InnoDB 里面对应一棵 B+ 树。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/07_%E7%B4%A2%E5%BC%95/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/06_%E9%97%B4%E9%9A%99%E9%94%81/">6 MySQL 幻读与间隙锁</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-06">2020-03-06</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>幻读</p>
+<!-- more -->
+<h2 id="1-幻读">1. 幻读</h2>
+<p>幻读指的是一个事务在前后两次查询同一个范围的时候，后一次查询看到了前一次查询没有看到的行。对于幻读需要在注意:</p>
+<ol>
+<li>在<strong>可重复读隔离级别下</strong>，普通的查询是快照读，是不会看到别的事务插入的数据的。而当前读的规则，就是要能读到所有已经提交的记录的最新值。因此，幻读<strong>只在</strong>“<strong>当前读</strong>”下才会出现。</li>
+<li>修改结果，被之后的 select 语句用“当前读”看到，不能称为幻读。<strong>幻读仅专指“新插入的行”</strong></li>
+</ol>
+<h2 id="11-幻读有什么问题">1.1 幻读有什么问题？</h2>
+<p>没有行锁到底会导致什么问题，我们来看下面这个示例:</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/06_%E9%97%B4%E9%9A%99%E9%94%81/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
 </article><ul class="pagination"><li class="page-item ">
                     <span class="page-link">
@@ -243,16 +323,6 @@
                 </li><li class="page-item ">
                     <span class="page-link">
                         <a href="/page/60/">60</a>
-                    </span>
-                </li><li class="page-item ">
-                    <span class="page-link">
-                        <a href="/page/61/">61</a>
-                    </span>
-                </li><li class="page-item ">
-                    <span class="page-link" aria-hidden="true">&hellip;</span>
-                </li><li class="page-item ">
-                    <span class="page-link">
-                        <a href="/page/63/">63</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">
