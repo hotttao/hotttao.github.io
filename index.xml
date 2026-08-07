@@ -4,16 +4,9 @@
         <link>https://hotttao.github.io/</link>
         <description>宋涛的个人博客</description>
         <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><managingEditor>1556824234@qq.com (宋涛)</managingEditor>
-            <webMaster>1556824234@qq.com (宋涛)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 01 Aug 2026 22:00:00 &#43;0800</lastBuildDate>
+            <webMaster>1556824234@qq.com (宋涛)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Wed, 01 Jul 2026 22:00:00 &#43;0800</lastBuildDate>
             <atom:link href="https://hotttao.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
-    <title>Agent 的分类</title>
-    <link>https://hotttao.github.io/posts/aigc/agent_design/001_agent_kind/</link>
-    <pubDate>Sat, 01 Aug 2026 22:00:00 &#43;0800</pubDate>
-    <author>作者</author>
-    <guid>https://hotttao.github.io/posts/aigc/agent_design/001_agent_kind/</guid>
-    <description><![CDATA[<p>市面上现在已经有很多 AI 开发框架和通用 Agent(类似 codex、claude code)，当我们需要开发一个 Agent 的时候，第一步就是选型。选型的前提是我们需要弄清楚，我们要开发的是一个什么 Agent，这些 AI 开发框架和通用 Agent 都提供了什么能力，适合开发什么样的 Agent。</p>]]></description>
-</item><item>
     <title>Base Agent 抽象</title>
     <link>https://hotttao.github.io/posts/aigc/base_agent/001_base_abs/</link>
     <pubDate>Wed, 01 Jul 2026 22:00:00 &#43;0800</pubDate>
@@ -21,9 +14,110 @@
     <guid>https://hotttao.github.io/posts/aigc/base_agent/001_base_abs/</guid>
     <description><![CDATA[<!-- more -->]]></description>
 </item><item>
+    <title>Multi-Agent</title>
+    <link>https://hotttao.github.io/posts/aigc/agent_design/003_multi_agent/</link>
+    <pubDate>Wed, 03 Jun 2026 22:00:00 &#43;0800</pubDate>
+    <author>作者</author>
+    <guid>https://hotttao.github.io/posts/aigc/agent_design/003_multi_agent/</guid>
+    <description><![CDATA[<h2 id="1-single-agent">1. Single-Agent</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-gdscript3" data-lang="gdscript3"><span class="line"><span class="cl"><span class="o">%%</span><span class="p">{</span><span class="n">init</span><span class="p">:</span> <span class="p">{</span> <span class="s1">&#39;flowchart&#39;</span><span class="p">:{</span><span class="s1">&#39;nodeSpacing&#39;</span><span class="p">:</span><span class="mi">35</span><span class="p">},</span> <span class="s1">&#39;theme&#39;</span><span class="p">:</span><span class="s1">&#39;neutral&#39;</span><span class="p">}}</span><span class="o">%%</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="n">TB</span>
+</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">全部外部组件统一放在左侧，从上往下排布，和原图完全一致</span>
+</span></span><span class="line"><span class="cl">    <span class="n">T</span><span class="p">[</span><span class="s2">&#34;task prompts&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">TD</span><span class="p">[</span><span class="s2">&#34;tools definitions&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">CTX</span><span class="p">[</span><span class="s2">&#34;context&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">TE</span><span class="p">[</span><span class="s2">&#34;tools executors&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">subgraph</span> <span class="n">agent_program</span><span class="p">[</span><span class="s2">&#34;agent program&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="n">direction</span> <span class="n">LR</span>
+</span></span><span class="line"><span class="cl">        <span class="n">PM</span><span class="p">[</span><span class="s2">&#34;prepare messages&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="n">CL</span><span class="p">[</span><span class="s2">&#34;check end condition&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="n">HM</span><span class="p">[</span><span class="s2">&#34;handle new message&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">end</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">END_LOOP</span><span class="p">((</span> <span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="n">LLM</span><span class="p">[</span><span class="s2">&#34;LLM&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">输入：左侧全部指向</span> <span class="n">prepare</span> <span class="n">messages</span>
+</span></span><span class="line"><span class="cl">    <span class="n">T</span> <span class="o">--</span> <span class="n">inject</span> <span class="n">instructions</span> <span class="o">--&gt;</span> <span class="n">PM</span>
+</span></span><span class="line"><span class="cl">    <span class="n">TD</span> <span class="o">--</span> <span class="nb">load</span> <span class="n">schemas</span> <span class="o">--&gt;</span> <span class="n">PM</span>
+</span></span><span class="line"><span class="cl">    <span class="n">CTX</span> <span class="o">--</span> <span class="n">inject</span> <span class="n">history</span> <span class="o">--&gt;</span> <span class="n">PM</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">主循环</span>
+</span></span><span class="line"><span class="cl">    <span class="n">PM</span> <span class="o">--</span> <span class="n">send</span> <span class="n">messages</span> <span class="o">--&gt;</span> <span class="n">LLM</span>
+</span></span><span class="line"><span class="cl">    <span class="n">LLM</span> <span class="o">--</span> <span class="n">response</span> <span class="n">message</span> <span class="o">--&gt;</span> <span class="n">CL</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">CL</span> <span class="o">--</span> <span class="n">end</span> <span class="n">the</span> <span class="n">loop</span> <span class="o">--&gt;</span> <span class="n">END_LOOP</span>
+</span></span><span class="line"><span class="cl">    <span class="n">CL</span> <span class="o">--&gt;</span> <span class="n">HM</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">输出：</span><span class="n">handle</span> <span class="n">new</span> <span class="n">message</span> <span class="err">回连左侧的</span><span class="n">context</span><span class="err">、</span><span class="n">tools</span> <span class="n">executors</span>
+</span></span><span class="line"><span class="cl">    <span class="n">HM</span> <span class="o">--</span> <span class="n">update</span> <span class="n">context</span> <span class="o">--&gt;</span> <span class="n">CTX</span>
+</span></span><span class="line"><span class="cl">    <span class="n">HM</span> <span class="o">--</span> <span class="n">call</span> <span class="n">tools</span> <span class="o">--&gt;</span> <span class="n">TE</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="11-single-agent-瓶颈">1.1 Single-Agent 瓶颈</h3>
+<h4 id="1-模型能力单一瓶颈">1. 模型能力单一瓶颈</h4>
+<p>单个Agent全程固定调用同一套模型，若任务同时需要多模态、绘图、高强度工具调用等多种差异化能力，单一模型无法全部覆盖，直接限制任务完成度。</p>]]></description>
+</item><item>
+    <title>Agent Copilot</title>
+    <link>https://hotttao.github.io/posts/aigc/agent_design/002_copilot/</link>
+    <pubDate>Tue, 02 Jun 2026 22:00:00 &#43;0800</pubDate>
+    <author>作者</author>
+    <guid>https://hotttao.github.io/posts/aigc/agent_design/002_copilot/</guid>
+    <description><![CDATA[<p>这一个章节我们重点介绍 Agent 设计中 Agent 和 用户交互的部分。为什么要这么关注交互的部分，主要原因有两个:</p>
+<ol>
+<li>当下 Agent 最好的形态就是人机交互，Agent 可以链接人、以及传统的应用，并可以让人参与到 Agent 决策并且影响 Agent 的决策过程。</li>
+<li>Copilot 会影响 Agent 的设计</li>
+</ol>
+<p>接下来我们会介绍几个不同的框架实现的 Agent Copilot，目的有两个:</p>]]></description>
+</item><item>
+    <title>Agent 的分类</title>
+    <link>https://hotttao.github.io/posts/aigc/agent_design/001_agent_kind/</link>
+    <pubDate>Mon, 01 Jun 2026 22:00:00 &#43;0800</pubDate>
+    <author>作者</author>
+    <guid>https://hotttao.github.io/posts/aigc/agent_design/001_agent_kind/</guid>
+    <description><![CDATA[<p>市面上现在已经有很多 AI 开发框架和通用 Agent(类似 codex、claude code)，当我们需要开发一个 Agent 的时候，第一步就是选型。选型的前提是我们需要弄清楚，我们要开发的是一个什么 Agent，这些 AI 开发框架和通用 Agent 都提供了什么能力，适合开发什么样的 Agent。</p>]]></description>
+</item><item>
     <title>Pocket Flow</title>
     <link>https://hotttao.github.io/posts/aigc/workflow/001_pocket_flow/</link>
-    <pubDate>Mon, 01 Jun 2026 22:00:00 &#43;0800</pubDate>
+    <pubDate>Fri, 01 May 2026 22:00:00 &#43;0800</pubDate>
     <author>作者</author>
     <guid>https://hotttao.github.io/posts/aigc/workflow/001_pocket_flow/</guid>
     <description><![CDATA[<p>今天我们来介绍第一个 Agent Framework <a href="https://github.com/The-Pocket/PocketFlow/blob/main/cookbook/pocketflow-batch/translations/README_CHINESE.md" target="_blank" rel="noopener noreffer">Pocket Flow</a></p>
@@ -45,6 +139,20 @@
 <li>任务计算的性能要求很高，需要充分利用计算资源，尽快完成计算</li>
 </ol>
 <p>为了快速完成这些任务的计算，设计了如下的分布式计算系统:</p>]]></description>
+</item><item>
+    <title>ES 基础</title>
+    <link>https://hotttao.github.io/posts/architecture/elasticsearch/01_es/</link>
+    <pubDate>Fri, 21 Jul 2023 22:00:00 &#43;0800</pubDate>
+    <author>作者</author>
+    <guid>https://hotttao.github.io/posts/architecture/elasticsearch/01_es/</guid>
+    <description><![CDATA[<h2 id="1-倒排索引">1. 倒排索引</h2>
+<h3 id="11-什么是倒排索引">1.1 什么是倒排索引</h3>
+<p>倒排索引是一种 <strong>从内容到文档的映射</strong> 数据结构，它和“正向索引”相反。</p>
+<ul>
+<li><strong>正向索引</strong>：文档 → 内容</li>
+<li><strong>倒排索引</strong>：内容（词语） → 出现该词语的文档列表</li>
+</ul>
+<p>它的核心作用是 <strong>快速找到包含某个词的文档</strong>，是搜索引擎（比如 ElasticSearch、Lucene）最核心的数据结构。</p>]]></description>
 </item><item>
     <title>Go 的常见“陷阱”</title>
     <link>https://hotttao.github.io/posts/program/go/expert/go_export/expert_31/</link>
@@ -71,59 +179,5 @@
 <h2 id="1-go-get">1. go get</h2>
 <p>go get 用于获取 Go 包及其依赖包</p>
 <p>常用命令如下:</p>]]></description>
-</item><item>
-    <title>Go cgo</title>
-    <link>https://hotttao.github.io/posts/program/go/expert/go_export/expert_19/</link>
-    <pubDate>Wed, 11 Jan 2023 22:00:00 &#43;0800</pubDate>
-    <author>作者</author>
-    <guid>https://hotttao.github.io/posts/program/go/expert/go_export/expert_19/</guid>
-    <description><![CDATA[这个系列我们开始学习 go 语言的第二部分-go语言进阶]]></description>
-</item><item>
-    <title>Go reflect</title>
-    <link>https://hotttao.github.io/posts/program/go/expert/go_export/expert_18/</link>
-    <pubDate>Tue, 10 Jan 2023 22:00:00 &#43;0800</pubDate>
-    <author>作者</author>
-    <guid>https://hotttao.github.io/posts/program/go/expert/go_export/expert_18/</guid>
-    <description><![CDATA[<h2 id="1-反射">1. 反射</h2>
-<p>Go在标准库中提供的reflect包让Go程序具备运行时的反射能力（reflection，又称为自省）。反射是程序在运行时访问、检测和修改它本身状态或行为的一种能力，各种编程语言所实现的反射机制各有不同。Go语言的<strong>interface{}类型变量具有析出任意类型变量的类型信息（type）和值信息（value）的能力</strong>，Go的反射本质上就是利用interface{}的这种能力在运行时对任意变量的类型和值信息进行检视甚至是对值进行修改的机制。</p>]]></description>
-</item><item>
-    <title>Go unsafe包的安全使用模式</title>
-    <link>https://hotttao.github.io/posts/program/go/expert/go_export/expert_17/</link>
-    <pubDate>Mon, 09 Jan 2023 22:00:00 &#43;0800</pubDate>
-    <author>作者</author>
-    <guid>https://hotttao.github.io/posts/program/go/expert/go_export/expert_17/</guid>
-    <description><![CDATA[<h2 id="1-类型安全">1. 类型安全</h2>
-<p>在Go语言中，我们是无法通过常规语法手段穿透Go在类型系统层面对内存数据的保护的：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">a</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mh">0x12345678</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;0x%x\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="p">)</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="kt">byte</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="kt">byte</span><span class="p">)(</span><span class="o">&amp;</span><span class="nx">a</span><span class="p">)</span><span class="w">   </span><span class="c1">// 错误！不允许将&amp;a从*int类型显式转型为*byte类型</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">*</span><span class="nx">p</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x23</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">b</span><span class="w"> </span><span class="kt">byte</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">byte</span><span class="p">(</span><span class="nx">a</span><span class="p">)</span><span class="w">        </span><span class="c1">// b是一个新变量，有自己所解释的内存空间</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">b</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x23</span><span class="w">                    </span><span class="c1">// 即便强制进行类型转换，原变量a所解释的内存空间的数据依然不变</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;0x%x\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="p">)</span><span class="w">     </span><span class="c1">// 0x23</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;0x%x\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="p">)</span><span class="w">     </span><span class="c1">// 0x12345678</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><p>Go在常规操作下是类型安全的（注：并非绝对的类型安全，绝对的类型安全需要在数学上的形式化证明）。所谓类型安全是指一块内存数据一旦被特定的类型所解释（该内存数据与该类型变量建立关联，也就是变量定义），它就不能再被解释为其他类型，不能再与其他类型变量建立关联。</p>]]></description>
 </item></channel>
 </rss>

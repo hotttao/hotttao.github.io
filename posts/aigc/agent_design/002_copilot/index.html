@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Agent Copilot - LoveIt</title><meta name="Description" content="Agent Copilot 实现  Agent 与 User 人机协作"><meta property="og:url" content="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="Agent Copilot">
+	<meta property="og:description" content="Agent Copilot 实现  Agent 与 User 人机协作">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-06-02T22:00:00+08:00">
+		<meta property="article:modified_time" content="2026-08-07T21:21:29+08:00">
+		<meta property="article:tag" content="Agent 设计模式">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="Agent Copilot">
+	<meta name="twitter:description" content="Agent Copilot 实现  Agent 与 User 人机协作">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/agent_design/001_agent_kind/" /><link rel="next" href="https://hotttao.github.io/posts/aigc/agent_design/003_multi_agent/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Agent Copilot",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/agent_design\/002_copilot\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "agent 设计模式","wordcount":  2352 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/agent_design\/002_copilot\/","datePublished": "2026-06-02T22:00:00+08:00","dateModified": "2026-08-07T21:21:29+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "Agent Copilot 实现  Agent 与 User 人机协作"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent/"><i class="far fa-folder-open fa-fw"></i>&nbsp;Agent</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">agent 设计模式</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/agent_design/001_agent_kind/">Agent 的分类</a></li><li><a href="/posts/aigc/agent_design/002_copilot/" class="active">Agent Copilot</a></li><li><a href="/posts/aigc/agent_design/003_multi_agent/">Multi-Agent</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">Agent Copilot</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-06-02">2026-06-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 2352 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-代码阅读工具">1. 代码阅读工具</a>
+      <ul>
+        <li><a href="#11-背景">1.1 背景</a></li>
+        <li><a href="#12-核心流程">1.2 核心流程</a></li>
+        <li><a href="#13-workflow">1.3 Workflow</a></li>
+        <li><a href="#14-sharedstorage">1.4 SharedStorage</a></li>
+        <li><a href="#14-核心通信---workflow-阻塞等待">1.4 核心通信 - Workflow 阻塞等待</a></li>
+        <li><a href="#15-核心通信---多轮">1.5 核心通信 - 多轮</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>这一个章节我们重点介绍 Agent 设计中 Agent 和 用户交互的部分。为什么要这么关注交互的部分，主要原因有两个:</p>
+<ol>
+<li>当下 Agent 最好的形态就是人机交互，Agent 可以链接人、以及传统的应用，并可以让人参与到 Agent 决策并且影响 Agent 的决策过程。</li>
+<li>Copilot 会影响 Agent 的设计</li>
+</ol>
+<p>接下来我们会介绍几个不同的框架实现的 Agent Copilot，目的有两个:</p>
+<ol>
+<li>理解 Copilot 这种设计模式</li>
+<li>掌握 Copilot 里的最佳实践: 如何实现 Agent 与前端的通信机制，来传递用户反馈</li>
+</ol>
+<!-- more -->
+<h2 id="1-代码阅读工具">1. 代码阅读工具</h2>
+<p>第一个项目上是使用 Pocket Flow 实现的类似 DeepWiki 的代码阅读工具: <a href="https://github.com/Yuyz0112/koala-code-reader" target="_blank" rel="noopener noreffer">koala-code-reader</a></p>
+<h3 id="11-背景">1.1 背景</h3>
+<ol>
+<li>需求: 解决DeepWiki类工具一次性全量生成、用户无法中途干预、结果不可控的痛点。</li>
+<li>目标: 1+1 Copilot是<strong>人主导、AI辅助</strong>的长任务人机协作范式
+<ul>
+<li>AI 每次返回两个1：①<strong>当前输出</strong>（本轮；②**；②**下一步计划**（AI后续任务方案）</li>
+<li>用户提供三类反馈：同意、拒绝、人工微调</li>
+<li>AI 根据用户反馈再次运行</li>
+</ul>
+</li>
+<li>优势:
+<ol>
+<li><strong>精准可控</strong>：单次只处理一个单元，避免AI一次性大面积跑偏，微调可省去重复LLM调用，节省Token成本；</li>
+<li><strong>思路对齐</strong>：AI学习用户每轮反馈（同意/微调差异/拒绝理由），持续贴合用户习惯；</li>
+<li><strong>主动预判</strong>：提前给出下一步计划，用户可提前修正AI后续工作方向。</li>
+</ol>
+</li>
+<li>适用场景：
+<ul>
+<li>适合<strong>长周期复杂任务</strong>（代码阅读、代码编写、长篇文档创作），且用户具备专业能力可审核AI输出；简单问答、无专业用户场景不适用。</li>
+</ul>
+</li>
+<li>开发框架: Pocket Flow</li>
+</ol>
+<h3 id="12-核心流程">1.2 核心流程</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">%%{init: { &#39;flowchart&#39;:{&#39;rankSpacing&#39;:60,&#39;nodeSpacing&#39;:35} } }%%
+</span></span><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">    S[&#34;开始 1+1 协作模式&#34;] --&gt; U1[&#34;用户：定义整体目标，声明1+1协作规则，指定初始文件/任务&#34;]
+</span></span><span class="line"><span class="cl">    U1 --&gt; LLM[&#34;LLM：生成并返回&lt;br/&gt;1.【当前输出】(对当前文件的变更/分析)&lt;br/&gt;2.【下一步计划】(下一个文件/重点及理由)&#34;]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    LLM --&gt; U_check[&#34;用户：审核LLM的「1+1」输出&#34;]
+</span></span><span class="line"><span class="cl">    U_check --&gt; Judge{&#34;用户如何处理【当前输出】？&#34;}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    Judge -- 不满意，需重做 --&gt; U_reject[&#34;用户：针对【当前输出】提供反馈和修改要求&#34;]
+</span></span><span class="line"><span class="cl">    U_reject --&gt; LLM
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    Judge -- 满意 / 或用户已自行调整 --&gt; U_confirm[&#34;用户/LLM：确认/整合【当前输出】&lt;br/&gt;(用户可能提供调整内容，LLM对齐认知)&#34;]
+</span></span><span class="line"><span class="cl">    U_confirm --&gt; TaskDone{&#34;整体任务是否完成？&#34;}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    TaskDone -- 未完成，继续 --&gt; U_next[&#34;用户：根据LLM的【下一步计划】准备下一个文件/任务的上下文&lt;br/&gt;(如提供文件内容)&#34;]
+</span></span><span class="line"><span class="cl">    U_next --&gt; LLM
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    TaskDone -- 已完成 --&gt; End[&#34;结束协作&#34;]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>用户输入代码库、阅读目标、限定范围；AI校验信息不足则反问补全，确定入口文件。</li>
+<li>循环单元（1+1核心）：AI分析文件输出「当前结果+下一步计划」→ 用户三种反馈分支：
+<ul>
+<li>拒绝：带回重做分析；</li>
+<li>同意/微调：归档本轮结果、全局汇总压缩文档，读取用户反馈让AI对齐思路，执行上一轮的下一步计划进入下一轮循环。</li>
+</ul>
+</li>
+<li>AI判定全部文件分析完毕，输出完整汇总文档，任务结束。</li>
+</ol>
+<h3 id="13-workflow">1.3 Workflow</h3>
+<p>理解了核心流程之后，需要设计对应的 Workflow。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">%%{init: { &#39;flowchart&#39;:{&#39;rankSpacing&#39;:60,&#39;nodeSpacing&#39;:40} } }%%
+</span></span><span class="line"><span class="cl">graph TB
+</span></span><span class="line"><span class="cl">    Start[开始] --&gt; A[获取入口文件]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    %% 获取入口文件分支
+</span></span><span class="line"><span class="cl">    A --&gt;|需要更多信息| B[改进基础输入]
+</span></span><span class="line"><span class="cl">    B --&gt;|重新获取入口文件| A
+</span></span><span class="line"><span class="cl">    A --&gt;|找到入口文件| C[分析文件]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    %% 分析文件分支
+</span></span><span class="line"><span class="cl">    C --&gt;|需要用户反馈| D[用户反馈]
+</span></span><span class="line"><span class="cl">    D --&gt;|用户拒绝，重新分析| C
+</span></span><span class="line"><span class="cl">    D --&gt;|用户接受或改进| E[压缩历史]
+</span></span><span class="line"><span class="cl">    E --&gt;|继续分析下一个文件| C
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    C --&gt;|所有文件已分析| F[完成]
+</span></span><span class="line"><span class="cl">    F --&gt; End[结束]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="14-sharedstorage">1.4 SharedStorage</h3>
+<p>SharedStorage 通常是跟节点的输出直接相关，在 Copilot 通常会包含:</p>
+<ol>
+<li>用户输入部分</li>
+<li>用户反馈</li>
+<li>需要持续收集的内容</li>
+<li>需要持续压缩的内容</li>
+<li>1+1 Copilot 的核心数据</li>
+</ol>
+<h3 id="14-核心通信---workflow-阻塞等待">1.4 核心通信 - Workflow 阻塞等待</h3>
+<p>通信的第一种方式是 Workflow 阻塞等待:</p>
+<ol>
+<li>后端接口和 websocket 链接通过 eventBus 交换数据</li>
+<li>Workflow 一直阻塞直到收到用户反馈</li>
+</ol>
+<p>这个机制的核心是:</p>
+<ol>
+<li>Workflow 控制 LLM决策 -&gt; 用户反馈 -&gt; LLM决策的循环</li>
+<li>Workflow 阻塞等待用户反馈</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">sequenceDiagram
+</span></span><span class="line"><span class="cl">    participant WS as WebSocket服务
+</span></span><span class="line"><span class="cl">    participant Bus as EventBus
+</span></span><span class="line"><span class="cl">    participant Flow as PocketFlow工作流
+</span></span><span class="line"><span class="cl">    participant UI as 前端
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    %% 连接初始化阶段
+</span></span><span class="line"><span class="cl">    UI-&gt;&gt;WS: 建立WebSocket长连接
+</span></span><span class="line"><span class="cl">    WS-&gt;&gt;Bus: 注册监听send事件
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    %% AI分析完成，推送1+1数据
+</span></span><span class="line"><span class="cl">    Flow-&gt;&gt;Bus: once监听user_feedback
+</span></span><span class="line"><span class="cl">    Flow-&gt;&gt;Bus: emit send(1+1数据)
+</span></span><span class="line"><span class="cl">    Bus--&gt;&gt;WS: 触发send监听回调
+</span></span><span class="line"><span class="cl">    WS--&gt;&gt;UI: 推送分析内容，展示反馈面板
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    %% 用户提交反馈
+</span></span><span class="line"><span class="cl">    UI-&gt;&gt;WS: WebSocket提交反馈
+</span></span><span class="line"><span class="cl">    WS-&gt;&gt;Bus: emit user_feedback(反馈)
+</span></span><span class="line"><span class="cl">    Bus--&gt;&gt;Flow: 触发监听，唤醒阻塞流程
+</span></span><span class="line"><span class="cl">    Flow-&gt;&gt;Flow: 保存反馈，继续流转
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="kr">async</span> <span class="kd">function</span> <span class="nx">getUserFeedback</span><span class="p">(</span><span class="nx">onePlusOneResult</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 2. 一直阻塞直至，前端回传的用户反馈，resolve 这个 Promise
+</span></span></span><span class="line"><span class="cl">    <span class="c1">//    await getUserFeedback() 节点，就能拿到 feedbackData，然后继续执行
+</span></span></span><span class="line"><span class="cl">    <span class="nx">eventBus</span><span class="p">.</span><span class="nx">once</span><span class="p">(</span><span class="s2">&#34;user_feedback&#34;</span><span class="p">,</span> <span class="p">(</span><span class="nx">feedbackData</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">resolve</span><span class="p">(</span><span class="nx">feedbackData</span><span class="p">);</span> <span class="c1">// 解除工作流阻塞
+</span></span></span><span class="line"><span class="cl">    <span class="p">});</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 把1+1数据推给前端
+</span></span></span><span class="line"><span class="cl">    <span class="nx">eventBus</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s2">&#34;send&#34;</span><span class="p">,</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">type</span><span class="o">:</span> <span class="s2">&#34;user_feedback&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">value</span><span class="o">:</span> <span class="nx">onePlusOneResult</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">});</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="15-核心通信---多轮">1.5 核心通信 - 多轮</h3>
+<p>通信的第二种方式是 多轮 + 状态恢复。</p>
+<p>这个机制的核心是:</p>
+<ol>
+<li>Workflow 把 <code>LLM决策 -&gt; 用户反馈 -&gt; LLM决策的循环</code> 拆分成两段独立的轮次，由前端驱动整个 workflow 的执行</li>
+<li>Workflow 会在需要用户反馈的地方 break(等同于结束当前的轮次)，保存状态</li>
+<li>下一次轮次由前端带着用户反馈重新发起，Workflow 恢复状态，继续执行</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">sequenceDiagram
+</span></span><span class="line"><span class="cl">    participant FE as Frontend
+</span></span><span class="line"><span class="cl">    participant API as FlowManager
+</span></span><span class="line"><span class="cl">    participant Q as Cloudflare Queue
+</span></span><span class="line"><span class="cl">    participant PF as PersistedFlow(KV)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    FE-&gt;&gt;API: POST /flows (初始化)
+</span></span><span class="line"><span class="cl">    API-&gt;&gt;PF: 写入初始状态到 KV
+</span></span><span class="line"><span class="cl">    API-&gt;&gt;Q: queueFlowExecution(trigger)
+</span></span><span class="line"><span class="cl">    Q-&gt;&gt;PF: 循环 step() 执行节点
+</span></span><span class="line"><span class="cl">    Note over PF: GetEntryFile → AnalyzeFile → UserFeedbackNode
+</span></span><span class="line"><span class="cl">    PF-&gt;&gt;PF: UserFeedbackNode 设置 callToAction=&#34;user_feedback&#34;
+</span></span><span class="line"><span class="cl">    PF--&gt;&gt;Q: step 返回, 循环 break (暂停)
+</span></span><span class="line"><span class="cl">    Note over PF: WaitingForUserFeedbackNode 尚未执行
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    FE-&gt;&gt;API: GET /flows/:runId (轮询)
+</span></span><span class="line"><span class="cl">    API--&gt;&gt;FE: 返回 shared.callToAction=&#34;user_feedback&#34;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    FE-&gt;&gt;API: POST /flows/:runId/input (提交反馈)
+</span></span><span class="line"><span class="cl">    Note over FE,API: { inputType:&#34;user_feedback&#34;, action:&#34;accept&#34; }
+</span></span><span class="line"><span class="cl">    API-&gt;&gt;PF: 写入 userFeedback, 清空 callToAction
+</span></span><span class="line"><span class="cl">    API-&gt;&gt;Q: queueFlowExecution(resume)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    Q-&gt;&gt;PF: 循环 step() 恢复执行
+</span></span><span class="line"><span class="cl">    Note over PF: nodes 重建 cursor 到 WaitingForUserFeedbackNode
+</span></span><span class="line"><span class="cl">    PF-&gt;&gt;PF: 读取 shared.userFeedback → 路由到 DO_REDUCE
+</span></span><span class="line"><span class="cl">    PF-&gt;&gt;PF: ReduceHistoryNode 消费反馈, 继续后续流程
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-07&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/8213182f503043853b9168d17887c205cf22e81b" target="_blank" title="commit by tao(tao@example.com) 8213182f503043853b9168d17887c205cf22e81b: copilot and Multi-agent">
+                                    <i class="fas fa-hashtag fa-fw"></i>8213182</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/agent_design/002_copilot/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/" data-title="Agent Copilot" data-hashtags="agent 设计模式"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/" data-hashtag="agent 设计模式"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/" data-title="Agent Copilot"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/" data-title="Agent Copilot"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/agent_design/002_copilot/" data-title="Agent Copilot" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">Agent 设计模式</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/agent_design/001_agent_kind/" class="prev" rel="prev" title="Agent 的分类"><i class="fas fa-angle-left fa-fw"></i>Agent 的分类</a>
+            <a href="/posts/aigc/agent_design/003_multi_agent/" class="next" rel="next" title="Multi-Agent">Multi-Agent<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2026-06-02T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Agent Copilot"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
