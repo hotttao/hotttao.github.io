@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>12. 流处理系统 - LoveIt</title><meta name="Description" content="宋涛的个人博客"><meta property="og:url" content="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="12. 流处理系统">
+	<meta property="og:description" content="派生数据
+1. 流处理系统 前面讨论的批处理系统存在一个重要的假设: 输入是有界的，是已知的有限大小，所以批处理知道何时读完他们。比如MapReduce 核心的排序操作必须读取整个输入，然后才开始生成输出。">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2019-04-12T00:00:00+00:00">
+		<meta property="article:modified_time" content="2026-08-07T09:53:55+08:00">
+		<meta property="article:tag" content="数据密集型应用">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="12. 流处理系统">
+	<meta name="twitter:description" content="派生数据
+1. 流处理系统 前面讨论的批处理系统存在一个重要的假设: 输入是有界的，是已知的有限大小，所以批处理知道何时读完他们。比如MapReduce 核心的排序操作必须读取整个输入，然后才开始生成输出。">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/" /><link rel="prev" href="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_11/" /><link rel="next" href="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_100/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "12. 流处理系统",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/distributed\/design-data-intensive-applications\/db_12\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "数据密集型应用","wordcount":  8270 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/distributed\/design-data-intensive-applications\/db_12\/","datePublished": "2019-04-12T00:00:00+00:00","dateModified": "2026-08-07T09:53:55+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": ""
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"><i class="far fa-folder-open fa-fw"></i>&nbsp;分布式</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">数据密集型应用</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/distributed/design-data-intensive-applications/db_1/">1. 构建数据密集型应用</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_2/">2. 构建怎样的数据系统</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_3/">3. 数据模型与查询语言</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_4/">4. 数据存储和检索</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_5/">5. 数据编码与演化</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_6/">6. 复制</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_7/">7. 分区</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_8/">8. 事务</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_9/">9. 分布式系统的挑战</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_10/">10. 一致性与共识</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_11/">11. 批处理系统</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_12/" class="active">12. 流处理系统</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_100/">13. 数据系统的未来</a></li><li><a href="/posts/distributed/design-data-intensive-applications/db_101/">13. 软件架构设计中的常见问题</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">12. 流处理系统</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"><i class="far fa-folder fa-fw"></i>分布式</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2019-04-12">2019-04-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 8270 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 17 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-流处理系统">1. 流处理系统</a>
+      <ul>
+        <li><a href="#11-发送事件流">1.1 发送事件流</a></li>
+        <li><a href="#12-消息系统">1.2 消息系统</a>
+          <ul>
+            <li><a href="#生产者与消费者之间直接消息传递">生产者与消费者之间直接消息传递</a></li>
+            <li><a href="#消息代理">消息代理</a></li>
+            <li><a href="#多个消费者">多个消费者</a></li>
+            <li><a href="#确认和重传">确认和重传</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-分区日志">2. 分区日志</a>
+      <ul>
+        <li><a href="#21-基于日志的消息存储">2.1 基于日志的消息存储</a>
+          <ul>
+            <li><a href="#对比日志与传统消息系统">对比日志与传统消息系统</a></li>
+            <li><a href="#消费者偏移量">消费者偏移量</a></li>
+            <li><a href="#磁盘使用">磁盘使用</a></li>
+            <li><a href="#消费者跟不上生产者时">消费者跟不上生产者时</a></li>
+            <li><a href="#重新处理消息">重新处理消息</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#3-数据库与流">3. 数据库与流</a>
+      <ul>
+        <li><a href="#31-保持系统同步">3.1 保持系统同步</a></li>
+        <li><a href="#32-变更捕获">3.2 变更捕获</a>
+          <ul>
+            <li><a href="#实现变更数据捕获">实现变更数据捕获</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#4-事件溯源">4. 事件溯源</a>
+      <ul>
+        <li><a href="#41-相同的事件日志派生多个视图">4.1 相同的事件日志派生多个视图</a></li>
+        <li><a href="#42-不可变的限制">4.2 不可变的限制</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-流处理">5. 流处理</a>
+      <ul>
+        <li><a href="#51-流处理的适用场景">5.1 流处理的适用场景</a></li>
+        <li><a href="#52-流的时间问题">5.2 流的时间问题</a>
+          <ul>
+            <li><a href="#事件时间和处理时间">事件时间和处理时间</a></li>
+            <li><a href="#什么时候准备就绪">什么时候准备就绪</a></li>
+            <li><a href="#你用谁的时间">你用谁的时间</a></li>
+          </ul>
+        </li>
+        <li><a href="#53-窗口类型">5.3 窗口类型</a></li>
+        <li><a href="#53-流式-join">5.3 流式 join</a>
+          <ul>
+            <li><a href="#流与流join">流与流join</a></li>
+            <li><a href="#流与表join">流与表join</a></li>
+            <li><a href="#表与表join">表与表join</a></li>
+          </ul>
+        </li>
+        <li><a href="#54-流处理容错">5.4 流处理容错</a>
+          <ul>
+            <li><a href="#微批处理和校验点">微批处理和校验点</a></li>
+            <li><a href="#重新审视原子提交">重新审视原子提交</a></li>
+            <li><a href="#幂等性">幂等性</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>派生数据</p>
+<!-- more -->
+<h2 id="1-流处理系统">1. 流处理系统</h2>
+<p>前面讨论的批处理系统存在一个重要的假设: 输入是有界的，是已知的有限大小，所以批处理知道何时读完他们。比如MapReduce 核心的排序操作必须读取整个输入，然后才开始生成输出。</p>
+<p>而实际上，有很多数据是无限的，而且随着时间的推移逐渐到达。数据集永远不会以任何有意义的方式&quot;完成&quot;。而批处理则必须人为将数据划分为固定时间段的数据库分批处理。批处理的问题是，输入的更改只会在一天之后的输出中反映出来。为了更快的响应用户，我们需要完全放弃固定的时间片，每当有事件就开始处理，这就是流处理背后的思想。</p>
+<h3 id="11-发送事件流">1.1 发送事件流</h3>
+<p>在流处理的上下文中，记录通常被称为事件，改事件或者说对象，包含某个时间点发生的事件的细节。每个事件通常包含一个时间戳，用于指示事件发生的<strong>墙上时间</strong>。</p>
+<p>事件由生产者生成一次，然后可能由多个消费者处理。相关的事件通常被组合成主题或流。为了更低的响应延时，当新事件出现时，最好通知消费者。</p>
+<h3 id="12-消息系统">1.2 消息系统</h3>
+<p>向消费者通知新事件的常见方法是使用消息系统。在这种发布/订阅模式中，不同的系统采用了不同的方法，为了区分这些系统，提出以下两个问题对区分很有帮助:</p>
+<ol>
+<li>如果生产者发送消息的速度比消费者能处理的快，会发生什么？
+<ul>
+<li>一般有三种选择: 系统丢弃消息；将消息缓存在队列中；激活背压(流量控制，即阻止生产者发送消息)</li>
+<li>如果消息被缓存在队列中，那么队列增长时会发生什么非常重要</li>
+<li>如果内存无法容纳所有队列，系统是否会崩溃，还是消息会被写入磁盘</li>
+<li>如果消息会落盘，又会如何影响消息传递系统的性能</li>
+</ul>
+</li>
+<li>如果节点崩溃或者暂时离线，是否会有消息丢失?
+<ul>
+<li>持久化需要写入磁盘或者结合复制方案，这些都是有成本的</li>
+<li>如果能够接受消息丢失，那么同样的硬件上可以获得更高的吞吐量和更低的延迟</li>
+</ul>
+</li>
+</ol>
+<p>消息传递有如下几种方式:</p>
+<ol>
+<li>生产者与消费者之间直接消息传递</li>
+<li>消息代理</li>
+</ol>
+<h4 id="生产者与消费者之间直接消息传递">生产者与消费者之间直接消息传递</h4>
+<p>这种方式通常要求应用程序意识消息丢失的可能性，它们只支持有限的容错。通常还假定生产者和消费者同时在线。诸如 RPC 和 HTTP 请求，webhooks 都是这种消息传递方式</p>
+<h4 id="消息代理">消息代理</h4>
+<p>消息代理本质上是一种针对<strong>处理消息而优化的数据库</strong>。将数据集中在代理上，可以更容易的适应不断变化的客户端。持久性问题被转移到代理。消息写入代理的结果也通常导致<strong>消费以异步方式工作</strong>。</p>
+<h4 id="多个消费者">多个消费者</h4>
+<p>当多个消费者读取同一主题中的消息时，有两种主要的消息传递模式:</p>
+<ol>
+<li>负载均衡式:
+<ul>
+<li>每一条消息都只被传递给其中一个消费者，所以消费者可以共享主题中处理消息的工作</li>
+<li>通过增加消费者可以并行处理消息</li>
+</ul>
+</li>
+<li>扇出式:
+<ul>
+<li>每条消息都被传递给所有的消费者</li>
+<li>独立的消费者独立接收相同的消息广播</li>
+</ul>
+</li>
+</ol>
+<p>这两种模式可以组合使用</p>
+<h4 id="确认和重传">确认和重传</h4>
+<p>消费者可能在未处理完消息时就已经奔溃，为了确保消息不会丢失，消息代理使用<strong>确认</strong>: 客户端必须在处理完消息后显示的告诉代理，以便代理可以将其从队列中移除。</p>
+<p>但是消息的确认/重传会导致以下两个问题:</p>
+<ol>
+<li>消息重复: 确认的消息可能在发送给代理的过程中丢失，导致代理重复发送和消息</li>
+<li>消息乱序: 与负载均衡结合时，重传机制不可避免的会导致消息被重新排序，为了避免这个问题，可以为每个消费者使用单独的队列(即不使用负载均衡)</li>
+</ol>
+<p>注意如果消息之间存在因果依赖关系，消息的顺序就是至关重要的。</p>
+<h2 id="2-分区日志">2. 分区日志</h2>
+<p>消息代理是基于瞬间的消息传递思想构建的，因此尽管可以永久记录消息，但通常也不会这么做。如果将新的消费者添加到消息系统，通常它只会开始接收在它注册后发送的消息；任何之前的消息已经消失。</p>
+<p>那为什么不把数据库的持久存储和消息传递的低延迟结合起来呢？这正是<strong>日志消息代理</strong>背后的思想。</p>
+<h3 id="21-基于日志的消息存储">2.1 基于日志的消息存储</h3>
+<p>日志是磁盘上一个仅支持追加式修改记录的序列。与日志结构化存储引擎类似，我们可以使用相同结构来实现消息代理:</p>
+<ol>
+<li>生产者通过将消息追加到日志的末尾来发送消息</li>
+<li>消费者通过一次读取日志来接受消息</li>
+</ol>
+<p>为了提升吞吐量，可以对日志进行分区，在每个分区中，代理为每个消息分配一个单调递增的序列号或偏移量。因为分区日志只能追加，所以分区内的消息是完全有序的。不同分区之间则没有顺序保证。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/db/message_log.png"
+        data-srcset="/images/db/message_log.png, /images/db/message_log.png 1.5x, /images/db/message_log.png 2x"
+        data-sizes="auto"
+        alt="/images/db/message_log.png"
+        title="基于日志的消息生产和消费" /></p>
+<p>kafka、Amazon Kinesis Stream 和 Twitter DistributedLog 都是这种基于日志的消息代理系统。尽管这些消息代理将所有消息写入磁盘，但是通过多台机器进行分区，能够实现每秒数百万条消息的吞吐量，并且通过复制消息实现容错性。</p>
+<p>因为多个消费者可以独立读取日志而不相互有影响，而且消息不会从日志中删除，所以基于日志的方法很自然的支持扇出式消息传递。通过将整个分区分配给消费者组中的节点，每一个节点消费一个分区，可以在一组消费者之间实现负责均衡。</p>
+<p>通常当消费者被分配了一个日志分区时，它会以直接的单线程方式顺序读取分区中的消息，这种粗粒度的负载均衡有一些缺点:</p>
+<ol>
+<li>消费者的最大数量等于主题的分区数</li>
+<li>如果单个消息处理缓慢，会阻碍分区中后续消息的处理。可以将消息处理扩展至线程池，但这种方法消息的确认和消费者偏移管理变得复杂，通常单线程是优选。</li>
+</ol>
+<h4 id="对比日志与传统消息系统">对比日志与传统消息系统</h4>
+<p>AMQP 类型的消息代理更适合如下场景:</p>
+<ul>
+<li>消息处理的代价很高，希望在逐个消息的基础上并行处理</li>
+<li>而且消息排序又不那么重要的情况下，并且需要在他们处理后返回并在此读取旧消息时 更可取</li>
+</ul>
+<p>相反，基于日志的消息系统更适用于:</p>
+<ul>
+<li>在消息吞吐量高，每个消息处理速度快</li>
+<li>消息顺序有很重要</li>
+<li>需要读取已经确认的旧消息</li>
+</ul>
+<h4 id="消费者偏移量">消费者偏移量</h4>
+<p>消费者偏移量用于记录消费者已经消费的消息位置，这样就无须跟踪每条消息的确认，减少记录开销。这种偏移量与主从复制数据库中的日志序列号非常相似。</p>
+<p>如果消费者节点失败，消费者组中的另一节点将被分配到失败的消费者分区，并以最后记录的偏移量开始使用消息。</p>
+<h4 id="磁盘使用">磁盘使用</h4>
+<p>不断追加的日志，磁盘空间最终会被耗尽。为了回收磁盘空间，日志实际上被分割成段，并不时地将旧段删除或归档保存。实际上，日志实现了一个有限大小的缓冲区，当缓冲区变满时，旧的消息被丢弃，该缓冲区被称为环形缓冲区。由于缓冲区在磁盘上，因此可以非常大。</p>
+<h4 id="消费者跟不上生产者时">消费者跟不上生产者时</h4>
+<p>一开始我们讨论消费者跟不上生产者发送消息的速度时由三种选择。基于日志的方法是一种缓冲形式，它具有较大但固定大小的缓冲区。因此消费者落后太多，代理将丢弃缓冲区容量不能容纳的旧消息。可以监控消费者落后日志头部的距离，并在落后明显时发出警告。由于缓冲区很大，通常有足够的时间去修复缓慢的消费者，并允许它在开始丢失消息之前赶上。</p>
+<p>即便落后太多并开始丢失消息也只有该消费者会受到影响，他不会中断其他消费者的服务。这是基于日志方法的消息代理带来的运营优势。在传统的消息代理中，需要小心删除消费者已经关闭的任何队列，否则他们讲继续不必要的积累消息，并占用其他活动消费者的内存。</p>
+<h4 id="重新处理消息">重新处理消息</h4>
+<p>使用AMQP 风格的消息代理，由于会导致消息在代理上被删除，因此处理和确认操作可视为带有一定破坏性。另一方面基于日志的消息代理中，使用消息更像是从文件读取，并不会更改日志。除了消费者的输出外，唯一的副作用是消费偏移量前移了。但是偏移量在消费者的控制之下，可以轻松对其进行操作了。</p>
+<p>这个特点使得基于日志的消息系统更像之前讲的批处理系统过程。派生数据通过可重复的转换过程与输入数据明确分离。支持更多的实验性尝试，也更容易从错误和故障中进行恢复。从而成为集成数据流的不错选择。</p>
+<h2 id="3-数据库与流">3. 数据库与流</h2>
+<p>事件是某个时刻发生的事情的记录，发生的事件可以是用户的操作，当然也可以是写入数据库。<strong>将内容写入数据库的事实</strong>是一个可以<strong>被捕获、存储和处理的事件</strong>。这一观察结果表明，<strong>数据库和数据流</strong>之间的联系比磁盘上<strong>日志的物理存储</strong>更紧密。</p>
+<p>实际上<strong>复制日志</strong>是数据库写入事件的流，由主节点在处理事务时生成。从节点将写入流应用于他们自己的数据库副本，从而最终得到相同数据的准确副本。复制日志的事件描述了数据变化。</p>
+<p>我们还在全序广播的中讨论了<strong>状态机复制原理</strong>，该原理指出: 如果每个事件代表对数据库的写入，并且每个副本按照相同的顺序处理相同的事件，则所有副本都将收敛于相同的最终状态。</p>
+<h3 id="31-保持系统同步">3.1 保持系统同步</h3>
+<p>没有一个系统能够满足所有的数据<strong>存储、查询和处理需求</strong>。一个大型应用通常由多个异构系统组成，这些异构系统都有自己的数据副本，以自己的表示方法存储，并针对自己的设计目标优化。由于相同和相关的数据出现在多个不同的地方，因此它们需要保持同步: 如果数据库中的某项更新，则也需要在缓存、搜索引擎、数据仓库中进行更新。</p>
+<p>保证异构系统数据同步的一种方法是使用 ETL，即批处理。如果定期的完整数据库转储过于缓慢，有时使用的替代方法是双重写入，由程序代码在数据更改时显示的写入每个系统。但是双重写入有一些严重的问题:</p>
+<ol>
+<li>因为写入是有不同客户端在并发写请求同时完成的，因此可能存在竞争条件(入下图)</li>
+<li>其中一个写入可能成功，而另一个可能失败，确保他们都成功或者失败属于原子提交范畴</li>
+</ol>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/db/double_write.png"
+        data-srcset="/images/db/double_write.png, /images/db/double_write.png 1.5x, /images/db/double_write.png 2x"
+        data-sizes="auto"
+        alt="/images/db/double_write.png"
+        title="双重写入引发的竞争条件" /></p>
+<h3 id="32-变更捕获">3.2 变更捕获</h3>
+<p>变更数据捕获(Change Data Capture CDC) 记录了写入数据库的所有更改，兵役可复制到其他系统的形式提取数据。如果在写入时立即将更改作为一种流来发布(更改日志)，其他派生数据系统知识变更流的消费者，只要所有异构系统以相同的顺序应用于更改日志，那么所有异构系统将与数据库匹配。注意数据库系统会保证写入顺序，而在双重写入中并没有任何机制来保证多个客户端对所有系统都具有相同的写入顺序。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/db/cdc.png"
+        data-srcset="/images/db/cdc.png, /images/db/cdc.png 1.5x, /images/db/cdc.png 2x"
+        data-sizes="auto"
+        alt="/images/db/cdc.png"
+        title="变更数据捕获" /></p>
+<h4 id="实现变更数据捕获">实现变更数据捕获</h4>
+<p>从本质上讲，变更数据捕获使得一个数据库称为主节点(捕获变化的数据库)，并将其他编程从节点。由于基于日志的消息代理保留了消息的顺序，因此它非常适合从源数据库传输更改时间。</p>
+<p>解析复制日志一捕获变更数据的好办法。LinkedIn Databus、Facebook Wormhole 和 Yahoo Sherpa 已经大规模部署。Bottled Water 使用解码雨鞋日志的 API 实现了 PostgreSQL 的 CDC，Maxwell 和 Debezinum 通过解析 binlog 为 MySQL 做类似的事情，Mongoriver 读取 MongoDB 的 oplog，Oracle GoldenGate 也提供类似功能。</p>
+<p><strong>像消息代理一样，变更数据捕获通常是异步的</strong>: 记录系统不会再提交变更之前等待应用于消费者。这样做的优势是添加缓慢的消费者不会对记录系统产生影响，但是<strong>所有复制滞后问题</strong>在这里全部适用。</p>
+<p>越来越多的数据库开始支持将变更流作为标准接口，例如 RethinkDB 支持订阅查询结果发生变化的通知，Firebase 和 CouchDB 的数据同步基于 change feed 并同时提供给应用层，而Meteor 适用 MongoDB oplog 来订阅数据更改消息并更新用户界面。</p>
+<p>VoltDB 支持事务以流的形式连续从数据库导出数据。<strong>kafka Connect</strong>致力于将广泛的<strong>数据库系统变更数据采集工具</strong>与kafka 集成。一旦更改事件流汲取到 kafka，它就可以用来更新派生数据系统。</p>
+<h2 id="4-事件溯源">4. 事件溯源</h2>
+<p>事件溯源类似于变更数据捕获，但是它在不同的抽象层次上应用了这个想法。事件溯源类似于编年史数据模型，其小心的区分命令和事件，用户的请求到达时，它最初是一个命令，它必须被验证。如果验证成功，它将变成一个持久且不可变的事件。</p>
+<p>与批处理受益于其输入文件的不变形。这种不变形原则也是事件溯源和变更数据捕获如此强大的原因。</p>
+<p>我们通常<strong>将数据库看成是用来存储应用程序的当前状态</strong>，这种表示<strong>针对读取进行了优化</strong>。每当状态变卦，改状态就反映了随着时间推移而变化的事件的结果。无论状态如何变化，总有一系列事件导致这些变化。关键思路是可变的状态和不变事件的追加日志不想矛盾。</p>
+<p>应用状态是事件流对时间的积分得到的，而变化流式状态对时间求导得到的。</p>
+<p>事务日志记录了对数据库所做的所有更改。高速追加式更改日志的唯一方法。从这个角度看，<strong>数据库的内容保存了日志中最新记录值的缓存</strong>。日志是事实，数据库是<strong>日志子集的缓存</strong>。日志压缩则是链接日志和数据库区别的一种方式，它保留每条记录的最新版本，并丢弃被覆盖的版本。通过不可变事件的追加日志，诊断问题和从问题中恢复就要容易得多。</p>
+<h3 id="41-相同的事件日志派生多个视图">4.1 相同的事件日志派生多个视图</h3>
+<p>此外通过从不变事件日志中分离可变状态，可以从相同的时间日志派生出多个面向读取的表示方式。分析型数据库Druid使用这种方式直接从Kafka摄取数据，Pistachio是一个分布式的键值存储，使用Kafka作为提交日志，<strong>Kafka Connect sinks</strong>能将来自Kafka的数据导出到各种不同的数据库与索引。</p>
+<p>从事件日志到数据库有一个明确的转换步骤，可以更加容易的随时间来演进应用程序: 如果想要引入一个新的方式呈现现有数据，可以使用事件日志来构建一个单独针对新功能的读取优化视图，并与现有的系统一起运行，而不要修改它们。</p>
+<p>如果不必担心如何去查询和访问数据，那么存储数据通常是非常简单的。<strong>模式设计、索引和存储引擎的许多复杂性</strong>多是源于<strong>希望支持某些查询和访问模式</strong>。因此将数据写入形式与读取形式分开，并允许多个不同的读取视图，可以获得更大的灵活性。这个想法有时被称为<strong>命令查询责任分离</strong>。</p>
+<p>数据库和模式设计的传统方法是基于<strong>数据查询和数据写入的形式必须相同这一谬误</strong>。如果可以将数据从针对写入优化的事件日志转换为针对读取优化的应用状态，那么有关规范化和非规范化的争论就变得无关紧要了（参阅“多对一和多对多的关系”）：由于<strong>转换过程提供了响应机制使其与源事件日志保持一致</strong>，因此在度优化的视图中对数据进行反规范化处理完全合理的。</p>
+<h3 id="42-不可变的限制">4.2 不可变的限制</h3>
+<p>事件捕获和变更数据捕获的最大缺点是<strong>事件日志的消费者是异步的</strong>，所有用户可能会写入日志，然后日志派生的视图中读取，却发现这些写操作还没有反应在读取视图中。</p>
+<p>此外对于频换变化的数据集，保留所有变化的历史是不可行的，碎片化也可能称为一个问题，并且压缩和垃圾回收的性能对于运维的健壮性变得至关重要。</p>
+<p>除了性能，还可能在某些情况下，由于监管方面的原因需要删除数据，尽管要求这些数据都是不可变的。比如法规要求用户关闭账户后必须删除个人所有数据。在这种情况下，标记删除是明显不够的。真正的删除数据反而会变得非常困难，因为数据副本可能在很多地方都有。</p>
+<h2 id="5-流处理">5. 流处理</h2>
+<p>前面我们已经讨论了<strong>流的来源</strong>，讨论了<strong>流是如何传输的</strong>，接下来我们要讨论的是: 有了流之后，可以用它来做什么，即怎么处理它，通常有三种选择:</p>
+<ol>
+<li>数据同步: 将数据写入数据库，缓存，搜索引擎等其他异构系统</li>
+<li>通过某种方式推送给用户</li>
+<li>处理一个或多个输入流以产生一个或多个输出流</li>
+</ol>
+<p>接下来我们将讨论选项3: 处理流以产生其他派生流。它与前面讨论 MapReduce 密切相关，并且数据流的模式是类似的: 流处理器以只读的方式接收输入流，并以仅追加方式将处理输出写入新的位置。流与批量作业的一个关键区别是，流不会结束。这种差别有很多含义:</p>
+<ol>
+<li>排序对无界数据集没有意义，因此不能使用排序合并 join</li>
+<li>容错机制必须改变: 对于已经运行了几分钟的批处理作业，可以简单从头开始重新执行，但是对于运行了好几年的流处理作业，重新执行几乎不可能</li>
+</ol>
+<h3 id="51-流处理的适用场景">5.1 流处理的适用场景</h3>
+<p>流长期以来一直被用于监控目的，随着时间推移也出现了如下的新用途:</p>
+<ol>
+<li>复杂事件处理:</li>
+<li>流分析: 按照一个时间窗口对数据进行聚合操作</li>
+<li>维护物化视图: 变更数据捕获来保持不同数据系统间的数据同步</li>
+<li>在流上搜索</li>
+<li>消息传递和 RPC</li>
+</ol>
+<h3 id="52-流的时间问题">5.2 流的时间问题</h3>
+<p>流处理系统经常需要和时间打交道:</p>
+<ol>
+<li>许多流处理框架使用处理节点上的本地系统时钟(处理时间)来确定窗口，但这个有效的前提是事件发生和事件处理的间隔可以忽略不计，然而显著滞后的情况也时有发生。</li>
+</ol>
+<h4 id="事件时间和处理时间">事件时间和处理时间</h4>
+<p>事件处理时间比发生时间滞后的原因有很多，例如排队、网络故障、重启动消费者、重新处理过去的事件等等。而且消息延迟还可能导致<strong>消息的不可预知排序</strong>。<strong>混淆事件发生时间和处理会导致错误的结果</strong>。</p>
+<h4 id="什么时候准备就绪">什么时候准备就绪</h4>
+<p>如果基于事件发生时间而定义窗口，面临一个棘手的问题是，你无法确定<strong>什么时候能收到特定窗口内的所有事件</strong>，或者<strong>是否还有一些事件尚未到来</strong>。由于网络中断和延迟，可能某些发生的事件还缓存在另一台机器上。需要能够处理<strong>在窗口已经声明完成后才到达的这样的滞后事件</strong>。大体上行有两种选择:</p>
+<ol>
+<li>忽略这些滞后事件</li>
+<li>发布一个更正: 针对滞后事件的一个更新值</li>
+</ol>
+<h4 id="你用谁的时间">你用谁的时间</h4>
+<p>当事件可能在系统的多个点缓冲时，为事件分配事件比较困难。考虑一个可离线使用的应用:</p>
+<ol>
+<li>事件可能在本地离线缓存，在下一次连接网络时被发送至服务器。这时事件的时间戳实际上指的是发生交互时的时间，然后用户设备上的时间通常是不可信的</li>
+<li>服务器收到事件的时间可能更准确，但在描述用户交互方面的意义不大</li>
+</ol>
+<p>为了调整不正确的设备时钟，一种方法是记录三个时间戳:</p>
+<ol>
+<li>根据设备的时钟，记录事件发生的时间</li>
+<li>根据设备的时钟，记录事件发送到服务器的时间</li>
+<li>根据服务器时钟，记录服务器收到事件的时间</li>
+</ol>
+<p>3-2 可以估计出设备和服务器时钟之间的偏移量，从而估算出事件实际发生的时间。</p>
+<h3 id="53-窗口类型">5.3 窗口类型</h3>
+<p>一旦明确了如何确定事件的时间戳，下一步就是决定如何定义时间段即窗口，有如下几种常见的窗口类型:</p>
+<ol>
+<li>轮转窗口: 翻滚窗口的长度固定，每一个事件都属于一个窗口</li>
+<li>跳跃窗口: 跳跃窗口也有固定长度，但允许窗口重叠以提供一些平滑过渡</li>
+<li>滑动窗口： 滑动窗口包含在彼此的某个时间间隔内的所有事件</li>
+<li>会话窗口：没有固定的持续时间，通过将同一用户在时间上机密相关的所有事件分组在一起而定义</li>
+</ol>
+<h3 id="53-流式-join">5.3 流式 join</h3>
+<p>因为流的无界，以及新事件随时可能出现在流中，使得流式join比批处理作业更具挑战性，我们区分了三种不同类型的join:</p>
+<ol>
+<li>流与流join</li>
+<li>流与表join</li>
+<li>表与表join</li>
+</ol>
+<h4 id="流与流join">流与流join</h4>
+<h4 id="流与表join">流与表join</h4>
+<h4 id="表与表join">表与表join</h4>
+<p>这三种类型的 join 有很多相似之处，它们都需要流处理系统根据一个 join 输入 来维护某些状态，并在来自另一个 join 输入的消息上查询状态。</p>
+<p>维持这个状态的事件的顺序非常关键。在分区日志中单个分区内的事件顺序被保留，但是通常不同流或分区之间没有排序保证。这就产生一个问题: <strong>如果不同流中的事件发生在相近的时间里，它们按照何种顺序进行处理</strong>。在流与表的join 中，如果用户更新了资料，哪些活动事件会与旧资料join，哪些又与新资料join。换句话说，如果状态随时间改变，join 操作需要输入状态信息，那么应该使用什么时间点的状态来 join 呢？</p>
+<p>如果垮流的时间排序是不确定的，那么 join 也变成非确定性的。这意味着<strong>不能在相同的输入上重新运行同一作业来得到相同的结果</strong>: 因为再次运行任务时，输入流上的事件可能以不同的方式交叉在一起。</p>
+<h3 id="54-流处理容错">5.4 流处理容错</h3>
+<p>流处理面临和批处理一样失败任务重试的问题。但是处理起来并不简单: 流处理无法像批处理一样，在使输出结果可见之前等待某个任务完成，因为流是无限的，因此几乎永远无法完成这个任务。</p>
+<h4 id="微批处理和校验点">微批处理和校验点</h4>
+<p>一种解决方案是将流分解成多个小块，冰箱小型批处理一样处理每个块。这种方法称为微批处理，已经用于 SparkStreaming。批处理大小通常约为 1s，这是一个折中的考虑:</p>
+<ol>
+<li>较小的批处理会导致更大的调度和协调开销</li>
+<li>较大的批处理意味着流处理器的结果需要更长的延迟才能看见</li>
+</ol>
+<p>微批处理隐含的设置了与批处理大小相等的轮转窗口(基于处理时间而不是事件时间)。任何需要更大窗口的作业都需要显示的将状态从一个微批处理保留至下一个微批处理。</p>
+<p>Apache Flink 中使用了该方法的一个变体，它定期生成状态滚动检查点并将其写入持久化存储。如果流操作发生崩溃，他可以从最近的检查点重新启动，并丢弃检查点和崩溃之间的所有输出。检查点由消息流中的barrier 触发，类似于微批处理的边界，但不强制特定的窗口大小。</p>
+<p>在流处理框架内，微批处理和检查点提供了与批处理一样的恰好一次语义，但是一旦输出脱离了流处理系统，框架将无法丢失失败批处理的输出。</p>
+<p>微批处理存在处理之后消息和跨批量边界的窗口等问题。</p>
+<h4 id="重新审视原子提交">重新审视原子提交</h4>
+<p>在出现故障时，为了看起来实现<strong>恰好一次</strong>语义，我们需要确保当且仅当处理成功时，所有输出和副作用才生效。这包括发送给下游的操作和外部消息传递系统的任何消息。所有数据库写入，以及对操作状态的更改和任何对输入消息的确认。</p>
+<p>这些事要么原子的发生，要么都不发生，我们在之前分布式事务和共识中已经有所讨论。</p>
+<h4 id="幂等性">幂等性</h4>
+<p>我们的目标是<strong>丢弃任何失败的部分输出</strong>，以便可以安全的重试而不会两次生效。分布式事务是实现的一种方式，另一种方式则是依赖幂等性。即使操作本身不具有幂等，往往也可以使用一些额外的元数据(唯一键)使其变得幂等。</p>
+<p>依赖幂等性意味着基于一些假设: 重启失败的任务必须以相同的顺序重新处理相同的消息，处理必须是确定的，<strong>并且没有其他节点并发更新相同的值</strong>。</p>
+<p><strong>任何需要状态的流处理，都必须确保在故障发生后状态可以恢复</strong>。有两种选择:</p>
+<ol>
+<li>将状态保存在远程存储中并采取复制，然而为每个消息去查询远程数据库可能会很慢</li>
+<li>将状态保存在本地，并定期进行复制</li>
+</ol>
+<p>当流处理器从故障中恢复时，新任务可以读取副本并在不丢失数据的情况下恢复处理。在某些情况下，甚至可能不需要复制状态，而是从输入流开始重建。</p>
+<p>所有权衡取决于底层基础架构的性能表现，网络延迟和磁盘访问延迟，网络带宽和磁盘带宽到底谁大，都是需要权衡的因素。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-07&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/b3674be18f11e7f889c624f8a21fe77b1ead73d5" target="_blank" title="commit by tao(tao@example.com) b3674be18f11e7f889c624f8a21fe77b1ead73d5: 构架数据密集型应用">
+                                    <i class="fas fa-hashtag fa-fw"></i>b3674be</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/distributed/design-data-intensive-applications/db_12/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/" data-title="12. 流处理系统" data-hashtags="数据密集型应用"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/" data-hashtag="数据密集型应用"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/" data-title="12. 流处理系统"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/" data-title="12. 流处理系统"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/distributed/design-data-intensive-applications/db_12/" data-title="12. 流处理系统" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%95%B0%E6%8D%AE%E5%AF%86%E9%9B%86%E5%9E%8B%E5%BA%94%E7%94%A8/">数据密集型应用</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/distributed/design-data-intensive-applications/db_11/" class="prev" rel="prev" title="11. 批处理系统"><i class="fas fa-angle-left fa-fw"></i>11. 批处理系统</a>
+            <a href="/posts/distributed/design-data-intensive-applications/db_100/" class="next" rel="next" title="13. 数据系统的未来">13. 数据系统的未来<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2019-04-12T00:00:00Z","owner":"hotttao","repo":"hotttao.github.io","title":"12. 流处理系统"}},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
