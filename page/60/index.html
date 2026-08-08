@@ -104,6 +104,53 @@
         alt="/images/hugo/avatar.png"
         title="/images/hugo/avatar.png" /></a></div><h2 class="home-subtitle"><div id="id-1" class="typeit"></div></h2><div class="links"><a href="https://github.com/hotttao" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github-alt fa-fw"></i></a><a href="https://weibo.com/xxxx" title="微博" target="_blank" rel="noopener noreffer me"><i class="fab fa-weibo fa-fw"></i></a><a href="https://steamcommunity.com/id/xxxx" title="Steam" target="_blank" rel="noopener noreffer me"><i class="fab fa-steam fa-fw"></i></a><a href="https://www.zhihu.com/people/xxxx" title="知乎" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/zhihu.svg"></i></a><a href="https://www.douban.com/people/xxxx" title="豆瓣" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/douban.svg"></i></a><a href="https://dev.to/xxxx" title="Dev.To" target="_blank" rel="noopener noreffer me"><i class="fab fa-dev fa-fw"></i></a><a href="https://space.bilibili.com/xxxx" title="bilibili" target="_blank" rel="noopener noreffer me"><i data-svg-src="/svg/icons/bilibili.min.svg"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel=" me"><i class="far fa-envelope fa-fw"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/">15 MySQL 主从复制</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-15">2020-03-15</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>接下来内容与 MySQL 主从复制相关的内容，包括:</p>
+<ol>
+<li>MySQL 如何保证主从同步的最终一致性，设计 binlog 同步过程和binlog 的格式</li>
+<li>主备延迟，以及并行复制</li>
+<li>由于主备延迟不可避免，因此由两种主备切换策略</li>
+<li>主从复制同步位点的判断以及GTID 模式</li>
+<li>读写分离，以及怎么处理主备延迟导致的读写分离问题</li>
+<li>主库的心跳信息监测，以便在主库故障时及时进行主备切换</li>
+</ol>
+<!-- more -->
+<h2 id="1-主备的基本原理">1. 主备的基本原理</h2>
+<p>如图 1 所示就是基本的主备切换流程</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/21_%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/16_%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F/">14 MYSQL 全表扫描</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-14">2020-03-14</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>全表扫描对 MySQL 有什么影响</p>
+<!-- more -->
+<h2 id="1-对-server-层的影响">1. 对 server 层的影响</h2>
+<h3 id="11-发送数据的流程">1.1 发送数据的流程</h3>
+<p>取数据和发数据的流程是这样的：</p>
+<ol>
+<li>获取一行，写到 net_buffer 中。这块内存的大小是由参数 net_buffer_length 定义的，默认是 16k。</li>
+<li>重复获取行，直到 net_buffer 写满，调用网络接口发出去。</li>
+<li>如果发送成功，就清空 net_buffer，然后继续取下一行，并写入 net_buffer。</li>
+<li>如果发送成功，就清空 net_buffer，然后继续取下一行，并写入 net_buffer。</li>
+</ol>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/mysql/MySQL45%e8%ae%b2/server_send.jpg"
+        data-srcset="/images/mysql/MySQL45%E8%AE%B2/server_send.jpg, /images/mysql/MySQL45%e8%ae%b2/server_send.jpg 1.5x, /images/mysql/MySQL45%E8%AE%B2/server_send.jpg 2x"
+        data-sizes="auto"
+        alt="/images/mysql/MySQL45%E8%AE%B2/server_send.jpg"
+        title="server_send" /></p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/16_%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/">13 MYSQL 索引选择</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-13">2020-03-13</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>MySQL 如何选择索引</p>
+<!-- more -->
+<h2 id="1-优化器逻辑">1. 优化器逻辑</h2>
+<p>选择索引是优化器的工作。而优化器选择索引的目的，是找到一个最优的执行方案，并用最小的代价去执行语句。优化器会考虑扫描行数、是否使用临时表、是否排序等因素进行综合判断。对于普通索引来说，优化器需要把回表的代价算进去。</p></div><div class="post-footer">
+        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/15_%E4%BC%98%E5%8C%96%E5%99%A8/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/14_%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">12 MySQL 问题追踪与性能优化</a>
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-12">2020-03-12</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>MySQL 中怎么做问题追踪与性能优化</p>
 <!-- more -->
@@ -235,78 +282,6 @@
 <p><code>select word from words order by rand() limit 3;</code> 这个语句的意思很直白，但执行流程却有点复杂的。</p></div><div class="post-footer">
         <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/12_%E9%9A%8F%E6%9C%BA/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/09_%E8%87%AA%E5%A2%9E%E5%80%BC%E4%B8%8A%E7%BA%BF/">9 MYSQL 自增值的上限</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-09">2020-03-09</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>MySQL 里面的几种自增 id，它们的值达到上限以后，会出现什么情况。</p>
-<!-- more -->
-<h2 id="1-表定义自增值-id">1. 表定义自增值 id</h2>
-<p>表定义的自增值达到上限后的逻辑是：再申请下一个 id 时，得到的值保持不变。因此就会出现主键冲突错误。</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/09_%E8%87%AA%E5%A2%9E%E5%80%BC%E4%B8%8A%E7%BA%BF/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/08_insert%E9%94%81/">8 insert 语句的锁</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-08">2020-03-08</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>insert select 为什么有这么多锁？</p>
-<!-- more -->
-<p>本节我们会介绍一些特殊的 insert 语句产生的锁:</p>
-<ol>
-<li>insert … select 是很常见的在两个表之间拷贝数据的方法。你需要注意，在可重复读隔离级别下，这个语句会给 select 的表里扫描到的记录和间隙加读锁</li>
-<li>如果 insert 和 select 的对象是同一个表，则有可能会造成循环写入。这种情况下，我们需要引入用户临时表来做优化。</li>
-<li>insert 语句如果出现唯一键冲突，会在冲突的唯一值上加共享的 next-key lock(S 锁)。因此，碰到由于唯一键约束导致报错后，要尽快提交或回滚事务，避免加锁时间过长。</li>
-</ol>
-<h2 id="1-insert--select-语句">1. insert … select 语句</h2>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">CREATE TABLE <span class="sb">`</span>t<span class="sb">`</span> <span class="o">(</span>
-</span></span><span class="line"><span class="cl">  <span class="sb">`</span>id<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> NOT NULL AUTO_INCREMENT,
-</span></span><span class="line"><span class="cl">  <span class="sb">`</span>c<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
-</span></span><span class="line"><span class="cl">  <span class="sb">`</span>d<span class="sb">`</span> int<span class="o">(</span>11<span class="o">)</span> DEFAULT NULL,
-</span></span><span class="line"><span class="cl">  PRIMARY KEY <span class="o">(</span><span class="sb">`</span>id<span class="sb">`</span><span class="o">)</span>,
-</span></span><span class="line"><span class="cl">  UNIQUE KEY <span class="sb">`</span>c<span class="sb">`</span> <span class="o">(</span><span class="sb">`</span>c<span class="sb">`</span><span class="o">)</span>
-</span></span><span class="line"><span class="cl"><span class="o">)</span> <span class="nv">ENGINE</span><span class="o">=</span>InnoDB<span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 1,1<span class="o">)</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 2,2<span class="o">)</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 3,3<span class="o">)</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">insert into t values<span class="o">(</span>null, 4,4<span class="o">)</span><span class="p">;</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">create table t2 like t
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>在可重复读隔离级别下，binlog_format=statement 时, <code>insert into t2(c,d) select c,d from t;</code> 需要对表 t 的所有行和间隙加锁。原因还是日志和数据的一致性。</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/08_insert%E9%94%81/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/07_%E7%B4%A2%E5%BC%95/">7 MYSQL 索引</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2020-03-07">2020-03-07</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%AD%98%E5%82%A8/"><i class="far fa-folder fa-fw"></i>存储</a></span></div><div class="content"><p>B+树索引</p>
-<!-- more -->
-<p><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="/images/mysql/MySQL45%e8%ae%b2/innodb_index.png"
-        data-srcset="/images/mysql/MySQL45%E8%AE%B2/innodb_index.png, /images/mysql/MySQL45%e8%ae%b2/innodb_index.png 1.5x, /images/mysql/MySQL45%E8%AE%B2/innodb_index.png 2x"
-        data-sizes="auto"
-        alt="/images/mysql/MySQL45%E8%AE%B2/innodb_index.png"
-        title="innodb_index" /></p>
-<h2 id="1-innodb-的索引模型">1. InnoDB 的索引模型</h2>
-<p>实现索引的方式有很多方式，N 叉树由于在读写上的性能优点，以及适配磁盘的访问模式，已经被广泛应用在数据库引擎中了。在 InnoDB 中，表都是根据主键顺序以索引的形式存放的，这种存储方式的表称为索引组织表。InnoDB 使用了 B+ 树索引模型，所以数据都是存储在 B+ 树中的。每一个索引在 InnoDB 里面对应一棵 B+ 树。</p></div><div class="post-footer">
-        <a href="/posts/architecture/mysql/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/07_%E7%B4%A2%E5%BC%95/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E6%9E%81%E5%AE%A2%E6%97%B6%E9%97%B4/">极客时间</a>,&nbsp;<a href="/tags/mysql%E5%AE%9E%E6%88%9845%E8%AE%B2/">MySQL实战45讲</a></div></div>
 </article><ul class="pagination"><li class="page-item ">
                     <span class="page-link">
                         <a href="/">1</a>
@@ -337,7 +312,7 @@
                     <span class="page-link" aria-hidden="true">&hellip;</span>
                 </li><li class="page-item ">
                     <span class="page-link">
-                        <a href="/page/64/">64</a>
+                        <a href="/page/65/">65</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">

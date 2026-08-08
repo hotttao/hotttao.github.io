@@ -109,85 +109,47 @@
         <a href="/posts/aigc/base_agent/001_base_abs/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/base_agent/">Base_agent</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/aigc/agent_design/004_agent_tools/">Agent Tools 设计</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>本节我们来介绍如何为 Agent 设计准确且省钱的工具。</p>
+<!-- more -->
+<h2 id="1-tools-设计">1. Tools 设计</h2>
+<p>Tools 设计遵循一些基本原则:</p>
+<ol>
+<li>效率和准确性:
+<ul>
+<li>什么时候选择开发一个专用工具，还是选择使用已有的通用工具。</li>
+<li>当 agent 需要处理一些深度复杂的业务逻辑的时候，可以考虑开发一个专用 tools，而不是使用通用 tools</li>
+</ul>
+</li>
+<li>功能独立:
+<ul>
+<li>Tools定义需要做到 <strong>意图清晰，工具功能之间没有重叠</strong></li>
+<li>工具本质上就是一个可调用的函数，可以通过扩展工具的参数来增强工具的功能</li>
+</ul>
+</li>
+<li>成本效益:
+<ul>
+<li>提供批量化工具</li>
+<li>提供 save 工具，其他工具内部使用 save 的数据集进行过滤，避免重复</li>
+</ul>
+</li>
+</ol>
+<h2 id="2-通用-thinking-tools">2. 通用 thinking tools</h2>
+<h3 id="21-为什么需要-thinking-tools">2.1 为什么需要 thinking tools</h3>
+<p>大多数时候，我们会提供一个通用的 thinking tools，会有如下好处:</p></div><div class="post-footer">
+        <a href="/posts/aigc/agent_design/004_agent_tools/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/posts/aigc/agent_design/003_multi_agent/">Multi-Agent</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><h2 id="1-single-agent">1. Single-Agent</h2>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-gdscript3" data-lang="gdscript3"><span class="line"><span class="cl"><span class="o">%%</span><span class="p">{</span><span class="n">init</span><span class="p">:</span> <span class="p">{</span> <span class="s1">&#39;flowchart&#39;</span><span class="p">:{</span><span class="s1">&#39;nodeSpacing&#39;</span><span class="p">:</span><span class="mi">35</span><span class="p">},</span> <span class="s1">&#39;theme&#39;</span><span class="p">:</span><span class="s1">&#39;neutral&#39;</span><span class="p">}}</span><span class="o">%%</span>
-</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="n">TB</span>
-</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">全部外部组件统一放在左侧，从上往下排布，和原图完全一致</span>
-</span></span><span class="line"><span class="cl">    <span class="n">T</span><span class="p">[</span><span class="s2">&#34;task prompts&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="n">TD</span><span class="p">[</span><span class="s2">&#34;tools definitions&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="n">CTX</span><span class="p">[</span><span class="s2">&#34;context&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="n">TE</span><span class="p">[</span><span class="s2">&#34;tools executors&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">subgraph</span> <span class="n">agent_program</span><span class="p">[</span><span class="s2">&#34;agent program&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">        <span class="n">direction</span> <span class="n">LR</span>
-</span></span><span class="line"><span class="cl">        <span class="n">PM</span><span class="p">[</span><span class="s2">&#34;prepare messages&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">        <span class="n">CL</span><span class="p">[</span><span class="s2">&#34;check end condition&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">        <span class="n">HM</span><span class="p">[</span><span class="s2">&#34;handle new message&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">    <span class="n">end</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">END_LOOP</span><span class="p">((</span> <span class="p">))</span>
-</span></span><span class="line"><span class="cl">    <span class="n">LLM</span><span class="p">[</span><span class="s2">&#34;LLM&#34;</span><span class="p">]</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">输入：左侧全部指向</span> <span class="n">prepare</span> <span class="n">messages</span>
-</span></span><span class="line"><span class="cl">    <span class="n">T</span> <span class="o">--</span> <span class="n">inject</span> <span class="n">instructions</span> <span class="o">--&gt;</span> <span class="n">PM</span>
-</span></span><span class="line"><span class="cl">    <span class="n">TD</span> <span class="o">--</span> <span class="nb">load</span> <span class="n">schemas</span> <span class="o">--&gt;</span> <span class="n">PM</span>
-</span></span><span class="line"><span class="cl">    <span class="n">CTX</span> <span class="o">--</span> <span class="n">inject</span> <span class="n">history</span> <span class="o">--&gt;</span> <span class="n">PM</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">主循环</span>
-</span></span><span class="line"><span class="cl">    <span class="n">PM</span> <span class="o">--</span> <span class="n">send</span> <span class="n">messages</span> <span class="o">--&gt;</span> <span class="n">LLM</span>
-</span></span><span class="line"><span class="cl">    <span class="n">LLM</span> <span class="o">--</span> <span class="n">response</span> <span class="n">message</span> <span class="o">--&gt;</span> <span class="n">CL</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="n">CL</span> <span class="o">--</span> <span class="n">end</span> <span class="n">the</span> <span class="n">loop</span> <span class="o">--&gt;</span> <span class="n">END_LOOP</span>
-</span></span><span class="line"><span class="cl">    <span class="n">CL</span> <span class="o">--&gt;</span> <span class="n">HM</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    <span class="o">%%</span> <span class="err">输出：</span><span class="n">handle</span> <span class="n">new</span> <span class="n">message</span> <span class="err">回连左侧的</span><span class="n">context</span><span class="err">、</span><span class="n">tools</span> <span class="n">executors</span>
-</span></span><span class="line"><span class="cl">    <span class="n">HM</span> <span class="o">--</span> <span class="n">update</span> <span class="n">context</span> <span class="o">--&gt;</span> <span class="n">CTX</span>
-</span></span><span class="line"><span class="cl">    <span class="n">HM</span> <span class="o">--</span> <span class="n">call</span> <span class="n">tools</span> <span class="o">--&gt;</span> <span class="n">TE</span>
-</span></span></code></pre></td></tr></table>
-</div>
-</div><h3 id="11-single-agent-瓶颈">1.1 Single-Agent 瓶颈</h3>
-<h4 id="1-模型能力单一瓶颈">1. 模型能力单一瓶颈</h4>
-<p>单个Agent全程固定调用同一套模型，若任务同时需要多模态、绘图、高强度工具调用等多种差异化能力，单一模型无法全部覆盖，直接限制任务完成度。</p></div><div class="post-footer">
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>今天我们来介绍 Multi-Agent 相关概念，目的有如下几个:</p>
+<ol>
+<li>理解 Single-Agent 的核心架构、核心组成以及每个部分可能遇到的问题</li>
+<li>Multi-Agent 能否解决 Single-Agent 所遇到的问题以及是否会带来新的问题。</li>
+</ol>
+<p>分析的目的不仅仅是了解这些概念本身。而是梳理构建 Agent 所需要关心的各个层面。
+在我们梳理清楚 Agent 的架构之后，我们就可以快速的、公式化的分析很多开源 Agent 产品。也能更好的指导我们实现自己的 Agent。</p></div><div class="post-footer">
         <a href="/posts/aigc/agent_design/003_multi_agent/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">Agent 设计模式</a></div></div>
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/posts/aigc/agent_design/002_copilot/">Agent Copilot</a>
     </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-02">2026-06-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>这一个章节我们重点介绍 Agent 设计中 Agent 和 用户交互的部分。为什么要这么关注交互的部分，主要原因有两个:</p>
@@ -197,33 +159,26 @@
 </ol>
 <p>接下来我们会介绍几个不同的框架实现的 Agent Copilot，目的有两个:</p></div><div class="post-footer">
         <a href="/posts/aigc/agent_design/002_copilot/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">Agent 设计模式</a></div></div>
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/posts/aigc/agent_design/001_agent_kind/">Agent 的分类</a>
     </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-01">2026-06-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>市面上现在已经有很多 AI 开发框架和通用 Agent(类似 codex、claude code)，当我们需要开发一个 Agent 的时候，第一步就是选型。选型的前提是我们需要弄清楚，我们要开发的是一个什么 Agent，这些 AI 开发框架和通用 Agent 都提供了什么能力，适合开发什么样的 Agent。</p></div><div class="post-footer">
         <a href="/posts/aigc/agent_design/001_agent_kind/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/">Agent 设计模式</a></div></div>
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/aigc/workflow/001_pocket_flow/">Pocket Flow</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-05-01">2026-05-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>今天我们来介绍第一个 Agent Framework <a href="https://github.com/The-Pocket/PocketFlow/blob/main/cookbook/pocketflow-batch/translations/README_CHINESE.md" target="_blank" rel="noopener noreffer">Pocket Flow</a></p>
-<!-- more -->
-<h2 id="1-workflow-的抽象-graph">1. Workflow 的抽象: Graph</h2>
-<p>个人认为，大多数 AI Framework 最大的价值就是提供了对 Workflow 的抽象，这个抽象基本上就是 Grap。因为 Grap 表达能力最强，能够支持很多流行的 <a href="https://the-pocket.github.io/PocketFlow/" target="_blank" rel="noopener noreffer">Agent 设计模式</a>。</p></div><div class="post-footer">
-        <a href="/posts/aigc/workflow/001_pocket_flow/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/workflow/">Workflow</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/distributed/code/01_redis_barrier/">Redis Barrier</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2025-01-14">2025-01-14</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"><i class="far fa-folder fa-fw"></i>分布式</a></span></div><div class="content"><h2 id="1-背景">1. 背景</h2>
-<h3 id="21-背景">2.1 背景</h3>
-<p>项目上需要周期性完成一些计算任务，这些任务具有如下特点:</p>
+        <a href="/posts/aigc/project/002_deep_wiki/">Pocket Flow 实现 Deep Wiki</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-05-01">2026-05-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>今天我们来介绍基于 Pocket Flow 实现的第二项目 - 类似 DeepWiki 的代码阅读工具。</p>
+<p>我们将学习:</p>
 <ol>
-<li>任务相似但是独立</li>
-<li>任务执行需要读取过去 7 天的历史数据，但是只有当天数据会更新</li>
-<li>任务计算的性能要求很高，需要充分利用计算资源，尽快完成计算</li>
+<li>如何扩展 Pocket Flow 的功能，实现状态存储和异常恢复</li>
+<li>如何实现一个 Agentic Node</li>
+<li>如何实现 Agent 的 memroy 及一层</li>
 </ol>
-<p>为了快速完成这些任务的计算，设计了如下的分布式计算系统:</p></div><div class="post-footer">
-        <a href="/posts/distributed/code/01_redis_barrier/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E5%B9%B6%E5%8F%91%E5%8E%9F%E8%AF%AD/">分布式并发原语</a></div></div>
+<!-- more -->
+<h2 id="1-deep-wiki-简介">1. Deep Wiki 简介</h2>
+<p>未完成。</p></div><div class="post-footer">
+        <a href="/posts/aigc/project/002_deep_wiki/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/">工程实践</a></div></div>
 </article><ul class="pagination"><li class="page-item active">
                     <span class="page-link">
                         <a href="/">1</a>
@@ -240,7 +195,7 @@
                     <span class="page-link" aria-hidden="true">&hellip;</span>
                 </li><li class="page-item ">
                     <span class="page-link">
-                        <a href="/page/64/">64</a>
+                        <a href="/page/65/">65</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">
