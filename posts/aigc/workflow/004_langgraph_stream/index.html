@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>LangGraph 的流式输出与中断恢复 - LoveIt</title><meta name="Description" content="从源码理解 LangGraph 的流式事件、Chat Model Callback，以及 interrupt 与 Command 的中断恢复机制"><meta property="og:url" content="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="LangGraph 的流式输出与中断恢复">
+	<meta property="og:description" content="从源码理解 LangGraph 的流式事件、Chat Model Callback，以及 interrupt 与 Command 的中断恢复机制">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-08-13T10:00:00+08:00">
+		<meta property="article:modified_time" content="2026-08-13T14:59:37+08:00">
+		<meta property="article:tag" content="Workflow">
+		<meta property="article:tag" content="Langgraph">
+		<meta property="article:tag" content="Streaming">
+		<meta property="article:tag" content="Human-in-the-Loop">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="LangGraph 的流式输出与中断恢复">
+	<meta name="twitter:description" content="从源码理解 LangGraph 的流式事件、Chat Model Callback，以及 interrupt 与 Command 的中断恢复机制">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/workflow/004_temporal/" /><link rel="next" href="https://hotttao.github.io/posts/hugo/loveit_shortcodes/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "LangGraph 的流式输出与中断恢复",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/workflow\/004_langgraph_stream\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "workflow, langgraph, streaming, human-in-the-loop","wordcount":  7263 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/workflow\/004_langgraph_stream\/","datePublished": "2026-08-13T10:00:00+08:00","dateModified": "2026-08-13T14:59:37+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "tao"
+            },"description": "从源码理解 LangGraph 的流式事件、Chat Model Callback，以及 interrupt 与 Command 的中断恢复机制"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent/"><i class="far fa-folder-open fa-fw"></i>&nbsp;Agent</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">workflow</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/workflow/001_pocket_flow/">Pocket Flow</a></li><li><a href="/posts/aigc/workflow/002_langgraph/">LangGraph</a></li><li><a href="/posts/aigc/workflow/003_pydantic_ai/">Pydantic AI 基本使用</a></li><li><a href="/posts/aigc/workflow/004_temporal/">Temporal：从订单数据流理解持久化工作流</a></li><li><a href="/posts/aigc/workflow/004_langgraph_stream/" class="active">LangGraph 的流式输出与中断恢复</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">LangGraph 的流式输出与中断恢复</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel=" author" class="author"><i class="fas fa-user-circle fa-fw"></i>tao</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-08-13">2026-08-13</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 7263 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 15 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-langgraph-如何实现流式输出">1. LangGraph 如何实现流式输出</a>
+      <ul>
+        <li><a href="#11-事件在哪里定义和产生">1.1 事件在哪里定义和产生</a>
+          <ul>
+            <li><a href="#pregel-loop-产生运行时事件">Pregel Loop 产生运行时事件</a></li>
+            <li><a href="#chat-model-callback-产生-token-事件">Chat Model Callback 产生 Token 事件</a></li>
+            <li><a href="#节点产生自定义事件">节点产生自定义事件</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#2-chat-model-如何定义流式输出">2. Chat Model 如何定义流式输出</a>
+      <ul>
+        <li><a href="#21-basechatmodel-的接口">2.1 <code>BaseChatModel</code> 的接口</a></li>
+        <li><a href="#22-message-示例与对应类型">2.2 Message 示例与对应类型</a></li>
+        <li><a href="#23-_stream-产生的是消息块">2.3 <code>_stream()</code> 产生的是消息块</a></li>
+        <li><a href="#24-basechatmodelstream-如何触发-callback">2.4 <code>BaseChatModel.stream()</code> 如何触发 Callback</a></li>
+        <li><a href="#25-langgraph-如何监听-chat-model">2.5 LangGraph 如何监听 Chat Model</a></li>
+        <li><a href="#26-为什么节点调用-invoke-也能流式输出">2.6 为什么节点调用 <code>invoke()</code> 也能流式输出</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-事件如何被收集和输出">3. 事件如何被收集和输出</a>
+      <ul>
+        <li><a href="#31-事件如何被收集">3.1 事件如何被收集</a></li>
+        <li><a href="#32-queue-中的事件如何变成调用方看到的流">3.2 Queue 中的事件如何变成调用方看到的流</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-interrupt-与-command-如何实现中断和恢复">4. <code>interrupt()</code> 与 <code>Command</code> 如何实现中断和恢复</a>
+      <ul>
+        <li><a href="#41-用户如何拿到-a-和-b">4.1 用户如何拿到 A 和 B</a></li>
+        <li><a href="#42-interrupt-第一次执行时发生什么">4.2 <code>interrupt()</code> 第一次执行时发生什么</a></li>
+        <li><a href="#43-commandresume-如何把用户输入交回节点">4.3 <code>Command(resume=...)</code> 如何把用户输入交回节点</a></li>
+        <li><a href="#44-为什么翻译和审核最好拆成两个节点">4.4 为什么翻译和审核最好拆成两个节点</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>前文分析了 LangGraph 的 Graph、Channel、Pregel 调度和 Checkpoint。本篇继续回答两个运行时问题：</p>
+<ol>
+<li>LangGraph 在哪里产生事件，如何收集并输出事件流</li>
+<li><code>interrupt()</code> 暂停时发生什么，用户如何获得上下文，<code>Command(resume=...)</code> 又如何把输入交还给节点</li>
+</ol>
+<p>其中 <code>messages</code> 模式依赖 LangChain Chat Model 的流式 Callback，因此还会单独分析 <code>BaseChatModel</code>、Provider 的 <code>_stream()</code> 和 LangGraph 的 <code>StreamMessagesHandler</code> 如何连接。</p>
+<!-- more -->
+<h2 id="1-langgraph-如何实现流式输出">1. LangGraph 如何实现流式输出</h2>
+<p>调用 <code>graph.stream()</code> 时，Graph 并不是在执行结束后把结果拆成多块返回，而是执行过程中不断产生事件并放入一个队列，调用方对生成器的迭代再不断从队列中取出事件。</p>
+<p>先看最常用的接口：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span><span class="s2">&#34;topic&#34;</span><span class="p">:</span> <span class="s2">&#34;LangGraph&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream_mode</span><span class="o">=</span><span class="p">[</span><span class="s2">&#34;updates&#34;</span><span class="p">,</span> <span class="s2">&#34;messages&#34;</span><span class="p">,</span> <span class="s2">&#34;custom&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl"><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>stream_mode</code> 决定订阅哪些事件。常见模式包括：</p>
+<table>
+	<thead>
+			<tr>
+					<th>模式</th>
+					<th>产生位置</th>
+					<th>Payload</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>values</code></td>
+					<td>每个 Superstep 完成、State Channel 更新后</td>
+					<td>当前完整 State</td>
+			</tr>
+			<tr>
+					<td><code>updates</code></td>
+					<td>一个节点完成并提交 Writes 时</td>
+					<td>节点名称及其 Partial State 更新</td>
+			</tr>
+			<tr>
+					<td><code>messages</code></td>
+					<td>Chat Model 的流式 Callback</td>
+					<td><code>AIMessageChunk</code> 和节点元数据</td>
+			</tr>
+			<tr>
+					<td><code>custom</code></td>
+					<td>节点主动调用 <code>StreamWriter</code> 时</td>
+					<td>用户传给 writer 的任意值</td>
+			</tr>
+			<tr>
+					<td><code>tasks</code></td>
+					<td>Task 开始和结束时</td>
+					<td>Task、结果、错误等调试信息</td>
+			</tr>
+			<tr>
+					<td><code>checkpoints</code></td>
+					<td>Checkpoint 创建时</td>
+					<td>与 <code>get_state()</code> 接近的状态快照</td>
+			</tr>
+	</tbody>
+</table>
+<p>这里的“事件”在 v1 内部统一表示为一个三元组：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">StreamChunk</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># (namespace, mode, payload)</span>
+</span></span><span class="line"><span class="cl"><span class="p">((),</span> <span class="s2">&#34;updates&#34;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&#34;writer&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;draft&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">}})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>namespace</code> 表示事件来自顶层 Graph 还是某个 Subgraph，<code>mode</code> 表示事件类型，<code>payload</code> 是该事件的数据。因此，State 更新、LLM Token 和用户自定义数据虽然来源不同，进入流以后都使用相同的信封结构。</p>
+<h3 id="11-事件在哪里定义和产生">1.1 事件在哪里定义和产生</h3>
+<p>LangGraph 没有一个“所有事件类的枚举”负责产生全部事件。更准确地说，<code>StreamMode</code> 定义允许订阅的类别，不同运行时组件在事件真正发生的位置调用统一的 Stream 接口。</p>
+<h4 id="pregel-loop-产生运行时事件">Pregel Loop 产生运行时事件</h4>
+<p><code>PregelLoop._emit()</code> 是 <code>values</code>、<code>updates</code>、<code>tasks</code> 和 <code>checkpoints</code> 等运行时事件的统一出口。它先检查调用方有没有订阅该 mode，再把数据规范化为 <code>(checkpoint_ns, mode, payload)</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">modes</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint_ns</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>事件的产生时机并不相同：</p>
+<ul>
+<li>Task 准备好时产生 <code>tasks</code> 开始事件</li>
+<li><code>PregelRunner</code> 完成节点、得到 <code>task.writes</code> 后，<code>output_writes()</code> 产生 <code>updates</code> 和 Task 结束事件</li>
+<li><code>after_tick()</code> 调用 <code>apply_writes()</code> 后产生 <code>values</code> 事件，此时看到的是 Superstep 更新后的完整 State</li>
+<li>创建 Checkpoint 时产生 <code>checkpoints</code> 事件</li>
+</ul>
+<p>这也解释了 <code>updates</code> 和 <code>values</code> 的语义差异：前者来自单个 Task 的 Writes，可以在并行节点陆续完成时输出；后者来自 Update 阶段之后的 Channel 快照，表示本轮统一提交后的 State。</p>
+<h4 id="chat-model-callback-产生-token-事件">Chat Model Callback 产生 Token 事件</h4>
+<p><code>messages</code> 不需要等节点返回。<code>graph.stream()</code> 发现订阅了 <code>messages</code> 后，会向 LangChain Callback Manager 注册 <code>StreamMessagesHandler</code>。Chat Model 每产生一个消息块，Handler 就调用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">((</span><span class="n">namespace</span><span class="p">,</span> <span class="s2">&#34;messages&#34;</span><span class="p">,</span> <span class="p">(</span><span class="n">message_chunk</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)))</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此 LLM Token 能在节点尚未完成、还没有 State Write 时先流出来。它不是从 State Channel 中拆出来的，而是直接截获 Chat Model 的流式 Callback。</p>
+<h4 id="节点产生自定义事件">节点产生自定义事件</h4>
+<p><code>custom</code> 模式会创建一个 <code>stream_writer</code>，并通过 <code>Runtime</code> 注入节点。节点调用 writer 时，数据直接进入流：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.types</span> <span class="kn">import</span> <span class="n">StreamWriter</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">node</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">,</span> <span class="n">writer</span><span class="p">:</span> <span class="n">StreamWriter</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">writer</span><span class="p">({</span><span class="s2">&#34;stage&#34;</span><span class="p">:</span> <span class="s2">&#34;retrieving&#34;</span><span class="p">,</span> <span class="s2">&#34;progress&#34;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;result&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">stream_writer</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">namespace</span><span class="p">,</span> <span class="s2">&#34;custom&#34;</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此自定义进度也不需要先写入 State。</p>
+<h2 id="2-chat-model-如何定义流式输出">2. Chat Model 如何定义流式输出</h2>
+<p>Chat Model 并不是 LangGraph 定义的，而是 LangChain Core 中的 <code>BaseChatModel</code>。LangGraph 不负责调用具体模型服务，它只是注册 Callback Handler，监听模型产生的消息块。</p>
+<p>完整调用链如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">节点调用 model.invoke() / model.stream()
+</span></span><span class="line"><span class="cl">    -&gt; BaseChatModel 判断是否需要流式执行
+</span></span><span class="line"><span class="cl">    -&gt; Provider 的 _stream() 从模型服务逐块读取响应
+</span></span><span class="line"><span class="cl">    -&gt; 每得到一个 ChatGenerationChunk
+</span></span><span class="line"><span class="cl">    -&gt; run_manager.on_llm_new_token(...)
+</span></span><span class="line"><span class="cl">    -&gt; StreamMessagesHandler.on_llm_new_token(...)
+</span></span><span class="line"><span class="cl">    -&gt; (namespace, &#34;messages&#34;, (message_chunk, metadata))
+</span></span><span class="line"><span class="cl">    -&gt; LangGraph Stream Queue
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="21-basechatmodel-的接口">2.1 <code>BaseChatModel</code> 的接口</h3>
+<p>基础类定义在 <code>langchain_core/language_models/chat_models.py</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BaseChatModel</span><span class="p">(</span><span class="n">BaseLanguageModel</span><span class="p">[</span><span class="n">AIMessage</span><span class="p">],</span> <span class="n">ABC</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>具体模型至少实现非流式生成接口和模型类型：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MyChatModel</span><span class="p">(</span><span class="n">BaseChatModel</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="nd">@property</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">_llm_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="s2">&#34;my-chat-model&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">_generate</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="n">stop</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">run_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChatResult</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="o">...</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>支持流式响应的 Provider 还应该实现 <code>_stream()</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_stream</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stop</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">run_manager</span><span class="p">:</span> <span class="n">CallbackManagerForLLMRun</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">ChatGenerationChunk</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用户调用公开接口，Provider 实现底层接口：</p>
+<table>
+	<thead>
+			<tr>
+					<th>公开接口</th>
+					<th>Provider 接口</th>
+					<th>返回值</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>invoke()</code></td>
+					<td><code>_generate()</code></td>
+					<td>完整 <code>AIMessage</code></td>
+			</tr>
+			<tr>
+					<td><code>ainvoke()</code></td>
+					<td><code>_agenerate()</code></td>
+					<td>完整 <code>AIMessage</code></td>
+			</tr>
+			<tr>
+					<td><code>stream()</code></td>
+					<td><code>_stream()</code></td>
+					<td><code>Iterator[AIMessageChunk]</code></td>
+			</tr>
+			<tr>
+					<td><code>astream()</code></td>
+					<td><code>_astream()</code></td>
+					<td><code>AsyncIterator[AIMessageChunk]</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>基础类的 <code>_stream()</code> 只抛出 <code>NotImplementedError</code>。OpenAI、Anthropic、Ollama 等 Provider 的子类负责把 SSE、WebSocket 或其他协议转换成 LangChain 的统一消息块。</p>
+<h3 id="22-message-示例与对应类型">2.2 Message 示例与对应类型</h3>
+<p>LangGraph 没有重新定义一套 Message，它直接使用 <code>langchain_core.messages</code> 中的类型。下面左列是实例化示例，右列是对象在 LangGraph State 或 Stream 中实际对应的 Python 类型。</p>
+<table>
+	<thead>
+			<tr>
+					<th>Message 示例</th>
+					<th>LangGraph 中的类型</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>SystemMessage(content=&quot;你是翻译助手&quot;)</code></td>
+					<td><code>SystemMessage</code>，完整的 System 指令消息，序列化类型为 <code>&quot;system&quot;</code></td>
+			</tr>
+			<tr>
+					<td><code>HumanMessage(content=&quot;把 A 翻译成中文&quot;)</code></td>
+					<td><code>HumanMessage</code>，完整的用户输入消息，序列化类型为 <code>&quot;human&quot;</code></td>
+			</tr>
+			<tr>
+					<td><code>AIMessage(content=&quot;B&quot;)</code></td>
+					<td><code>AIMessage</code>，完整的模型输出消息，序列化类型为 <code>&quot;ai&quot;</code></td>
+			</tr>
+			<tr>
+					<td><code>AIMessage(content=&quot;&quot;, tool_calls=[{&quot;name&quot;: &quot;search&quot;, &quot;args&quot;: {&quot;q&quot;: &quot;LangGraph&quot;}, &quot;id&quot;: &quot;call_1&quot;, &quot;type&quot;: &quot;tool_call&quot;}])</code></td>
+					<td><code>AIMessage</code>，Tool Call 是 <code>AIMessage.tool_calls</code> 中的 <code>ToolCall</code>，不是独立 Message</td>
+			</tr>
+			<tr>
+					<td><code>ToolMessage(content=&quot;搜索结果&quot;, tool_call_id=&quot;call_1&quot;)</code></td>
+					<td><code>ToolMessage</code>，工具执行结果，通过 <code>tool_call_id</code> 对应前面的 Tool Call，序列化类型为 <code>&quot;tool&quot;</code></td>
+			</tr>
+			<tr>
+					<td><code>ChatMessage(role=&quot;critic&quot;, content=&quot;需要修改&quot;)</code></td>
+					<td><code>ChatMessage</code>，允许自定义 <code>role</code> 的完整消息，序列化类型为 <code>&quot;chat&quot;</code></td>
+			</tr>
+			<tr>
+					<td><code>FunctionMessage(name=&quot;search&quot;, content=&quot;搜索结果&quot;)</code></td>
+					<td><code>FunctionMessage</code>，旧版函数调用结果，没有 <code>tool_call_id</code>；新代码通常使用 <code>ToolMessage</code>，序列化类型为 <code>&quot;function&quot;</code></td>
+			</tr>
+			<tr>
+					<td><code>SystemMessageChunk(content=&quot;你是&quot;)</code></td>
+					<td><code>SystemMessageChunk</code>，可拼接的 System 消息分块</td>
+			</tr>
+			<tr>
+					<td><code>HumanMessageChunk(content=&quot;把 A&quot;)</code></td>
+					<td><code>HumanMessageChunk</code>，可拼接的 Human 消息分块</td>
+			</tr>
+			<tr>
+					<td><code>AIMessageChunk(content=&quot;你&quot;)</code></td>
+					<td><code>AIMessageChunk</code>，Chat Model 最常见的流式输出分块</td>
+			</tr>
+			<tr>
+					<td><code>AIMessageChunk(content=&quot;&quot;, tool_call_chunks=[{&quot;name&quot;: &quot;search&quot;, &quot;args&quot;: &quot;{\&quot;q\&quot;:&quot;, &quot;id&quot;: &quot;call_1&quot;, &quot;index&quot;: 0, &quot;type&quot;: &quot;tool_call_chunk&quot;}])</code></td>
+					<td><code>AIMessageChunk</code>，流式 Tool Call 位于 <code>tool_call_chunks</code>，元素类型为 <code>ToolCallChunk</code>，不是独立 Message Chunk</td>
+			</tr>
+			<tr>
+					<td><code>ToolMessageChunk(content=&quot;部分结果&quot;, tool_call_id=&quot;call_1&quot;)</code></td>
+					<td><code>ToolMessageChunk</code>，可拼接的工具结果分块</td>
+			</tr>
+			<tr>
+					<td><code>ChatMessageChunk(role=&quot;critic&quot;, content=&quot;需要&quot;)</code></td>
+					<td><code>ChatMessageChunk</code>，带自定义 <code>role</code> 的消息分块</td>
+			</tr>
+			<tr>
+					<td><code>FunctionMessageChunk(name=&quot;search&quot;, content=&quot;部分结果&quot;)</code></td>
+					<td><code>FunctionMessageChunk</code>，旧版函数结果分块</td>
+			</tr>
+			<tr>
+					<td><code>RemoveMessage(id=&quot;message-id&quot;)</code></td>
+					<td><code>RemoveMessage</code>，供 LangGraph Message Reducer 删除指定 ID 的已有消息；它是状态更新指令，不会发送给 Chat Model</td>
+			</tr>
+	</tbody>
+</table>
+<p>完整消息的联合类型 <code>AnyMessage</code> 可以简化为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">AnyMessage</span> <span class="o">=</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">AIMessage</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">HumanMessage</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">SystemMessage</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">ToolMessage</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">ChatMessage</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">FunctionMessage</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">AIMessageChunk</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">HumanMessageChunk</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">SystemMessageChunk</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">ToolMessageChunk</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">ChatMessageChunk</span>
+</span></span><span class="line"><span class="cl">    <span class="o">|</span> <span class="n">FunctionMessageChunk</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中最常见的对话顺序是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">SystemMessage                 # 系统指令
+</span></span><span class="line"><span class="cl">    -&gt; HumanMessage           # 用户请求
+</span></span><span class="line"><span class="cl">    -&gt; AIMessage              # 模型直接回答
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>带工具调用时则是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">HumanMessage
+</span></span><span class="line"><span class="cl">    -&gt; AIMessage(tool_calls=[ToolCall(...)])
+</span></span><span class="line"><span class="cl">    -&gt; ToolMessage(tool_call_id=...)
+</span></span><span class="line"><span class="cl">    -&gt; AIMessage
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>ToolCall</code>、<code>ToolCallChunk</code>、<code>ContentBlock</code> 和 <code>ChatGenerationChunk</code> 都不是 Message：前几者是 Message 内部字段，<code>ChatGenerationChunk</code> 则是模型生成层的包装对象。LangGraph 的 <code>stream_mode=&quot;messages&quot;</code> 最终对外输出的是包装对象中的 <code>message</code>，通常为 <code>AIMessageChunk</code>。</p>
+<h3 id="23-_stream-产生的是消息块">2.3 <code>_stream()</code> 产生的是消息块</h3>
+<p><code>_stream()</code> 每次 Yield 一个 <code>ChatGenerationChunk</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">ChatGenerationChunk</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="o">=</span><span class="n">AIMessageChunk</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="s2">&#34;你&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其类型关系为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">ChatGenerationChunk
+</span></span><span class="line"><span class="cl">    -&gt; message: BaseMessageChunk
+</span></span><span class="line"><span class="cl">                    -&gt; 通常是 AIMessageChunk
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Chunk 不只包含文本，还可以携带 Tool Call 增量、Reasoning Content、Usage Metadata、Provider Metadata 和消息 ID。所以 Callback 虽然名为 <code>on_llm_new_token</code>，事件单位并不一定严格等于 tokenizer 的一个 Token，更准确地说是 Provider 返回的一个消息 Chunk。</p>
+<p>本地 Fake Model 的实现最容易看清这个约定：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">run_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">responses</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">i</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">yield</span> <span class="n">ChatGenerationChunk</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="n">message</span><span class="o">=</span><span class="n">AIMessageChunk</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                <span class="n">content</span><span class="o">=</span><span class="n">char</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="n">chunk_position</span><span class="o">=</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;last&#34;</span> <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">None</span>
+</span></span><span class="line"><span class="cl">                <span class="p">),</span>
+</span></span><span class="line"><span class="cl">            <span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>假设模型回复“你好”，它会依次产生：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">ChatGenerationChunk</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">AIMessageChunk</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="s2">&#34;你&#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="n">ChatGenerationChunk</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">message</span><span class="o">=</span><span class="n">AIMessageChunk</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="s2">&#34;好&#34;</span><span class="p">,</span> <span class="n">chunk_position</span><span class="o">=</span><span class="s2">&#34;last&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="24-basechatmodelstream-如何触发-callback">2.4 <code>BaseChatModel.stream()</code> 如何触发 Callback</h3>
+<p>公开的 <code>stream()</code> 建立 Callback 生命周期、调用 Provider 的 <code>_stream()</code>，再将 Chunk 同时发送给 Callback 和直接调用方：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">callback_manager</span> <span class="o">=</span> <span class="n">CallbackManager</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;callbacks&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">(</span><span class="n">run_manager</span><span class="p">,)</span> <span class="o">=</span> <span class="n">callback_manager</span><span class="o">.</span><span class="n">on_chat_model_start</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">_serialized</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span><span class="n">messages</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">try</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">            <span class="n">run_manager</span><span class="o">.</span><span class="n">on_llm_new_token</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                <span class="n">chunk</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">yield</span> <span class="n">chunk</span><span class="o">.</span><span class="n">message</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">generation</span> <span class="o">=</span> <span class="n">merge_chat_generation_chunks</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">run_manager</span><span class="o">.</span><span class="n">on_llm_end</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="n">LLMResult</span><span class="p">(</span><span class="n">generations</span><span class="o">=</span><span class="p">[[</span><span class="n">generation</span><span class="p">]])</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">run_manager</span><span class="o">.</span><span class="n">on_llm_error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">raise</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>一个模型 Chunk 同时进入两条路径：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Provider._stream()
+</span></span><span class="line"><span class="cl">       +-&gt; yield chunk.message
+</span></span><span class="line"><span class="cl">       |       -&gt; model.stream() 调用方
+</span></span><span class="line"><span class="cl">       |
+</span></span><span class="line"><span class="cl">       +-&gt; run_manager.on_llm_new_token(..., chunk=chunk)
+</span></span><span class="line"><span class="cl">               -&gt; Callback Handlers
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>CallbackManagerForLLMRun.on_llm_new_token()</code> 遍历本次模型调用的 Handler：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">on_llm_new_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">handle_event</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;on_llm_new_token&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;ignore_llm&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">run_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parent_run_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_run_id</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tags</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="25-langgraph-如何监听-chat-model">2.5 LangGraph 如何监听 Chat Model</h3>
+<p>订阅 <code>messages</code> 时，LangGraph 创建 <code>StreamMessagesHandler</code>，并添加到 Graph Callback Manager 的 <code>inheritable_handlers</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">if</span> <span class="s2">&#34;messages&#34;</span> <span class="ow">in</span> <span class="n">stream_modes</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">run_manager</span><span class="o">.</span><span class="n">inheritable_handlers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">StreamMessagesHandler</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="n">stream</span><span class="o">.</span><span class="n">put</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="n">subgraphs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="n">parent_ns</span><span class="o">=...</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>节点内的 Chat Model 是 Graph 下层的 Runnable，它创建 Callback Manager 时会继承这个 Handler，所以节点无须显式传入 LangGraph Handler。</p>
+<p>模型产生 Chunk 后，Handler 收到回调：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">on_llm_new_token</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="o">*</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">chunk</span><span class="p">:</span> <span class="n">ChatGenerationChunk</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">run_id</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">ChatGenerationChunk</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">meta</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">run_id</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">chunk</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里使用 <code>chunk.message</code> 而不是字符串 <code>token</code>，以保留 Tool Call 和 Metadata 等结构化数据。<code>_emit()</code> 最终写入：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">namespace</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;messages&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="p">(</span><span class="n">message_chunk</span><span class="p">,</span> <span class="n">metadata</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="26-为什么节点调用-invoke-也能流式输出">2.6 为什么节点调用 <code>invoke()</code> 也能流式输出</h3>
+<p>节点经常使用非流式接口：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">&#34;messages&#34;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;messages&#34;</span><span class="p">:</span> <span class="p">[</span><span class="n">result</span><span class="p">]}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>但 Graph 外部仍然可以订阅 <code>messages</code>。原因是 <code>BaseChatModel</code> 会检查 Callback Handler：如果 Provider 实现了 <code>_stream()</code>，且存在 Streaming Callback Handler，<code>invoke()</code> 内部也会改走 <code>_stream()</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_should_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">run_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stream</span> <span class="o">==</span> <span class="n">BaseChatModel</span><span class="o">.</span><span class="n">_stream</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">False</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_streaming_disabled</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">False</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&#34;stream&#34;</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">True</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&#34;streaming&#34;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">True</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">handlers</span> <span class="o">=</span> <span class="n">run_manager</span><span class="o">.</span><span class="n">handlers</span> <span class="k">if</span> <span class="n">run_manager</span> <span class="k">else</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">isinstance</span><span class="p">(</span><span class="n">handler</span><span class="p">,</span> <span class="n">_StreamingCallbackHandler</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="n">handler</span> <span class="ow">in</span> <span class="n">handlers</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>LangGraph 的 <code>StreamMessagesHandler</code> 正是一个 <code>_StreamingCallbackHandler</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">graph.stream(stream_mode=&#34;messages&#34;)
+</span></span><span class="line"><span class="cl">    -&gt; 安装 StreamMessagesHandler
+</span></span><span class="line"><span class="cl">    -&gt; 节点调用 model.invoke()
+</span></span><span class="line"><span class="cl">    -&gt; BaseChatModel 发现 Streaming Callback Handler
+</span></span><span class="line"><span class="cl">    -&gt; invoke() 内部使用 model._stream()
+</span></span><span class="line"><span class="cl">    -&gt; 每个 Chunk 触发 on_llm_new_token()
+</span></span><span class="line"><span class="cl">    -&gt; LangGraph 输出 messages 事件
+</span></span><span class="line"><span class="cl">    -&gt; 所有 Chunk 合并成最终 AIMessage
+</span></span><span class="line"><span class="cl">    -&gt; model.invoke() 向节点返回完整 AIMessage
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此同一次模型调用有两个观察结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">                    +-&gt; 每个 AIMessageChunk -&gt; messages 事件
+</span></span><span class="line"><span class="cl">Provider._stream() -+
+</span></span><span class="line"><span class="cl">                    +-&gt; 合并所有 Chunk -&gt; invoke() 返回完整 AIMessage
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>核心结论是：</p>
+<blockquote>
+<p><strong>Provider 的 <code>_stream()</code> 定义如何产生 <code>ChatGenerationChunk</code>；<code>BaseChatModel</code> 为每个 Chunk 触发 <code>on_llm_new_token()</code>；LangGraph 通过可继承的 <code>StreamMessagesHandler</code> 监听 Callback，再将 <code>chunk.message</code> 转换成自己的 <code>messages</code> 事件。</strong></p>
+</blockquote>
+<h2 id="3-事件如何被收集和输出">3. 事件如何被收集和输出</h2>
+<h3 id="31-事件如何被收集">3.1 事件如何被收集</h3>
+<p>同步 <code>stream()</code> 会先创建一个线程安全的 <code>SyncQueue</code>，然后把它包装成 <code>StreamProtocol</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">stream</span> <span class="o">=</span> <span class="n">SyncQueue</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">with</span> <span class="n">SyncPregelLoop</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream</span><span class="o">=</span><span class="n">StreamProtocol</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">put</span><span class="p">,</span> <span class="n">stream_modes</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">as</span> <span class="n">loop</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>StreamProtocol</code> 只有两个核心成员：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">StreamProtocol</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">modes</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">StreamMode</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="fm">__call__</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">StreamChunk</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中 <code>modes</code> 是供事件生产者判断是否需要生成某类事件的订阅集合，<code>__call__</code> 最终指向 <code>SyncQueue.put</code>。于是所有生产者共享同一条路径：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">PregelLoop._emit() ───────────────┐
+</span></span><span class="line"><span class="cl">StreamMessagesHandler ────────────┼─&gt; StreamProtocol(...) ─&gt; SyncQueue
+</span></span><span class="line"><span class="cl">Runtime.stream_writer() ──────────┘
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Queue 是事件的汇合点，但它不负责推导 State 或生成 Token；它只按生产者放入的顺序暂存已经生成的 <code>StreamChunk</code>。</p>
+<h3 id="32-queue-中的事件如何变成调用方看到的流">3.2 Queue 中的事件如何变成调用方看到的流</h3>
+<p>Pregel 主循环仍按照 <code>Plan -&gt; Execution -&gt; Update</code> 执行，但 <code>PregelRunner.tick()</code> 在等待并行 Task 的过程中会不断把控制权交还给 <code>stream()</code>。每次交还时，<code>_output()</code> 都会持续调用 <code>stream.get()</code>，直到当前 Queue 被取空：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">while</span> <span class="n">loop</span><span class="o">.</span><span class="n">tick</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">runner</span><span class="o">.</span><span class="n">tick</span><span class="p">(</span><span class="o">...</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">yield from</span> <span class="n">_output</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">stream</span><span class="o">.</span><span class="n">get</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">loop</span><span class="o">.</span><span class="n">after_tick</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Graph 结束前再清空一次 Queue</span>
+</span></span><span class="line"><span class="cl"><span class="k">yield from</span> <span class="n">_output</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">stream</span><span class="o">.</span><span class="n">get</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>_output()</code> 根据调用参数把内部三元组转换成公开输出。比如同时订阅多个 mode 时，v1 通常输出：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="p">(</span><span class="s2">&#34;messages&#34;</span><span class="p">,</span> <span class="p">(</span><span class="n">message_chunk</span><span class="p">,</span> <span class="n">metadata</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="s2">&#34;updates&#34;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&#34;writer&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;draft&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">}})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果设置 <code>subgraphs=True</code>，输出中还会保留 namespace。v2 则使用带字段名的统一信封：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;updates&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;ns&#34;</span><span class="p">:</span> <span class="p">(),</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;data&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;writer&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;draft&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">}},</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以一条流式事件的完整路径是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">事件发生
+</span></span><span class="line"><span class="cl">  -&gt; 对应组件构造 (namespace, mode, payload)
+</span></span><span class="line"><span class="cl">  -&gt; 生产者根据 StreamProtocol.modes 判断是否订阅
+</span></span><span class="line"><span class="cl">  -&gt; StreamProtocol.__call__ 把事件写入 Queue
+</span></span><span class="line"><span class="cl">  -&gt; SyncQueue.put() 收集
+</span></span><span class="line"><span class="cl">  -&gt; Runner 在执行间隙让出控制权
+</span></span><span class="line"><span class="cl">  -&gt; _output() 从 Queue 取出并转换公开格式
+</span></span><span class="line"><span class="cl">  -&gt; graph.stream() yield 给调用方
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里还有一个重要区别：<code>messages</code> 和 <code>custom</code> 可以在节点执行中途到达 Queue，因此是真正的节点内增量输出；<code>updates</code> 必须等节点形成 Writes，<code>values</code> 必须等本轮 <code>apply_writes()</code> 完成。它们都叫 Streaming，但粒度和产生时机不同。</p>
+<h2 id="4-interrupt-与-command-如何实现中断和恢复">4. <code>interrupt()</code> 与 <code>Command</code> 如何实现中断和恢复</h2>
+<p><code>interrupt_before/after</code> 是在节点边界暂停；<code>interrupt(value)</code> 则可以在节点函数内部动态暂停，并把业务上下文交给用户。后者的关键语义是：</p>
+<blockquote>
+<p><strong><code>interrupt()</code> 第一次执行时抛出 <code>GraphInterrupt</code>；恢复时节点从头重新执行，同一个 <code>interrupt()</code> 再次执行时不再抛异常，而是返回 <code>Command(resume=...)</code> 携带的值。</strong></p>
+</blockquote>
+<p>它不是保存 Python 调用栈，也不是恢复到函数的下一行。</p>
+<h3 id="41-用户如何拿到-a-和-b">4.1 用户如何拿到 A 和 B</h3>
+<p><code>interrupt(value)</code> 的 <code>value</code> 就是节点发给用户的 Payload。比如翻译节点生成 B 后，可以把原文 A、译文 B 和操作说明一起传出：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">TypedDict</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.checkpoint.memory</span> <span class="kn">import</span> <span class="n">InMemorySaver</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.graph</span> <span class="kn">import</span> <span class="n">StateGraph</span><span class="p">,</span> <span class="n">START</span><span class="p">,</span> <span class="n">END</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.types</span> <span class="kn">import</span> <span class="n">Command</span><span class="p">,</span> <span class="n">interrupt</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">State</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">translation</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">approved</span><span class="p">:</span> <span class="nb">bool</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">translate_and_review</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">source</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&#34;source&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">translation</span> <span class="o">=</span> <span class="n">llm</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;把下面内容翻译成中文：</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">content</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">approved</span> <span class="o">=</span> <span class="n">interrupt</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;kind&#34;</span><span class="p">:</span> <span class="s2">&#34;translation_review&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;source&#34;</span><span class="p">:</span> <span class="n">source</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;translation&#34;</span><span class="p">:</span> <span class="n">translation</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;question&#34;</span><span class="p">:</span> <span class="s2">&#34;是否接受这份翻译？&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;translation&#34;</span><span class="p">:</span> <span class="n">translation</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;approved&#34;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">approved</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">builder</span> <span class="o">=</span> <span class="n">StateGraph</span><span class="p">(</span><span class="n">State</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&#34;translate_and_review&#34;</span><span class="p">,</span> <span class="n">translate_and_review</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">START</span><span class="p">,</span> <span class="s2">&#34;translate_and_review&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&#34;translate_and_review&#34;</span><span class="p">,</span> <span class="n">END</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">checkpointer</span><span class="o">=</span><span class="n">InMemorySaver</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl"><span class="n">config</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&#34;configurable&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;thread_id&#34;</span><span class="p">:</span> <span class="s2">&#34;translation-42&#34;</span><span class="p">}}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>第一次执行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span><span class="s2">&#34;source&#34;</span><span class="p">:</span> <span class="s2">&#34;A&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="n">config</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream_mode</span><span class="o">=</span><span class="s2">&#34;updates&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>调用方会收到类似事件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;__interrupt__&#34;</span><span class="p">:</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">Interrupt</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="n">value</span><span class="o">=</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="s2">&#34;kind&#34;</span><span class="p">:</span> <span class="s2">&#34;translation_review&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="s2">&#34;source&#34;</span><span class="p">:</span> <span class="s2">&#34;A&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="s2">&#34;translation&#34;</span><span class="p">:</span> <span class="s2">&#34;B&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="s2">&#34;question&#34;</span><span class="p">:</span> <span class="s2">&#34;是否接受这份翻译？&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="nb">id</span><span class="o">=</span><span class="s2">&#34;interrupt-id&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>服务端把 <code>Interrupt.value</code> 返回给前端，前端就能同时展示 A 和 B。A、B 并不是 LangGraph 自动从节点局部变量中提取出来的；节点必须显式把希望用户看到的信息放入 <code>interrupt(value)</code>。</p>
+<h3 id="42-interrupt-第一次执行时发生什么">4.2 <code>interrupt()</code> 第一次执行时发生什么</h3>
+<p>节点进入 <code>interrupt(value)</code> 后会读取当前 Task 的 <code>PregelScratchpad</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">idx</span> <span class="o">=</span> <span class="n">scratchpad</span><span class="o">.</span><span class="n">interrupt_counter</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="n">已经存在第</span> <span class="n">idx</span> <span class="n">个</span> <span class="n">resume</span> <span class="n">value</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">resume_value</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">raise</span> <span class="n">GraphInterrupt</span><span class="p">((</span><span class="n">Interrupt</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="nb">id</span><span class="o">=...</span><span class="p">),))</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>第一次执行还没有 Resume Value，所以它创建 <code>Interrupt</code> 并抛出 <code>GraphInterrupt</code>。接下来：</p>
+<ol>
+<li><code>PregelRunner.commit()</code> 捕获 <code>GraphInterrupt</code></li>
+<li>Runner 不把它当成普通失败，而是给当前 Task 保存一条 <code>(__interrupt__, Interrupt(...))</code> Pending Write</li>
+<li><code>PregelLoop.output_writes()</code> 把这条 Pending Write 转换成 <code>updates</code> 或 <code>values</code> 流事件</li>
+<li>Loop 退出时保存 Checkpoint 和 Pending Writes，并在顶层吞掉 <code>GraphInterrupt</code>，所以用户看到的是“正常结束但包含待处理 Interrupt”，而不是未处理异常</li>
+</ol>
+<p>由于节点没有正常返回，节点最后的 <code>return {&quot;translation&quot;: ..., ...}</code> 尚未发生，因而这部分 State Update 也没有提交。Checkpoint 保存的是节点执行前的 State、调度位置以及这次 Interrupt Pending Write。</p>
+<h3 id="43-commandresume-如何把用户输入交回节点">4.3 <code>Command(resume=...)</code> 如何把用户输入交回节点</h3>
+<p>假设用户点击“通过”，应用使用相同的 <code>thread_id</code> 恢复：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">Command</span><span class="p">(</span><span class="n">resume</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="n">config</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">stream_mode</span><span class="o">=</span><span class="s2">&#34;updates&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>内部过程如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Command(resume=True)
+</span></span><span class="line"><span class="cl">        -&gt; map_command() 转换成 (NULL_TASK_ID, RESUME, True)
+</span></span><span class="line"><span class="cl">        -&gt; Loop 把 RESUME 保存为 Pending Write
+</span></span><span class="line"><span class="cl">        -&gt; 从 Checkpoint 重新创建被中断的 Task
+</span></span><span class="line"><span class="cl">        -&gt; 为 Task 构造 PregelScratchpad(resume=...)
+</span></span><span class="line"><span class="cl">        -&gt; 节点从第一行重新执行
+</span></span><span class="line"><span class="cl">        -&gt; interrupt_counter() 再次得到相同序号
+</span></span><span class="line"><span class="cl">        -&gt; interrupt() 找到对应 Resume Value，返回 True
+</span></span><span class="line"><span class="cl">        -&gt; approved = True，节点继续执行并正常 return
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此节点拿到用户信息的方式就是普通的函数返回值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">approved</span> <span class="o">=</span> <span class="n">interrupt</span><span class="p">(</span><span class="n">review_payload</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># 恢复后，approved 就是 Command(resume=...) 中的值</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>多个 <code>interrupt()</code> 按节点内的调用顺序匹配 Resume Value，计数器和 Resume 列表都属于当前 Task。若同时存在多个并行 Interrupt，则应使用 Interrupt ID 精确恢复：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">Command</span><span class="p">(</span><span class="n">resume</span><span class="o">=</span><span class="p">{</span><span class="n">interrupt_id</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="44-为什么翻译和审核最好拆成两个节点">4.4 为什么翻译和审核最好拆成两个节点</h3>
+<p>上面的单节点示例容易说明机制，但不适合直接用于生产。恢复会从节点开头重跑，所以 LLM 会再次生成翻译：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">第一次：LLM 生成 B1 -&gt; interrupt 展示 B1
+</span></span><span class="line"><span class="cl">恢复时：LLM 再次调用 -&gt; 可能生成 B2 -&gt; interrupt 返回用户对 B1 的意见
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这不仅重复消耗 Token，而且用户确认的内容和最终写入的内容可能不一致。更可靠的 Graph 应把“产生待审核结果”和“等待审核”拆开：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">translation</span> <span class="o">=</span> <span class="n">llm</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;把下面内容翻译成中文：</span><span class="si">{</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span><span class="o">.</span><span class="n">content</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;translation&#34;</span><span class="p">:</span> <span class="n">translation</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">review</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">approved</span> <span class="o">=</span> <span class="n">interrupt</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;kind&#34;</span><span class="p">:</span> <span class="s2">&#34;translation_review&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;source&#34;</span><span class="p">:</span> <span class="n">state</span><span class="p">[</span><span class="s2">&#34;source&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;translation&#34;</span><span class="p">:</span> <span class="n">state</span><span class="p">[</span><span class="s2">&#34;translation&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;question&#34;</span><span class="p">:</span> <span class="s2">&#34;是否接受这份翻译？&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="p">{</span><span class="s2">&#34;approved&#34;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">approved</span><span class="p">)}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&#34;translate&#34;</span><span class="p">,</span> <span class="n">translate</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&#34;review&#34;</span><span class="p">,</span> <span class="n">review</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">START</span><span class="p">,</span> <span class="s2">&#34;translate&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&#34;translate&#34;</span><span class="p">,</span> <span class="s2">&#34;review&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">builder</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&#34;review&#34;</span><span class="p">,</span> <span class="n">END</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>translate</code> 正常结束后，A 和 B 已经进入 State Channel 并保存到 Checkpoint。<code>review</code> 被恢复时虽然仍会从头重跑，但它只会重新读取同一份 A、B，再让 <code>interrupt()</code> 返回用户意见，不会重新调用 LLM。</p>
+<p>完整时序如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">translate 读取 A
+</span></span><span class="line"><span class="cl">    -&gt; LLM 生成 B
+</span></span><span class="line"><span class="cl">    -&gt; return {translation: B}
+</span></span><span class="line"><span class="cl">    -&gt; Update + Checkpoint，A/B 已持久化
+</span></span><span class="line"><span class="cl">    -&gt; review 读取 A/B
+</span></span><span class="line"><span class="cl">    -&gt; interrupt({source: A, translation: B})
+</span></span><span class="line"><span class="cl">    -&gt; GraphInterrupt + __interrupt__ 流事件
+</span></span><span class="line"><span class="cl">    -&gt; 用户看到 A/B 并提交 approved
+</span></span><span class="line"><span class="cl">    -&gt; Command(resume=approved)
+</span></span><span class="line"><span class="cl">    -&gt; 从 Checkpoint 重建 review Task
+</span></span><span class="line"><span class="cl">    -&gt; review 从头执行并再次调用 interrupt(...)
+</span></span><span class="line"><span class="cl">    -&gt; interrupt() 返回 approved
+</span></span><span class="line"><span class="cl">    -&gt; return {approved: approved}
+</span></span><span class="line"><span class="cl">    -&gt; Graph 继续执行
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此，动态中断的本质不是“冻结函数”，而是 <strong>Checkpoint 保存可重建的 Graph/Task 状态，Interrupt Pending Write 保存待回答的问题，Command 写入 Resume Value，节点重放时由 <code>interrupt()</code> 把 Resume Value 还原成普通返回值</strong>。</p>
+<p>本文的源码核对基于本地安装的 LangGraph <code>1.2.11</code> 和 LangChain Core <code>1.5.4</code>，关键位置包括：</p>
+<ul>
+<li><code>langchain_core/language_models/chat_models.py</code>：<code>BaseChatModel</code>、<code>stream()</code>、<code>_stream()</code> 以及 Callback 的触发</li>
+<li><code>langchain_core/callbacks/manager.py</code>：分发 <code>on_llm_new_token()</code></li>
+<li><code>langchain_core/outputs/chat_generation.py</code>：<code>ChatGenerationChunk</code> 的定义</li>
+<li><code>langgraph/pregel/main.py</code>：创建 Stream Queue、注册消息 Callback、驱动 Loop 并输出 Queue</li>
+<li><code>langgraph/pregel/_loop.py</code>：产生运行时事件、处理中断 Pending Writes、接收 Resume Command</li>
+<li><code>langgraph/pregel/_runner.py</code>：捕获 <code>GraphInterrupt</code> 并保存 Interrupt</li>
+<li><code>langgraph/pregel/_messages.py</code>：把 Chat Model 消息块转换成 <code>messages</code> 事件</li>
+<li><code>langgraph/pregel/_io.py</code>：把 <code>Command</code> 转换成 Pending Writes</li>
+<li><code>langgraph/pregel/_algo.py</code>：恢复 Task 并构造包含 Resume Values 的 <code>PregelScratchpad</code></li>
+<li><code>langgraph/types.py</code>：<code>StreamChunk</code>、<code>Command</code> 和 <code>interrupt()</code> 的公开定义</li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-13&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/756f59e3cf5b566acfde6aa8458caf31ac7de4c4" target="_blank" title="commit by tao(tao@example.com) 756f59e3cf5b566acfde6aa8458caf31ac7de4c4: claude code 实现、langgraph、base agent">
+                                    <i class="fas fa-hashtag fa-fw"></i>756f59e</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/workflow/004_langgraph_stream/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" data-title="LangGraph 的流式输出与中断恢复" data-hashtags="workflow,langgraph,streaming,human-in-the-loop"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" data-hashtag="workflow"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" data-title="LangGraph 的流式输出与中断恢复"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" data-title="LangGraph 的流式输出与中断恢复"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" data-title="LangGraph 的流式输出与中断恢复" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/workflow/">Workflow</a>,&nbsp;<a href="/tags/langgraph/">Langgraph</a>,&nbsp;<a href="/tags/streaming/">Streaming</a>,&nbsp;<a href="/tags/human-in-the-loop/">Human-in-the-Loop</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/workflow/004_temporal/" class="prev" rel="prev" title="Temporal：从订单数据流理解持久化工作流"><i class="fas fa-angle-left fa-fw"></i>Temporal：从订单数据流理解持久化工作流</a>
+            <a href="/posts/hugo/loveit_shortcodes/" class="next" rel="next" title="Loveit 内置 Shortcodes">Loveit 内置 Shortcodes<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2026-08-13T10:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"LangGraph 的流式输出与中断恢复"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

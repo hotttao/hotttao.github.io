@@ -104,9 +104,11 @@
         alt="/images/hugo/avatar.png"
         title="/images/hugo/avatar.png" /></a></div><h2 class="home-subtitle"><div id="id-1" class="typeit"></div></h2><div class="links"><a href="https://github.com/hotttao" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github-alt fa-fw"></i></a><a href="https://weibo.com/xxxx" title="微博" target="_blank" rel="noopener noreffer me"><i class="fab fa-weibo fa-fw"></i></a><a href="https://steamcommunity.com/id/xxxx" title="Steam" target="_blank" rel="noopener noreffer me"><i class="fab fa-steam fa-fw"></i></a><a href="https://www.zhihu.com/people/xxxx" title="知乎" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/zhihu.svg"></i></a><a href="https://www.douban.com/people/xxxx" title="豆瓣" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/douban.svg"></i></a><a href="https://dev.to/xxxx" title="Dev.To" target="_blank" rel="noopener noreffer me"><i class="fab fa-dev fa-fw"></i></a><a href="https://space.bilibili.com/xxxx" title="bilibili" target="_blank" rel="noopener noreffer me"><i data-svg-src="/svg/icons/bilibili.min.svg"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel=" me"><i class="far fa-envelope fa-fw"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/expert/go_export/expert_17/">Go unsafe包的安全使用模式</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-09">2023-01-09</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><h2 id="1-类型安全">1. 类型安全</h2>
-<p>在Go语言中，我们是无法通过常规语法手段穿透Go在类型系统层面对内存数据的保护的：</p>
+        <a href="/posts/aigc/claude_code/004_cc_tool/">Claude Code Tool 设计</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-04-02">2026-04-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>这一节我们来学习 <a href="https://github.com/Yuyz0112/claude-code-reverse/blob/main/results/tools/" target="_blank" rel="noopener noreffer">Claude Code 实现的通用基础工具</a>。</p>
+<!-- more -->
+<h2 id="1-edit-tool">1. Edit Tool</h2>
+<p>Edit Tool 的核心需求是实现精准修改。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -121,117 +123,140 @@
 </span><span class="lnt">10
 </span><span class="lnt">11
 </span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">a</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mh">0x12345678</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;0x%x\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="p">)</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="kt">byte</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="kt">byte</span><span class="p">)(</span><span class="o">&amp;</span><span class="nx">a</span><span class="p">)</span><span class="w">   </span><span class="c1">// 错误！不允许将&amp;a从*int类型显式转型为*byte类型</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">*</span><span class="nx">p</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x23</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">b</span><span class="w"> </span><span class="kt">byte</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">byte</span><span class="p">(</span><span class="nx">a</span><span class="p">)</span><span class="w">        </span><span class="c1">// b是一个新变量，有自己所解释的内存空间</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">b</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x23</span><span class="w">                    </span><span class="c1">// 即便强制进行类型转换，原变量a所解释的内存空间的数据依然不变</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;0x%x\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="p">)</span><span class="w">     </span><span class="c1">// 0x23</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;0x%x\n&#34;</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="p">)</span><span class="w">     </span><span class="c1">// 0x12345678</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="p">}</span><span class="w">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Edit</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="p">&gt;-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  对文件执行精确的字符串替换。
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  使用方式：
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  - 在对话中编辑之前，必须至少使用一次 `Read` 工具。
+</span></span></span><span class="line"><span class="cl"><span class="sd">  如果尝试未读取文件就编辑，此工具将报错。
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  - 使用 Read 工具输出的文本进行编辑时，请确保保留行号前缀之后显示的确切缩进（制表符/空格）。
+</span></span></span><span class="line"><span class="cl"><span class="sd">  行号前缀格式为：空格 + 行号 + 制表符。制表符之后的所有内容才是要匹配的实际文件内容。
+</span></span></span><span class="line"><span class="cl"><span class="sd">  切勿在 old_string 或 new_string 中包含行号前缀的任何部分。
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  - 始终优先编辑代码库中已存在的文件。除非有明确要求，绝不编写新文件。
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  - 仅在用户明确要求时使用emoji。除非被要求，避免向文件添加emoji。
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  - 如果 `old_string` 在文件中不唯一，编辑将会失败。
+</span></span></span><span class="line"><span class="cl"><span class="sd">  请提供包含更多周边上下文的更长字符串使其唯一，或使用 `replace_all` 更改每一处 `old_string`。
+</span></span></span><span class="line"><span class="cl"><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">  - 使用 `replace_all` 在整个文件中替换和重命名字符串。该参数适用于例如重命名变量的场景。</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="nt">input_schema</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">object</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">properties</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">file_path</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l">待修改文件的绝对路径</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">old_string</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l">要替换的文本</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">new_string</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l">用来替换的文本（必须与 old_string 不同）</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">replace_all</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">boolean</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l">替换所有 old_string 的匹配项（默认为 false）</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">required</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">file_path</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">old_string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">new_string</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">additionalProperties</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">$schema</span><span class="p">:</span><span class="w"> </span><span class="l">http://json-schema.org/draft-07/schema#</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><p>Go在常规操作下是类型安全的（注：并非绝对的类型安全，绝对的类型安全需要在数学上的形式化证明）。所谓类型安全是指一块内存数据一旦被特定的类型所解释（该内存数据与该类型变量建立关联，也就是变量定义），它就不能再被解释为其他类型，不能再与其他类型变量建立关联。</p></div><div class="post-footer">
-        <a href="/posts/program/go/expert/go_export/expert_17/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">Go 进阶</a></div></div>
+</div></div><div class="post-footer">
+        <a href="/posts/aigc/claude_code/004_cc_tool/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/claude-code/">Claude Code</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/expert/go_export/expert_16/">Go 网络编程</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-08">2023-01-08</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>Go是自带运行时的跨平台编程语言，Go中暴露给语言使用者的TCP Socket接口是建立在操作系统原生TCP Socket接口之上的。由于Go运行时调度的需要，Go设计了一套适合自己的TCP Socket网络编程模型。在本条中我们就来理解一下这个模型，并了解在该模型下Go TCP Socket在各个场景下的使用方法、行为特点及注意事项。</p></div><div class="post-footer">
-        <a href="/posts/program/go/expert/go_export/expert_16/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">Go 进阶</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/expert/go_export/expert_14/">Go 调度器</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-06">2023-01-06</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><p>今天我们来学习一些 Go 程序的调试技巧。</p>
+        <a href="/posts/aigc/claude_code/001_cc/">Claude Code 核心 Agent 流程</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-04-02">2026-04-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>抛开各种争议，Claude Code 还是目前为止最好用的 Coding Agent。我们的目的是从中习得 Agent 开发的最佳实践。</p>
+<p>今天我们重点来学习 Claude Code 核心 Agent 流程。</p>
 <!-- more -->
-<h2 id="1-调度器状态的查看方法">1. 调度器状态的查看方法</h2>
-<p>Go提供了调度器当前状态的查看方法：使用Go运行时环境变量GODEBUG。</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ <span class="nv">GODEBUG</span><span class="o">=</span><span class="nv">schedtrace</span><span class="o">=</span><span class="m">1000</span> godoc -http<span class="o">=</span>:6060
-</span></span><span class="line"><span class="cl">SCHED 0ms: <span class="nv">gomaxprocs</span><span class="o">=</span><span class="m">4</span> <span class="nv">idleprocs</span><span class="o">=</span><span class="m">3</span> <span class="nv">threads</span><span class="o">=</span><span class="m">3</span> <span class="nv">spinningthreads</span><span class="o">=</span><span class="m">0</span> <span class="nv">idlethreads</span><span class="o">=</span><span class="m">0</span> <span class="nv">runqueue</span><span class="o">=</span><span class="m">0</span> <span class="o">[</span><span class="m">0</span> <span class="m">0</span> <span class="m">0</span> 0<span class="o">]</span>
-</span></span><span class="line"><span class="cl">SCHED 1001ms: <span class="nv">gomaxprocs</span><span class="o">=</span><span class="m">4</span> <span class="nv">idleprocs</span><span class="o">=</span><span class="m">0</span> <span class="nv">threads</span><span class="o">=</span><span class="m">9</span> <span class="nv">spinningthreads</span><span class="o">=</span><span class="m">0</span> <span class="nv">idlethreads</span><span class="o">=</span><span class="m">3</span> <span class="nv">runqueue</span><span class="o">=</span><span class="m">2</span> <span class="o">[</span><span class="m">8</span> <span class="m">14</span> <span class="m">5</span> 2<span class="o">]</span>
-</span></span><span class="line"><span class="cl">SCHED 2006ms: <span class="nv">gomaxprocs</span><span class="o">=</span><span class="m">4</span> <span class="nv">idleprocs</span><span class="o">=</span><span class="m">0</span> <span class="nv">threads</span><span class="o">=</span><span class="m">25</span> <span class="nv">spinningthreads</span><span class="o">=</span><span class="m">0</span> <span class="nv">idlethreads</span><span class="o">=</span><span class="m">19</span> <span class="nv">runqueue</span><span class="o">=</span><span class="m">12</span> <span class="o">[</span><span class="m">0</span> <span class="m">0</span> <span class="m">4</span> 0<span class="o">]</span>
-</span></span><span class="line"><span class="cl">SCHED 3006ms: <span class="nv">gomaxprocs</span><span class="o">=</span><span class="m">4</span> <span class="nv">idleprocs</span><span class="o">=</span><span class="m">0</span> <span class="nv">threads</span><span class="o">=</span><span class="m">26</span> <span class="nv">spinningthreads</span><span class="o">=</span><span class="m">0</span> <span class="nv">idlethreads</span><span class="o">=</span><span class="m">8</span> <span class="nv">runqueue</span><span class="o">=</span><span class="m">2</span> <span class="o">[</span><span class="m">0</span> <span class="m">1</span> <span class="m">1</span> 0<span class="o">]</span>
-</span></span><span class="line"><span class="cl">SCHED 4010ms: <span class="nv">gomaxprocs</span><span class="o">=</span><span class="m">4</span> <span class="nv">idleprocs</span><span class="o">=</span><span class="m">0</span> <span class="nv">threads</span><span class="o">=</span><span class="m">26</span> <span class="nv">spinningthreads</span><span class="o">=</span><span class="m">0</span> <span class="nv">idlethreads</span><span class="o">=</span><span class="m">20</span> <span class="nv">runqueue</span><span class="o">=</span><span class="m">12</span> <span class="o">[</span><span class="m">6</span> <span class="m">3</span> <span class="m">1</span> 0<span class="o">]</span>
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>GODEBUG 通过给其传入不同的key1=value1, key2=value2, …组合，Go的运行时会输出不同的调试信息，比如在这里我们给GODEBUG传入了&quot;schedtrace=1000&quot;，其含义就是每1000ms打印输出一次goroutine调度器的状态，每次一行。以上面例子中最后一行为例，每一行各字段含义如下：</p></div><div class="post-footer">
-        <a href="/posts/program/go/expert/go_export/expert_14/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">Go 进阶</a></div></div>
+<style>
+table { table-layout: fixed; width: 100%; margin: 1em 0; border-collapse: collapse; }
+td, th { word-break: break-word; overflow-wrap: break-word; vertical-align: top; padding: 0.5em; }
+td pre { overflow-x: auto; max-width: 100%; }
+td code { white-space: pre-wrap; word-wrap: break-word; }
+</style>
+<h2 id="1-claude-code-的逆向">1. Claude Code 的逆向</h2>
+<p>Claude Code 目前未开源，市面上有关 Claude Code 代码的分析主要是逆向和基于 Source Map 还原代码。</p></div><div class="post-footer">
+        <a href="/posts/aigc/claude_code/001_cc/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/claude-code/">Claude Code</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/expert/go_export/expert_13/">Go 汇编反汇编</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-05">2023-01-05</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><h2 id="1-查看go程序的汇编代码">1. 查看Go程序的汇编代码</h2>
-<p>查看Go程序的汇编代码有多种方法：</p>
+        <a href="/posts/distributed/code/01_redis_barrier/">Redis Barrier</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2025-01-14">2025-01-14</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"><i class="far fa-folder fa-fw"></i>分布式</a></span></div><div class="content"><h2 id="1-背景">1. 背景</h2>
+<h3 id="21-背景">2.1 背景</h3>
+<p>项目上需要周期性完成一些计算任务，这些任务具有如下特点:</p>
 <ol>
-<li>使用objdump工具：<code>objdump -S go二进制文件</code></li>
-<li>使用gdb disassemble</li>
-<li>使用go tool工具生成汇编代码文件：<code>go build -gcflags '-S' xx.go &gt; xx.s 2&gt;&amp;1</code></li>
-<li>将Go代码编译成汇编代码：<code>go tool compile -S xx.go &gt; xx.s</code></li>
-<li>使用go tool工具反编译Go程序：<code>go tool objdump -S go-binary &gt; xx.s</code></li>
+<li>任务相似但是独立</li>
+<li>任务执行需要读取过去 7 天的历史数据，但是只有当天数据会更新</li>
+<li>任务计算的性能要求很高，需要充分利用计算资源，尽快完成计算</li>
 </ol>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 编译</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="nx">GOARCH</span><span class="p">=</span><span class="mi">386</span><span class="w"> </span><span class="k">go</span><span class="w"> </span><span class="nx">tool</span><span class="w"> </span><span class="nx">compile</span><span class="w"> </span><span class="o">-</span><span class="nx">N</span><span class="w"> </span><span class="o">-</span><span class="nx">l</span><span class="w"> </span><span class="nx">test</span><span class="p">.</span><span class="k">go</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 反编译</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="nx">GOARCH</span><span class="p">=</span><span class="mi">386</span><span class="w"> </span><span class="k">go</span><span class="w"> </span><span class="nx">tool</span><span class="w"> </span><span class="nx">objdump</span><span class="w"> </span><span class="o">-</span><span class="nx">gnu</span><span class="w"> </span><span class="nx">test</span><span class="p">.</span><span class="nx">o</span><span class="w">
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="交叉编译">交叉编译</h2>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">GOOS</span><span class="p">=</span><span class="nx">linux</span><span class="w"> </span><span class="nx">GOARCH</span><span class="p">=</span><span class="nx">amd64</span><span class="w"> </span><span class="k">go</span><span class="w"> </span><span class="nx">build</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="c1">// 交叉编译支持的所有架构</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="err">$</span><span class="nx">GOROOT</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="k">go</span><span class="o">/</span><span class="nx">build</span><span class="o">/</span><span class="nx">syslist</span><span class="p">.</span><span class="k">go</span><span class="w">
-</span></span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="参考资料">参考资料</h2>
-<ol>
-<li><a href="https://software.intel.com/en-us/blogs/2014/05/10/debugging-performance-issues-in-go-programs" target="_blank" rel="noopener noreffer">Debugging Performance Issues in Go Programs</a></li>
-<li><a href="https://go.dev/doc/diagnostics" target="_blank" rel="noopener noreffer">go.dev/doc/diagnostics</a></li>
-<li><a href="https://github.com/dgryski/go-perfbook/blob/master/performance-zh.md" target="_blank" rel="noopener noreffer">go-perfbook</a></li>
-<li><a href="https://github.com/bradfitz/talk-yapc-asia-2015/blob/master/talk.md" target="_blank" rel="noopener noreffer">talk-yapc-asia-2015</a></li>
-</ol></div><div class="post-footer">
-        <a href="/posts/program/go/expert/go_export/expert_13/">阅读全文</a><div class="post-tags">
+<p>为了快速完成这些任务的计算，设计了如下的分布式计算系统:</p></div><div class="post-footer">
+        <a href="/posts/distributed/code/01_redis_barrier/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E5%B9%B6%E5%8F%91%E5%8E%9F%E8%AF%AD/">分布式并发原语</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/architecture/elasticsearch/01_es/">ES 基础</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-07-21">2023-07-21</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/architecture/"><i class="far fa-folder fa-fw"></i>Architecture</a></span></div><div class="content"><h2 id="1-倒排索引">1. 倒排索引</h2>
+<h3 id="11-什么是倒排索引">1.1 什么是倒排索引</h3>
+<p>倒排索引是一种 <strong>从内容到文档的映射</strong> 数据结构，它和“正向索引”相反。</p>
+<ul>
+<li><strong>正向索引</strong>：文档 → 内容</li>
+<li><strong>倒排索引</strong>：内容（词语） → 出现该词语的文档列表</li>
+</ul>
+<p>它的核心作用是 <strong>快速找到包含某个词的文档</strong>，是搜索引擎（比如 ElasticSearch、Lucene）最核心的数据结构。</p></div><div class="post-footer">
+        <a href="/posts/architecture/elasticsearch/01_es/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/elasticsearch/">Elasticsearch</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/program/go/expert/go_export/expert_31/">Go 的常见“陷阱”</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-13">2023-01-13</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content">这个系列我们开始学习 go 语言的第二部分-go语言进阶</div><div class="post-footer">
+        <a href="/posts/program/go/expert/go_export/expert_31/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">Go 进阶</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/expert/go_export/expert_12/">Delve 调试Go代码</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-04">2023-01-04</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><h2 id="1-专业调试工具">1. 专业调试工具</h2>
-<p>bug是表象，要发现内部原因需要利用更多的表象数据去推理，需要收集足够多的“现场数据”。我们可以通过编程语言内置的输出语句（如Go的print、fmt.Printf等）输出我们需要的信息，而更为专业的方法是通过编程语言提供的专业调试工具（如GDB）设置断点来采集现场数据或重现bug。</p></div><div class="post-footer">
-        <a href="/posts/program/go/expert/go_export/expert_12/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">Go 进阶</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/program/go/expert/go_export/expert_11/">expvar</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-03">2023-01-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><h2 id="1-expvar">1. expvar</h2>
-<p>应用运行状态一般以度量数据的形式呈现。通过了解应用关键路径上的度量数据，我们可以确定在某个度量点上应用的性能是符合预期性能指标还是较大偏离预期，这样就可以最大限度地缩小性能瓶颈点的搜索范围，从而快速定位应用中的瓶颈点并进行优化。这些可以反映应用运行状态的数据也被称为应用的内省（introspection）数据。相比于通过查询应用外部特征而获取的探针类（probing）数据（比如查看应用某端口是否有响应并返回正确的数据或状态码），内省数据可以传达更为丰富、更多的有关应用程序状态的上下文信息。这些上下文信息可以是应用对各类资源的占用信息，比如应用运行占用了多少内存空间，也可以是自定义的性能指标信息，比如单位时间处理的外部请求数量、应答延迟、队列积压量等。我们可以轻松地使用Go标准库提供的expvar包按统一接口、统一数据格式、一致的指标定义方法输出自定义的度量数据。</p></div><div class="post-footer">
-        <a href="/posts/program/go/expert/go_export/expert_11/">阅读全文</a><div class="post-tags">
+        <a href="/posts/program/go/expert/go_export/expert_26/">Go generate</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-12">2023-01-12</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/go/"><i class="far fa-folder fa-fw"></i>Go</a></span></div><div class="content"><h2 id="1-go-generate">1. go generate</h2>
+<h3 id="11-简介">1.1 简介</h3>
+<p>项目构建，通常我们会依赖一些构建管理工具，比如shell脚本、make等。通过 make 我们可以在编译和构建 Go 代码之前，完成诸如 protobuf 文件生成等等编译代码所需要的前置动作。不过，Go 1.4 版本的Go工具链中增加了在构建之前驱动执行前置动作的能力，这就是go generate命令。我们看下面这个示例:</p></div><div class="post-footer">
+        <a href="/posts/program/go/expert/go_export/expert_26/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/go-%E8%BF%9B%E9%98%B6/">Go 进阶</a></div></div>
 </article><ul class="pagination"><li class="page-item ">
                     <span class="page-link">
@@ -261,7 +286,7 @@
                     <span class="page-link" aria-hidden="true">&hellip;</span>
                 </li><li class="page-item ">
                     <span class="page-link">
-                        <a href="/page/65/">65</a>
+                        <a href="/page/67/">67</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Cluade 云上 Agent 记忆系统 - LoveIt</title><meta name="Description" content="深入拆解 Cluade 云上 Agent 记忆系统"><meta property="og:url" content="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="Cluade 云上 Agent 记忆系统">
+	<meta property="og:description" content="深入拆解 Cluade 云上 Agent 记忆系统">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-04-03T22:00:00+08:00">
+		<meta property="article:modified_time" content="2026-08-13T14:59:37+08:00">
+		<meta property="article:tag" content="Claude Code">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="Cluade 云上 Agent 记忆系统">
+	<meta name="twitter:description" content="深入拆解 Cluade 云上 Agent 记忆系统">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/claude_code/003_cc/" /><link rel="next" href="https://hotttao.github.io/posts/aigc/workflow/001_pocket_flow/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Cluade 云上 Agent 记忆系统",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/claude_code\/011_cc_agent_mem\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Claude Code","wordcount":  4375 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/claude_code\/011_cc_agent_mem\/","datePublished": "2026-04-03T22:00:00+08:00","dateModified": "2026-08-13T14:59:37+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "深入拆解 Cluade 云上 Agent 记忆系统"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent/"><i class="far fa-folder-open fa-fw"></i>&nbsp;Agent</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">Claude Code</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/claude_code/003_cc/">Claude Code Context Compact</a></li><li><a href="/posts/aigc/claude_code/002_cc/">Claude Code SubAgent</a></li><li><a href="/posts/aigc/claude_code/004_cc_tool/">Claude Code Tool 设计</a></li><li><a href="/posts/aigc/claude_code/001_cc/">Claude Code 核心 Agent 流程</a></li><li><a href="/posts/aigc/claude_code/011_cc_agent_mem/" class="active">Cluade 云上 Agent 记忆系统</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">Cluade 云上 Agent 记忆系统</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-04-03">2026-04-03</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4375 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-cloud-managed-agentcma">1. Cloud Managed Agent（CMA）</a>
+      <ul>
+        <li><a href="#11-什么是-cma">1.1 什么是 CMA</a></li>
+        <li><a href="#12-新一代记忆系统">1.2 新一代记忆系统</a>
+          <ul>
+            <li><a href="#cma-记忆系统-vs-claude-code-记忆系统">CMA 记忆系统 vs Claude Code 记忆系统</a></li>
+          </ul>
+        </li>
+        <li><a href="#13-dreaming-机制">1.3 dreaming 机制</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-记忆系统-agent-视角的-interface">2. 记忆系统 Agent 视角的 Interface</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#system-prompt">System Prompt</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#type-user--feedback--project--reference">&lt;the fact; for feedback/project, follow with <strong>Why:</strong> and <strong>How to apply:</strong> lines. Link related memories with [[their-name]].&gt;</code> <code>— name: &lt;使用 kebab-case 的简短名称&gt; description: &lt;单行摘要，用于在召回时判断相关性&gt; metadata: type: user | feedback | project | reference</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#索引文件的维护">索引文件的维护</a></li>
+            <li><a href="#记忆文件格式">记忆文件格式</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#3-两种类型记忆系统的对比">3. 两种类型记忆系统的对比</a></li>
+    <li><a href="#4-记忆文件系统的实现">4. 记忆文件系统的实现</a>
+      <ul>
+        <li><a href="#41-分布式文件系统实现">4.1 分布式文件系统实现</a></li>
+        <li><a href="#42-数据库--fuse">4.2 数据库 + FUSE</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-个人总结">5. 个人总结</a></li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>今天我们来学习 Claude Code 最新实现的记忆系统。内容来自: <img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://app.koala-oss.club/videos/6f968f84-cb35-4243-a0cb-eebc136d7ae9"
+        data-srcset="https://app.koala-oss.club/videos/6f968f84-cb35-4243-a0cb-eebc136d7ae9, https://app.koala-oss.club/videos/6f968f84-cb35-4243-a0cb-eebc136d7ae9 1.5x, https://app.koala-oss.club/videos/6f968f84-cb35-4243-a0cb-eebc136d7ae9 2x"
+        data-sizes="auto"
+        alt="https://app.koala-oss.club/videos/6f968f84-cb35-4243-a0cb-eebc136d7ae9"
+        title="深度拆解 Cluade 云上 Agent 记忆系统" /></p>
+<p>我个人觉得这篇内容是非常值得反复学习的，里面对如何实现记忆系统有非常深入的理解。接下来我们将详细介绍以下内容:</p>
+<ol>
+<li>什么是 CMA，它的记忆系统与 Claude Code 记忆系统的有何异同，Anthropic 始终坚持基于文件系统实现记忆系统而不是 RAG</li>
+<li>基于文件实现的记忆系统提供给 Agent 的 Interface</li>
+<li>对比文件实现的记忆系统与 RAG 优势与劣势</li>
+<li>如何实现记忆系统里文件到数据库的读写链路</li>
+</ol>
+<!-- more -->
+<h2 id="1-cloud-managed-agentcma">1. Cloud Managed Agent（CMA）</h2>
+<h3 id="11-什么是-cma">1.1 什么是 CMA</h3>
+<p>CMA 是 Anthropic的 agent as a service这样的一个产品。他与 Claude Code 的区别在于这些托管的agent是跑在Anthropic的云上基础设施里边的，所以就更加接近于Saas service这样的一个形态。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/aigc/cc/image.png"
+        data-srcset="/images/aigc/cc/image.png, /images/aigc/cc/image.png 1.5x, /images/aigc/cc/image.png 2x"
+        data-sizes="auto"
+        alt="/images/aigc/cc/image.png"
+        title="CMA 架构" /></p>
+<p>从架构图上可以看到，对于一个云上运行的 agent，Anthropic 要把一些内容给解耦开。</p>
+<ol>
+<li>Harness: 核心大脑（Agent Core）就是 Claude Code；</li>
+<li>cloud code 把所依赖的一些能力外置到平台上去，包括
+2. Session: Session 管理
+3. Sandbox: 沙箱执行
+4. Tools: 工具调用、MCP集成等能力
+4. Orchestration: 任务的编排</li>
+</ol>
+<h3 id="12-新一代记忆系统">1.2 新一代记忆系统</h3>
+<p>Anthropic 新一代的记忆系统，已经让 Claude code 还有它的CMA 彻底统一打通了。</p>
+<h4 id="cma-记忆系统-vs-claude-code-记忆系统">CMA 记忆系统 vs Claude Code 记忆系统</h4>
+<p>首先他们之间绝大部分东西都是共享，因为核心 Harness 都是 Claude Code。</p>
+<p>相同点:</p>
+<ol>
+<li>底层内核都是 Claude Code / Claude Agent SDK，接口实现相似；</li>
+<li><strong>文件优先路线，不使用 Embedding、向量RAG做语义检索</strong>，发挥 agent 对于文件的理解能力；规避向量带来的复杂度与不稳定问题；</li>
+<li>共用一套 <code>dreaming</code>后台记忆处理机制。</li>
+</ol>
+<p>核心差异:</p>
+<ol>
+<li>Claude Code：记忆保存在<strong>用户本地</strong>；</li>
+<li>CMA：新增<strong>记忆库抽象层</strong>
+<ul>
+<li>记忆库可绑定单个Agent，也支持<strong>多个云上Agent挂载共享同一份记忆库</strong>，同时每个Agent还可以保留自身独立记忆；</li>
+<li>为实现多Agent共享，CMA记忆读写的数据链路和本地Claude Code完全不同；</li>
+<li>逆向推断技术实现：大概率基于 <strong>FUSE</strong>，记忆实际存数据库，但Agent侧操作体验如同操作普通文件。</li>
+</ul>
+</li>
+</ol>
+<h3 id="13-dreaming-机制">1.3 dreaming 机制</h3>
+<p>Dreaming 之所以重要，使用所有 Agent 系统都存在共同的痛点:</p>
+<ol>
+<li><strong>记忆的读取（召回）</strong>：我们希望的是按需读取，显然我们不希望一次性读取所有记忆，也不希望太懒惰始终不读取。可以通过提示词引导Agent按需读取记忆；读取的积极性和准确度，是可以通过提示词强调的。</li>
+<li><strong>记忆的写入（整理）</strong>：记忆的更新大多依赖用户手动指令“帮我记下来”。而 Agent 自我的记忆的写入触发是非常不积极的、记忆的整理也不够积极，</li>
+</ol>
+<p>dreaming 机制的核心是它会定期的去扫描会话，然后用一个专有的写入的机制去对已有的所有记忆做一次整理。这样即便会话里边没有及时的记忆，但只要会话数据还在，就可以重新扫描一遍做一次记录。</p>
+<h2 id="2-记忆系统-agent-视角的-interface">2. 记忆系统 Agent 视角的 Interface</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/aigc/cc/agent_interface.png"
+        data-srcset="/images/aigc/cc/agent_interface.png, /images/aigc/cc/agent_interface.png 1.5x, /images/aigc/cc/agent_interface.png 2x"
+        data-sizes="auto"
+        alt="/images/aigc/cc/agent_interface.png"
+        title="CMA 记忆系统 Agent 视角的 Interface" /></p>
+<p>Agent 视角:</p>
+<ol>
+<li>每一个记忆库对应一个根目录</li>
+<li>每一个根目录下，都有一个索引文件，叫 MEMORY.md，他是对这个记忆库里边所有文件的一个概览(Short Summary)，并保存了每个文件的绝对路径。</li>
+<li>System Prompt 会 Inline Agent 所能看到的所有记忆库的索引文件。所以记忆读取的整个过程中，系统提示词不会携带任何一条记忆的实际内容。</li>
+</ol>
+<p>Agent 是否会读取某一个记忆条路，完全由agent自己来驱动了:</p>
+<ol>
+<li>Agent 通过 Short Summary 判断内容相关就会读取</li>
+<li>Agnet 判断这个short summary对他当前的会话已经无关或者已经足够，就不会召回。</li>
+</ol>
+<p>对于 Agent 来说可能有多个记忆库，而基于文件系统的接口，Agent 可以有很多的文件的工具对多文件做 <code>拼接，关键词的检索，或者非全量的读取</code>。这对 TOKEN 来说非常的友好。这就是基于文件去做记忆的好处。</p>
+<p><strong>索引文件的机制，从 skills 开始就被广泛使用</strong></p>
+<h4 id="system-prompt">System Prompt</h4>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1"
+        data-srcset="https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1, https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1 1.5x, https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1 2x"
+        data-sizes="auto"
+        alt="https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1"
+        title="System Prompt" /></p>
+<h4>Memory / 记忆</h4>
+<table>
+  <thead>
+    <tr>
+      <th>English</th>
+      <th>中文</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><pre><code>&lt;!--
+name: "System Prompt: Memory instructions"
+description: "Instructions for using persistent file-based memory, including memory file format, scope, indexing, and stale-memory handling"
+ccVersion: "2.1.227"
+variables:
+  - "MEMORY_LOCATION_CONTEXT"
+  - "MEMORY_LINKING_INSTRUCTIONS"
+  - "MEMORY_TYPE_DESCRIPTIONS"
+  - "TEAM_MEMORY_SCOPE_NOTE"
+  - "MEMORY_INDEX_POINTER_INSTRUCTIONS"
+  - "MEMORY_SAVE_EXCLUSIONS"
+  - "RECALLED_MEMORY_VERIFICATION_GUIDANCE"
+  - "MEMORY_CITATION_INSTRUCTIONS"
+  - "HAS_PROJECT_SKILL_UPKEEP_INSTRUCTIONS_FN"
+  - "PROJECT_SKILL_UPKEEP_INSTRUCTIONS"
+--&gt;</code></pre></td>
+      <td><pre><code>&lt;!--
+名称：系统提示词——记忆说明
+描述：关于使用基于文件的持久化记忆的说明，包括记忆文件格式、作用域、索引和过期记忆处理
+Claude Code 版本：2.1.227
+变量：
+  - "MEMORY_LOCATION_CONTEXT"：记忆存储位置上下文
+  - "MEMORY_LINKING_INSTRUCTIONS"：记忆关联说明
+  - "MEMORY_TYPE_DESCRIPTIONS"：记忆类型说明
+  - "TEAM_MEMORY_SCOPE_NOTE"：团队记忆作用域说明
+  - "MEMORY_INDEX_POINTER_INSTRUCTIONS"：记忆索引指针说明
+  - "MEMORY_SAVE_EXCLUSIONS"：不应保存为记忆的内容
+  - "RECALLED_MEMORY_VERIFICATION_GUIDANCE"：召回记忆的验证指南
+  - "MEMORY_CITATION_INSTRUCTIONS"：记忆引用说明
+  - "HAS_PROJECT_SKILL_UPKEEP_INSTRUCTIONS_FN"：判断是否包含项目技能维护说明的函数
+  - "PROJECT_SKILL_UPKEEP_INSTRUCTIONS"：项目技能维护说明
+--&gt;</code></pre></td>
+    </tr>
+    <tr>
+      <td>You have a persistent file-based memory <code>&#36;{MEMORY_LOCATION_CONTEXT}</code>. Each memory is one file holding one fact, with the following frontmatter:</td>
+      <td>你拥有基于文件的持久化记忆 <code>&#36;{MEMORY_LOCATION_CONTEXT}</code>。每条记忆对应一个文件，其中只保存一个事实，并包含以下 frontmatter：</td>
+    </tr>
+    <tr>
+      <td><pre><code>---
+name: &lt;short-kebab-case-slug&gt;
+description: &lt;one-line summary, used to decide relevance during recall&gt;
+metadata:
+  type: user | feedback | project | reference
+---
+<h2 id="type-user--feedback--project--reference">&lt;the fact; for feedback/project, follow with <strong>Why:</strong> and <strong>How to apply:</strong> lines. Link related memories with [[their-name]].&gt;</code></pre></td>
+<td><pre><code>&mdash;
+name: &lt;使用 kebab-case 的简短名称&gt;
+description: &lt;单行摘要，用于在召回时判断相关性&gt;
+metadata:
+type: user | feedback | project | reference</h2>
+<p>&lt;记忆所记录的事实；对于 feedback/project 类型，后面需要添加 <strong>Why:</strong> 和 <strong>How to apply:</strong>。使用 [[记忆名称]] 链接相关记忆。&gt;</code></pre></td>
+</tr></p>
+  </tbody>
+</table>
+<h4 id="索引文件的维护">索引文件的维护</h4>
+<p>对于索引文件:</p>
+<ol>
+<li>索引文件在CMA里完全由 agent 维护，当agent每新增一个记忆去写入的时候，CMA的提示词都会要求它必须要同步地来刷新一下这个索引文件，来保持两者的一致性。</li>
+</ol>
+<p>所以在CMA里，索引文件的有效性新鲜度非常依赖于 agent的智力和这个提示词引导的，它本身的这个程序化的约束是非常简单甚至可以说是非常弱的。dreaming机制会做一个兜底，当他发现整个记忆库里边有一些预期之外没有整理好的内容的时候呢，dreaming 会再次补偿再次修正。</p>
+<h4 id="记忆文件格式">记忆文件格式</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;short-kebab-case-slug&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;one-line summary, used to decide relevance during recall&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">user | feedback | project | reference</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>系统提示词里，约束了记忆文件需要包含的元数据:</p>
+<ol>
+<li>name: 记忆条目的名字</li>
+<li>description: 一个短的一行的总结</li>
+<li>metadata.type: 记忆类型:
+<ul>
+<li>用户类的记忆</li>
+<li>反馈类的记忆</li>
+<li>项目相关的记忆</li>
+<li>引用相关的记忆。</li>
+</ul>
+</li>
+</ol>
+<p>我们再次验证了CMA的这种宽松和约束的一个边界: <strong>API程序化的部分宽松，提示词的部分约束</strong>。</p>
+<p>这样的灵活性就比较高，因为有可能它未来也会发现说这一套分类方法不够灵活，那就换一个。那这个时候他只要调整他的提示词，然后重新跑一遍他这个dream的整理，就可以把他的记忆重新整理成未来的格式了，而不需要去改造整个大的存储系统的 API系统。所以这也是一种面向agent的设计工具现在看来蛮灵活的一个思路。<strong>这个思路也反应在当下 Agent的实现中。在提示词内实现 Workflow 而不是使用 Agent Framework框架。</strong></p>
+<h2 id="3-两种类型记忆系统的对比">3. 两种类型记忆系统的对比</h2>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/aigc/cc/mem_tool.png"
+        data-srcset="/images/aigc/cc/mem_tool.png, /images/aigc/cc/mem_tool.png 1.5x, /images/aigc/cc/mem_tool.png 2x"
+        data-sizes="auto"
+        alt="/images/aigc/cc/mem_tool.png"
+        title="记忆系统读写工具" /></p>
+<p>专门给 Agent 开发的记忆系统，比如说super memory、mem0:</p>
+<ol>
+<li>通常以<code>数据库+向量数据库</code>实现。</li>
+<li>需要一套 API，并进一步封装为 MCP 或者专用的SDK供 Agent 去读写记忆系统里边的信息，包括:
+<ol>
+<li>read memory: 包括 read、list 等</li>
+<li>Update memory: 包括覆盖、追加</li>
+</ol>
+</li>
+</ol>
+<p>在这里就会发现，当你的记忆内容变得越来越长越来越多的时候，通常你的API都是不够用的，或者说你就需要拓展出非常非常多的API。</p>
+<p>比如读可能需要:</p>
+<ol>
+<li>搜索的能力</li>
+<li>读几行的能力</li>
+<li>类似 GREP 抓取的能力。</li>
+</ol>
+<p>写可能需要:</p>
+<ol>
+<li>替换的能力</li>
+<li>关键词匹配的能力</li>
+<li>也可能有追加、覆盖，拷贝(比如把另一个记忆拷贝到这个记忆里边)。</li>
+</ol>
+<p>一旦你有这么多的需求之后，你最后会发现还不如文件系统的语义是更能够承接这些能力。因为在文件系统里边 bash 或者是 Agent 封装过的二次工具，都有非常强的能力完成文件的各种操作，而且 Agent 非常的熟悉，这就是它一个巨大的优势。</p>
+<p>通过 API 去实现这些能力，不说别的，把 sed 包装成一套API，都是一个巨大的工作量，而且包装完之后，Agent还要去学习你那套API，或者说他也理解为那就是一个sed。如果你需要的是 sed，你为什么不直接用一个文件加上原生的sed呢。这就是anthropic的一种思路，所以他们一直都坚持就是万物皆文件，当然记忆也作为文件的方式来用来带来一个更好的 Agent 方面的性能。</p>
+<h2 id="4-记忆文件系统的实现">4. 记忆文件系统的实现</h2>
+<h3 id="41-分布式文件系统实现">4.1 分布式文件系统实现</h3>
+<p>对于 Claude Code 单机形态的应用，文件系统是很自然的形态。但是对于 CMA 的记忆库，他是有共享的需求的。也就是一套文件挂给两个agent。</p>
+<p>最直观的实现是使用共享的文件系统，所有 CMA 运行单元通过挂载共享。但是这种实现有一些明显的问题:</p>
+<ol>
+<li>实现比较的重，因为一个分布式的文件系统其实还是相对来讲非常复杂的。而记忆文件这个场景呢相对来说又没有那么的啊强的必要性</li>
+<li>CMA 从API上，可以看到它有版本管理的能力，具备回滚的能力。</li>
+</ol>
+<p>agent是不会主动去帮你做这个文件管理的，所以如果在分布式文件系统上上叠加一套针对特定文件的自动化的多版本的管理实现起来难度就非常高了。</p>
+<h3 id="42-数据库--fuse">4.2 数据库 + FUSE</h3>
+<p>CMA 的实现:</p>
+<ol>
+<li>把记忆存储在数据库</li>
+<li>通过 FUSE 挂载截获所有的文件操作，实现跟数据库的交互</li>
+</ol>
+<p>实现的过程:</p>
+<ol>
+<li>一个记忆库对应一个特定的目录</li>
+<li>写一个fuse的程序，通过文件系统挂载，专门监听这个目录下边所有的文件的写入过程。</li>
+<li>劫持的这个位置是在非常底层的位置，上层不管是用什么样工具去写入的文件，都可以被正确地截取到。</li>
+<li>而且这个劫持的时机是可以阻塞这次写入的，业务逻辑先处理成功才放行这次文件的写入，如果业务逻辑没有处理成功那这次写入就会失败。这样就可以避免文件写入成功，但是数据库更新失败，两者不一致。</li>
+</ol>
+<p>这样的逻辑下:</p>
+<ol>
+<li>文件系统被简化，Agent 可以继续去使用一个简单常规的单机的文件系统</li>
+<li>在数据库里，可以用各种的应用层的代码，甚至是数据库自己的能力去实现多版本的自动的产生和管理</li>
+<li>dreaming 的运行不需要深入到文件系统层面去扫描文件，只需要在这个数据库层面就能够拉取到所有的消息然后和记忆去做一个汇总。</li>
+</ol>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/aigc/cc/fuse.png"
+        data-srcset="/images/aigc/cc/fuse.png, /images/aigc/cc/fuse.png 1.5x, /images/aigc/cc/fuse.png 2x"
+        data-sizes="auto"
+        alt="/images/aigc/cc/fuse.png"
+        title="fuse 截获更新数据库流程" /></p>
+<p>完整的读写流程如上，这里我们不再详细介绍。后面在介绍 Agent Platform 的实现的时候，我们会详解介绍里面的实现细节。</p>
+<h2 id="5-个人总结">5. 个人总结</h2>
+<p>基于<code>文件系统+文件索引</code>实现的记忆系统具有明显的先进性。但是存在一个明显的局限性: <strong>你的 Agent 首先必须有一个文件系统</strong>。这个对你的 Agent 应用形态就有明显的限制。</p>
+<p>CMA 基于 Claude Code 或者 Claude Code SDK 实现，Agent Core 本身以单独的进程存在。通常一个 Agent 对应一个虚拟机(虚拟机对用多种形态)。但是本质上，Agent Core 是运行在一个操作系统内的，向本地一样有一个可用的文件系统。</p>
+<p>但是对于像 Langgraph 这些 Agent Framework 开发的 Agent，Agent 本身只是服务进程里的一个对象。他不会存在与之对应的文件系统。</p>
+<p>Agent Core 独立进程的这种形态，本身实现比较重。比较适合企业级用户。同一部门内部，他们有共同的需求可以使用同一个 Agent。通过 Session 区分不同的用户。</p>
+<p>但是对于 ToC 用户。不可能给每一个用户创建一个虚拟机。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-13&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/756f59e3cf5b566acfde6aa8458caf31ac7de4c4" target="_blank" title="commit by tao(tao@example.com) 756f59e3cf5b566acfde6aa8458caf31ac7de4c4: claude code 实现、langgraph、base agent">
+                                    <i class="fas fa-hashtag fa-fw"></i>756f59e</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/claude_code/011_cc_agent_mem/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/" data-title="Cluade 云上 Agent 记忆系统" data-hashtags="Claude Code"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/" data-hashtag="Claude Code"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/" data-title="Cluade 云上 Agent 记忆系统"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/" data-title="Cluade 云上 Agent 记忆系统"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/claude_code/011_cc_agent_mem/" data-title="Cluade 云上 Agent 记忆系统" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/claude-code/">Claude Code</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/claude_code/003_cc/" class="prev" rel="prev" title="Claude Code Context Compact"><i class="fas fa-angle-left fa-fw"></i>Claude Code Context Compact</a>
+            <a href="/posts/aigc/workflow/001_pocket_flow/" class="next" rel="next" title="Pocket Flow">Pocket Flow<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2026-04-03T22:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Cluade 云上 Agent 记忆系统"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

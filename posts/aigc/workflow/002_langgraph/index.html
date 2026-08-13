@@ -13,7 +13,7 @@
 	<meta property="og:type" content="article">
 		<meta property="article:section" content="posts">
 		<meta property="article:published_time" content="2026-05-02T22:00:00+08:00">
-		<meta property="article:modified_time" content="2026-08-07T21:21:29+08:00">
+		<meta property="article:modified_time" content="2026-08-13T14:59:37+08:00">
 		<meta property="article:tag" content="Workflow">
 		<meta property="og:image" content="https://hotttao.github.io/logo.png">
 
@@ -33,8 +33,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/workflow\/002_langgraph\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "workflow","wordcount":  5725 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/workflow\/002_langgraph\/","datePublished": "2026-05-02T22:00:00+08:00","dateModified": "2026-08-07T21:21:29+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "workflow","wordcount":  7262 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/workflow\/002_langgraph\/","datePublished": "2026-05-02T22:00:00+08:00","dateModified": "2026-08-13T14:59:37+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -275,12 +275,12 @@
                 <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent/"><i class="far fa-folder-open fa-fw"></i>&nbsp;Agent</a>
                 <section>
                     <h3 class="article-docs-tag-name docs-tree-tag">workflow</h3>
-                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/workflow/001_pocket_flow/">Pocket Flow</a></li><li><a href="/posts/aigc/workflow/002_langgraph/" class="active">LangGraph</a></li></ol>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/workflow/001_pocket_flow/">Pocket Flow</a></li><li><a href="/posts/aigc/workflow/002_langgraph/" class="active">LangGraph</a></li><li><a href="/posts/aigc/workflow/003_pydantic_ai/">Pydantic AI 基本使用</a></li><li><a href="/posts/aigc/workflow/004_temporal/">Temporal：从订单数据流理解持久化工作流</a></li><li><a href="/posts/aigc/workflow/004_langgraph_stream/">LangGraph 的流式输出与中断恢复</a></li></ol>
                 </section>
             </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">LangGraph</h1><div class="post-meta">
                 <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div>
-                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-05-02">2026-05-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 5725 字&nbsp;
-                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 12 分钟&nbsp;</div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-05-02">2026-05-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 7262 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 15 分钟&nbsp;</div>
             </div><div class="details toc" id="toc-static"  kept="">
                     <div class="details-summary toc-title">
                         <span>目录</span>
@@ -312,7 +312,14 @@
     <li><a href="#5-如何在节点之间传递共享数据">5. 如何在节点之间传递共享数据</a></li>
     <li><a href="#6-graph-被驱动执行的过程">6. Graph 被驱动执行的过程</a></li>
     <li><a href="#7-用户代码如何转换成运行时结构">7. 用户代码如何转换成运行时结构</a></li>
-    <li><a href="#8-源码阅读">8. 源码阅读</a></li>
+    <li><a href="#8-graph-的持久化与恢复">8. Graph 的持久化与恢复</a>
+      <ul>
+        <li><a href="#81-checkpoint-保存哪些值">8.1 Checkpoint 保存哪些值</a></li>
+        <li><a href="#82-如何从-checkpoint-恢复">8.2 如何从 Checkpoint 恢复</a></li>
+        <li><a href="#83-superstep-中途失败">8.3 Superstep 中途失败</a></li>
+      </ul>
+    </li>
+    <li><a href="#9-源码阅读">9. 源码阅读</a></li>
   </ul>
 </nav></div>
                 </div><div class="content" id="content"><p>前面我们介绍了第一个 Agent Framework - Pocket Flow。并且说道，大多数 Agent Framework 的核心是提供了对 Workflow 的抽象-Graph。今天我们来介绍另一个 Agent Framework - LangGraph。并依旧重点关注 Graph 实现的四个问题：</p>
@@ -1261,7 +1268,256 @@
 <blockquote>
 <p><strong>Node 负责计算，writer 负责写 Channel，trigger 负责订阅 Channel，Pregel 负责在相邻轮次之间完成匹配和调度。</strong></p>
 </blockquote>
-<h2 id="8-源码阅读">8. 源码阅读</h2>
+<h2 id="8-graph-的持久化与恢复">8. Graph 的持久化与恢复</h2>
+<p>Pregel 在 Superstep 的 Update 阶段结束后创建 Checkpoint。Checkpoint 保存的不只是 State，还保存恢复调度所需的 Channel 版本和节点消费位置。</p>
+<p>继续使用开头的 Graph。我们配置一个 Checkpointer，并在 <code>review</code> 执行前暂停：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">langgraph.checkpoint.memory</span> <span class="kn">import</span> <span class="n">InMemorySaver</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">InMemorySaver</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">checkpointer</span><span class="o">=</span><span class="n">checkpointer</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">interrupt_before</span><span class="o">=</span><span class="p">[</span><span class="s2">&#34;review&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;configurable&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;thread_id&#34;</span><span class="p">:</span> <span class="s2">&#34;article-1&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 执行到 review 之前暂停</span>
+</span></span><span class="line"><span class="cl"><span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">({</span><span class="s2">&#34;topic&#34;</span><span class="p">:</span> <span class="s2">&#34;LangGraph Workflow&#34;</span><span class="p">},</span> <span class="n">config</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>此时已经完成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">START -&gt; plan -&gt; writer_a / writer_b -&gt; Update
+</span></span><span class="line"><span class="cl">                                         ↓
+</span></span><span class="line"><span class="cl">                                  checkpoint
+</span></span><span class="line"><span class="cl">                                         ↓
+</span></span><span class="line"><span class="cl">                                下一个节点是 review
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="81-checkpoint-保存哪些值">8.1 Checkpoint 保存哪些值</h3>
+<p>可以通过 <code>get_state()</code> 查看恢复所需的公开状态，也可以直接从 Checkpointer 读取底层记录：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">snapshot</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_state</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">saved</span> <span class="o">=</span> <span class="n">checkpointer</span><span class="o">.</span><span class="n">get_tuple</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">checkpoint</span> <span class="o">=</span> <span class="n">saved</span><span class="o">.</span><span class="n">checkpoint</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>底层 Checkpoint 的核心结构可以简化为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">checkpoint</span> <span class="o">=</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;checkpoint-id&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;ts&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;channel_values&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;topic&#34;</span><span class="p">:</span> <span class="s2">&#34;LangGraph Workflow&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;outline&#34;</span><span class="p">:</span> <span class="s2">&#34;LangGraph Workflow：定义、实现、执行&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;drafts&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;版本 A：...&#34;</span><span class="p">,</span> <span class="s2">&#34;版本 B：...&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;join:writer_a+writer_b:review&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;writer_a&#34;</span><span class="p">,</span> <span class="s2">&#34;writer_b&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;channel_versions&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;topic&#34;</span><span class="p">:</span> <span class="s2">&#34;v1&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;outline&#34;</span><span class="p">:</span> <span class="s2">&#34;v2&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;drafts&#34;</span><span class="p">:</span> <span class="s2">&#34;v3&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;join:writer_a+writer_b:review&#34;</span><span class="p">:</span> <span class="s2">&#34;v3&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># 还会包含已经消费、当前为空的控制 Channel 的版本</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;versions_seen&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;plan&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;branch:to:plan&#34;</span><span class="p">:</span> <span class="s2">&#34;v1&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;writer_a&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;branch:to:writer_a&#34;</span><span class="p">:</span> <span class="s2">&#34;v2&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;writer_b&#34;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&#34;branch:to:writer_b&#34;</span><span class="p">:</span> <span class="s2">&#34;v2&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># review 尚未执行，所以还没有消费 Barrier 的 v3</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;updated_channels&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;drafts&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;join:writer_a+writer_b:review&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">],</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面使用 <code>v1/v2/v3</code> 简化实际版本字符串。各字段的作用是：</p>
+<table>
+	<thead>
+			<tr>
+					<th>字段</th>
+					<th>持久化内容</th>
+					<th>恢复时的用途</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>channel_values</code></td>
+					<td>数据 Channel 和当前可用的控制 Channel 的快照</td>
+					<td>重建每个 Channel 的当前值</td>
+			</tr>
+			<tr>
+					<td><code>channel_versions</code></td>
+					<td>每个 Channel 的当前版本</td>
+					<td>判断 Channel 当前是哪一次更新</td>
+			</tr>
+			<tr>
+					<td><code>versions_seen</code></td>
+					<td>每个节点已经处理到的 Trigger 版本</td>
+					<td>避免恢复后重复执行已完成节点</td>
+			</tr>
+			<tr>
+					<td><code>updated_channels</code></td>
+					<td>最近一个 Superstep 更新且可用的 Channel</td>
+					<td>快速找出下一步候选节点</td>
+			</tr>
+			<tr>
+					<td><code>id</code>、<code>ts</code></td>
+					<td>Checkpoint 标识和时间</td>
+					<td>定位、排序和选择恢复点</td>
+			</tr>
+	</tbody>
+</table>
+<p>并非所有 Channel 都会出现在 <code>channel_values</code> 中。比如 <code>branch:to:writer_a</code> 使用 <code>EphemeralValue</code>，被消费后已经为空，因此没有可保存的值；但它的版本仍保留在 <code>channel_versions</code> 中。</p>
+<p><code>thread_id</code> 不在 Checkpoint 内容内部，它是 Checkpointer 查找这条执行记录的键。同一个 <code>thread_id</code> 下可以保存按 <code>checkpoint_id</code> 串联起来的多个 Checkpoint。</p>
+<p>完整的持久化记录是一个 CheckpointTuple。除上面的 checkpoint 外，它还包含：</p>
+<ul>
+<li>config：thread_id、checkpoint_id 和 checkpoint namespace</li>
+<li>metadata：本记录来自输入、普通循环还是手工更新，以及 step、parents 等信息</li>
+<li>parent_config：上一个 Checkpoint，用于形成执行历史</li>
+<li>pending_writes：当前 Superstep 中已经完成的 Task Writes</li>
+</ul>
+<h3 id="82-如何从-checkpoint-恢复">8.2 如何从 Checkpoint 恢复</h3>
+<p>在同一进程中可以继续使用上面的 checkpointer 和相同的 thread_id；下面重新编译 Graph 来模拟恢复：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">graph</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">checkpointer</span><span class="o">=</span><span class="n">checkpointer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;configurable&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;thread_id&#34;</span><span class="p">:</span> <span class="s2">&#34;article-1&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># None 表示不提交新输入，从已有 Checkpoint 继续</span>
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>真实跨进程场景不能新建一个空的 <code>InMemorySaver</code>，应使用保存了原记录的数据库 Checkpointer；这里的关键是 Graph 获得同一份持久化记录。</p>
+<p>恢复过程如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">1. Checkpointer 根据 thread_id 读取最新 Checkpoint
+</span></span><span class="line"><span class="cl">2. channels_from_checkpoint() 用 channel_values 重建 Channels
+</span></span><span class="line"><span class="cl">3. 恢复 channel_versions、versions_seen 和 updated_channels
+</span></span><span class="line"><span class="cl">4. updated_channels 中的 Barrier Channel 映射到候选节点 review
+</span></span><span class="line"><span class="cl">5. 比较 Barrier 当前版本 v3 与 review 的 versions_seen
+</span></span><span class="line"><span class="cl">6. review 尚未见过 v3，因此创建 review Task
+</span></span><span class="line"><span class="cl">7. review 读取已恢复的 topic、outline、drafts，Graph 继续执行
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此恢复后不会重新执行 <code>plan</code>、<code>writer_a</code> 和 <code>writer_b</code>：它们的 Trigger 版本已经记录在 <code>versions_seen</code> 中。<code>review</code> 尚未消费 Barrier 的当前版本，所以从 <code>review</code> 继续。</p>
+<p>这说明 LangGraph 持久化的不是单独一个 State 字典，而是一个能够重新启动 Pregel 调度的运行时快照：</p>
+<blockquote>
+<p><strong>Channel Values 恢复数据，Channel Versions 和 Versions Seen 恢复执行位置，Updated Channels 帮助快速找到下一批节点。</strong></p>
+</blockquote>
+<h3 id="83-superstep-中途失败">8.3 Superstep 中途失败</h3>
+<p>Checkpoint 保存的是 Superstep 边界状态。如果一个 Superstep 内有多个并行 Task，LangGraph 还可以把已完成 Task 的 Writes 作为 <code>pending_writes</code> 单独保存。</p>
+<p>恢复时，已成功 Task 的 Writes 会重新挂回对应 Task；Runner 只执行尚无 Writes 的失败或未完成 Task。等本轮全部 Task 完成后，再统一 <code>apply_writes()</code> 并创建新的 Checkpoint。这样可以避免并行步骤中已经成功的节点被重复执行。</p>
+<h2 id="9-源码阅读">9. 源码阅读</h2>
 <p>本文基于 LangGraph <code>1.2.10</code>、commit <code>658541c4960f329864a2523fc7d52427e8190bed</code>：</p>
 <ol>
 <li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/langgraph/langgraph/pregel/_read.py#L97-L170" target="_blank" rel="noopener noreffer"><code>PregelNode</code> 的接口</a></li>
@@ -1271,13 +1527,16 @@
 <li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/langgraph/langgraph/pregel/_algo.py#L1260-L1277" target="_blank" rel="noopener noreffer">Trigger 的 Channel 版本检查</a></li>
 <li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/langgraph/langgraph/pregel/_algo.py#L232-L345" target="_blank" rel="noopener noreffer">Update 阶段的 <code>apply_writes()</code></a></li>
 <li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/checkpoint/langgraph/checkpoint/base/__init__.py#L692-L711" target="_blank" rel="noopener noreffer">Version 生成接口 get_next_version()</a></li>
+<li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/checkpoint/langgraph/checkpoint/base/__init__.py#L92-L146" target="_blank" rel="noopener noreffer">Checkpoint 数据结构</a></li>
+<li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/langgraph/langgraph/pregel/_checkpoint.py#L149-L277" target="_blank" rel="noopener noreffer">创建和恢复 Channel Checkpoint</a></li>
+<li><a href="https://github.com/langchain-ai/langgraph/blob/658541c4960f329864a2523fc7d52427e8190bed/libs/langgraph/langgraph/pregel/_loop.py#L1081-L1219" target="_blank" rel="noopener noreffer">每个 Superstep 保存 Checkpoint</a></li>
 </ol>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2026-08-07&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/8213182f503043853b9168d17887c205cf22e81b" target="_blank" title="commit by tao(tao@example.com) 8213182f503043853b9168d17887c205cf22e81b: copilot and Multi-agent">
-                                    <i class="fas fa-hashtag fa-fw"></i>8213182</a></span>
+                <span>更新于 2026-08-13&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/756f59e3cf5b566acfde6aa8458caf31ac7de4c4" target="_blank" title="commit by tao(tao@example.com) 756f59e3cf5b566acfde6aa8458caf31ac7de4c4: claude code 实现、langgraph、base agent">
+                                    <i class="fas fa-hashtag fa-fw"></i>756f59e</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>
