@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>Mem0 详解：长期记忆、Scope 与检索流程 - LoveIt</title><meta name="Description" content="从本地代码解释 Mem0 的 Memory、Entity、History、近期消息、Scope 和检索流程"><meta property="og:url" content="https://hotttao.github.io/posts/aigc/rag/005_mem0/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="Mem0 详解：长期记忆、Scope 与检索流程">
+	<meta property="og:description" content="从本地代码解释 Mem0 的 Memory、Entity、History、近期消息、Scope 和检索流程">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-08-15T12:00:00+08:00">
+		<meta property="article:modified_time" content="2026-08-16T23:21:16+08:00">
+		<meta property="article:tag" content="RAG">
+		<meta property="article:tag" content="Mem0">
+		<meta property="article:tag" content="Agent Memory">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="Mem0 详解：长期记忆、Scope 与检索流程">
+	<meta name="twitter:description" content="从本地代码解释 Mem0 的 Memory、Entity、History、近期消息、Scope 和检索流程">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/rag/005_mem0/" /><link rel="prev" href="https://hotttao.github.io/posts/hugo/loveit_emoji/" /><link rel="next" href="https://hotttao.github.io/posts/hugo/markdown/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Mem0 详解：长期记忆、Scope 与检索流程",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/rag\/005_mem0\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "RAG, Mem0, Agent Memory","wordcount":  3180 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/rag\/005_mem0\/","datePublished": "2026-08-15T12:00:00+08:00","dateModified": "2026-08-16T23:21:16+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "从本地代码解释 Mem0 的 Memory、Entity、History、近期消息、Scope 和检索流程"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent_core/"><i class="far fa-folder-open fa-fw"></i>&nbsp;agent_core</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">RAG</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/rag/003_rag_index_enhancement/">RAG 索引增强：从原始事实到多路检索投影</a></li><li><a href="/posts/aigc/rag/004_ragflow/">RAGFlow 详解：架构、数据层级与检索流程</a></li><li><a href="/posts/aigc/rag/005_mem0/" class="active">Mem0 详解：长期记忆、Scope 与检索流程</a></li><li><a href="/posts/aigc/rag/006_rag_framework_comparison/">RAG 框架对比与选型：RAGFlow、Mem0</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">Mem0 详解：长期记忆、Scope 与检索流程</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent_core/"><i class="far fa-folder fa-fw"></i>Agent_core</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-08-15">2026-08-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3180 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-总体架构与底层存储">1. 总体架构与底层存储</a></li>
+    <li><a href="#2-mem0-有没有-tenantkbdocument-层级">2. Mem0 有没有 Tenant、KB、Document 层级</a>
+      <ul>
+        <li><a href="#21-scope-是多维过滤不是父子树">2.1 Scope 是多维过滤，不是父子树</a></li>
+        <li><a href="#22-为什么-user_id-不能直接等同-tenant">2.2 为什么 user_id 不能直接等同 Tenant</a></li>
+        <li><a href="#23-scope-如何进入读取过滤">2.3 Scope 如何进入读取过滤</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-memoryentity-与-history-保存什么">3. Memory、Entity 与 History 保存什么</a>
+      <ul>
+        <li><a href="#31-memory-vector-store">3.1 Memory Vector Store</a></li>
+        <li><a href="#32-entity-vector-store">3.2 Entity Vector Store</a></li>
+        <li><a href="#33-history-store">3.3 History Store</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-messages近期消息如何生成和读取">4. <code>messages</code>：近期消息如何生成和读取</a></li>
+    <li><a href="#5-写入memory-抽取流程">5. 写入：Memory 抽取流程</a></li>
+    <li><a href="#6-读取memory-检索流程">6. 读取：Memory 检索流程</a></li>
+    <li><a href="#7-显式更新删除与边界">7. 显式更新、删除与边界</a></li>
+    <li><a href="#8-本地代码依据">8. 本地代码依据</a></li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>Mem0 不是传统文档 RAG，而是 Agent 的长期记忆层。它从对话中提炼值得长期保存的事实，再按用户、Agent 或运行实例检索这些事实。</p>
+<p>它解决的核心问题是：<strong>模型上下文窗口有限且会话结束后状态丢失，如何用较小的 Token 成本保留用户偏好和长期上下文。</strong></p>
+<!-- more -->
+<blockquote>
+<p>本文依据本地 Mem0 提交 <code>001c235229be8795e3834520467bd0d661ed8f34</code> 分析。当前 OSS 主摄取路径为 ADD-only，Graph Memory 不在这版 OSS SDK 中。</p>
+</blockquote>
+<h2 id="1-总体架构与底层存储">1. 总体架构与底层存储</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart TB
+</span></span><span class="line"><span class="cl">    APP[Agent / Application] --&gt; SDK[Memory SDK]
+</span></span><span class="line"><span class="cl">    REST[FastAPI Server] --&gt; SDK
+</span></span><span class="line"><span class="cl">    SDK --&gt; LLM[LLM：事实抽取]
+</span></span><span class="line"><span class="cl">    SDK --&gt; EMB[Embedder]
+</span></span><span class="line"><span class="cl">    SDK --&gt; MV[(Memory Vector Store)]
+</span></span><span class="line"><span class="cl">    SDK --&gt; EV[(Entity Vector Store)]
+</span></span><span class="line"><span class="cl">    SDK --&gt; H[(SQLite：history + messages)]
+</span></span><span class="line"><span class="cl">    SDK --&gt; RR[可选 Reranker]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><table>
+	<thead>
+			<tr>
+					<th>运行方式</th>
+					<th>Memory Store</th>
+					<th>Entity Store</th>
+					<th>History Store</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>OSS SDK 默认</td>
+					<td>本地 Qdrant <code>mem0</code></td>
+					<td>同一 Qdrant <code>mem0_entities</code></td>
+					<td>SQLite <code>~/.mem0/history.db</code></td>
+			</tr>
+			<tr>
+					<td>仓库 REST Server 默认</td>
+					<td>pgvector <code>memories</code></td>
+					<td>同一 pgvector <code>memories_entities</code></td>
+					<td>SQLite <code>/app/history/history.db</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>向量 Store 可替换为 Qdrant、pgvector、Milvus、Elasticsearch、Redis 等 Provider。Entity Store 复用同一 Provider，只是使用另一个 Collection。</p>
+<p>在 pgvector 中，两个表都是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="n">id</span><span class="w"> </span><span class="n">UUID</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">vector</span><span class="w"> </span><span class="n">vector</span><span class="p">(</span><span class="mi">1536</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">payload</span><span class="w"> </span><span class="n">JSONB</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="2-mem0-有没有-tenantkbdocument-层级">2. Mem0 有没有 Tenant、KB、Document 层级</h2>
+<p>没有。Mem0 原生模型不是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Tenant → KB → Document → Chunk
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>而是把身份范围作为并列字段附着到 Memory：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart LR
+</span></span><span class="line"><span class="cl">    M[Memory] --&gt; U[user_id]
+</span></span><span class="line"><span class="cl">    M --&gt; A[agent_id]
+</span></span><span class="line"><span class="cl">    M --&gt; R[run_id]
+</span></span><span class="line"><span class="cl">    M --&gt; MD[自定义 Metadata]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="21-scope-是多维过滤不是父子树">2.1 Scope 是多维过滤，不是父子树</h3>
+<ul>
+<li><code>user_id</code>：这是谁的记忆。</li>
+<li><code>agent_id</code>：哪个 Agent 产生或使用这条记忆。</li>
+<li><code>run_id</code>：哪次运行或会话实例的记忆。</li>
+</ul>
+<p>一条 Memory 可以同时带三个字段。它们之间没有“user 包含 agent、agent 包含 run”的外键或级联关系；查询时只是求字段交集：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">user_id = user-42
+</span></span><span class="line"><span class="cl">AND agent_id = restaurant-assistant
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Mem0 要求写入至少提供其中一个 Scope。查询也必须带 Scope Filter，从而避免把不同用户或 Agent 的 Memory 混在一起。</p>
+<h3 id="22-为什么-user_id-不能直接等同-tenant">2.2 为什么 user_id 不能直接等同 Tenant</h3>
+<p><code>user_id</code> 可以隔离个人记忆，但 Mem0 OSS 没有 RAGFlow 那样的 Tenant、成员角色、KB 所有权、Document 生命周期和 Chunk 级联删除模型。</p>
+<p>可以用 Metadata 模拟业务字段：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;tenant_id&#34;</span><span class="p">:</span> <span class="s2">&#34;company-a&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;customer-service&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;document_id&#34;</span><span class="p">:</span> <span class="s2">&#34;refund-policy&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>但它们只是 payload 过滤字段，不会自动产生企业成员权限、知识库管理、文档解析或引用能力。如果需要多租户授权，宿主 API 必须自己验证调用者，再构造可信 Scope/Metadata；不能允许客户端任意指定其他用户的 <code>user_id</code>。</p>
+<h3 id="23-scope-如何进入读取过滤">2.3 Scope 如何进入读取过滤</h3>
+<p><code>add()</code> 会把顶层 <code>user_id</code>、<code>agent_id</code>、<code>run_id</code> 固定写入 Memory payload。调用方 Metadata 中伪造的同名身份字段会被移除，避免把 Memory 写入未声明的 Scope。</p>
+<p><code>search()</code> 使用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">filters</span><span class="o">=</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;user_id&#34;</span><span class="p">:</span> <span class="s2">&#34;user-42&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;agent_id&#34;</span><span class="p">:</span> <span class="s2">&#34;restaurant-assistant&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这些条件进入向量数据库搜索，只在相同 Scope 中召回 Dense 候选。它属于召回前过滤，不是拿到全局 Top K 后再删除。</p>
+<p>但这只是数据范围过滤，不等于完整鉴权。SDK 不知道当前登录者是否真的有权使用 <code>user-42</code>，授权仍由宿主应用负责。</p>
+<h2 id="3-memoryentity-与-history-保存什么">3. Memory、Entity 与 History 保存什么</h2>
+<h3 id="31-memory-vector-store">3.1 Memory Vector Store</h3>
+<p>Memory 是从对话提炼出的自包含短事实。一条记录类似：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;7bc4cd95-cf1a-4c55-92d6-28730311d271&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;vector&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.018</span><span class="p">,</span> <span class="mf">-0.032</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;payload&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;data&#34;</span><span class="p">:</span> <span class="s2">&#34;用户对花生过敏&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;text_lemmatized&#34;</span><span class="p">:</span> <span class="s2">&#34;用户 对 花生 过敏&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;hash&#34;</span><span class="p">:</span> <span class="s2">&#34;c7e36cc3816f4d65a5bc0e772cca52f4&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;user_id&#34;</span><span class="p">:</span> <span class="s2">&#34;user-42&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;agent_id&#34;</span><span class="p">:</span> <span class="s2">&#34;restaurant-assistant&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;created_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-08-15T02:00:00+00:00&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;updated_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-08-15T02:00:00+00:00&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;category&#34;</span><span class="p">:</span> <span class="s2">&#34;dietary_restriction&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>data</code> 是 Memory 文本，<code>vector</code> 用于语义检索，Scope 用于过滤，<code>hash</code> 用于文本精确去重。自定义 Metadata 会展开到 payload 中，而不是嵌套在 <code>metadata</code> 字段下。</p>
+<h3 id="32-entity-vector-store">3.2 Entity Vector Store</h3>
+<p>Entity Store 保存实体向量及其关联 Memory ID：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;entity-uuid&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;vector&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.024</span><span class="p">,</span> <span class="mf">-0.019</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;payload&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;data&#34;</span><span class="p">:</span> <span class="s2">&#34;上海&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;entity_type&#34;</span><span class="p">:</span> <span class="s2">&#34;PROPER&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;linked_memory_ids&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;memory-1&#34;</span><span class="p">,</span> <span class="s2">&#34;memory-2&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;user_id&#34;</span><span class="p">:</span> <span class="s2">&#34;user-42&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查询提到“上海”时，系统找到实体记录，再给关联 Memory 加分。它是实体到 Memory 的辅助目录，不保存“实体—关系—实体”，所以不是知识图谱。</p>
+<h3 id="33-history-store">3.3 History Store</h3>
+<p>SQLite <code>history</code> 表记录 Memory 的 ADD、UPDATE、DELETE：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;memory_id&#34;</span><span class="p">:</span> <span class="s2">&#34;memory-1&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;old_memory&#34;</span><span class="p">:</span> <span class="s2">&#34;用户住在北京&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;new_memory&#34;</span><span class="p">:</span> <span class="s2">&#34;用户住在上海&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;event&#34;</span><span class="p">:</span> <span class="s2">&#34;UPDATE&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;created_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-08-15T01:00:00+00:00&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;updated_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-08-15T03:00:00+00:00&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;is_deleted&#34;</span><span class="p">:</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>History 是审计日志，不参与相似度检索，也不是支持原子回退的版本库。当前值在向量 Store，历史在 SQLite，两者不是同一个数据库事务。</p>
+<h2 id="4-messages近期消息如何生成和读取">4. <code>messages</code>：近期消息如何生成和读取</h2>
+<p>SQLite <code>messages</code> 保存 <code>memory.add(messages=...)</code> 收到的原始消息副本，不是 LLM 摘要，也不是从 Memory 还原的内容。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">sequenceDiagram
+</span></span><span class="line"><span class="cl">    participant A as Application
+</span></span><span class="line"><span class="cl">    participant M as Mem0 add()
+</span></span><span class="line"><span class="cl">    participant S as SQLite messages
+</span></span><span class="line"><span class="cl">    participant V as Memory Store
+</span></span><span class="line"><span class="cl">    participant L as LLM
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    A-&gt;&gt;M: 本轮消息 + Scope
+</span></span><span class="line"><span class="cl">    M-&gt;&gt;S: 读取相同 session_scope 最近 10 条
+</span></span><span class="line"><span class="cl">    M-&gt;&gt;V: 用本轮消息召回相关 Memory
+</span></span><span class="line"><span class="cl">    M-&gt;&gt;L: 近期消息 + 本轮消息 + 相关 Memory
+</span></span><span class="line"><span class="cl">    L--&gt;&gt;M: 新的长期事实
+</span></span><span class="line"><span class="cl">    M-&gt;&gt;V: 保存 Memory
+</span></span><span class="line"><span class="cl">    M-&gt;&gt;S: 保存本轮原始消息并淘汰旧消息
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>LLM 同时看到：</p>
+<table>
+	<thead>
+			<tr>
+					<th>输入</th>
+					<th>来源</th>
+					<th>作用</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Last k Messages</td>
+					<td>SQLite 相同 Scope</td>
+					<td>理解代词、省略和近期事件</td>
+			</tr>
+			<tr>
+					<td>New Messages</td>
+					<td>本次 <code>add()</code></td>
+					<td>本轮主要抽取对象</td>
+			</tr>
+			<tr>
+					<td>Existing Memories</td>
+					<td>向量库相关 Memory</td>
+					<td>去重和建立新旧关联</td>
+			</tr>
+	</tbody>
+</table>
+<p><code>session_scope</code> 由 Scope 字段按固定顺序拼接，例如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">agent_id=travel-assistant&amp;user_id=user-42
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>只有完全相同的组合才能共享近期消息。只带 <code>user_id</code> 与同时带 <code>user_id+agent_id</code> 是两个不同的 <code>session_scope</code>。</p>
+<p>例如第一轮说“我姐姐小王下周来上海”，第二轮只说“她不吃花生”。第二次抽取时，近期消息帮助 LLM 把“她”解析成“小王”，产生自包含 Memory“用户的姐姐小王不吃花生”。</p>
+<p>边界包括：</p>
+<ul>
+<li>最近 10 条是 10 条消息，不是 10 轮对话。</li>
+<li>超过 10 条会滚动淘汰，不能当完整会话存档。</li>
+<li>普通 <code>search()</code> 不读取 <code>messages</code>，它们也不会自动进入 Agent 最终回答。</li>
+<li><code>infer=False</code> 直接把消息写成 Memory，不经过近期消息流程。</li>
+<li><code>save_messages()</code> 不去重，调用方应优先只传本轮新增消息。</li>
+</ul>
+<h2 id="5-写入memory-抽取流程">5. 写入：Memory 抽取流程</h2>
+<p>当前 <code>infer=True</code> 主路径为 ADD-only：</p>
+<ol>
+<li>验证至少存在一个 Scope。</li>
+<li>读取最近 10 条消息。</li>
+<li>用本轮消息向量召回最多 10 条既有 Memory。</li>
+<li>LLM 从三类上下文中抽取新的、自包含事实。</li>
+<li>对新事实批量 Embedding，并通过 MD5 去重。</li>
+<li>写入 Memory Store 和 ADD History。</li>
+<li>抽取实体，写入或更新 Entity Store。</li>
+<li>保存本轮消息。</li>
+</ol>
+<p>当前自动摄取不会自动用新事实覆盖或删除旧事实。代码虽然保留旧 Update Prompt，但实际使用的 Additive Prompt 明确只执行 ADD。更新和删除要调用显式 API。</p>
+<h2 id="6-读取memory-检索流程">6. 读取：Memory 检索流程</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart LR
+</span></span><span class="line"><span class="cl">    Q[Query + Scope] --&gt; E[Query Embedding]
+</span></span><span class="line"><span class="cl">    E --&gt; D[Dense 超额召回]
+</span></span><span class="line"><span class="cl">    Q --&gt; B[BM25]
+</span></span><span class="line"><span class="cl">    Q --&gt; X[实体搜索]
+</span></span><span class="line"><span class="cl">    D --&gt; C[Dense 候选]
+</span></span><span class="line"><span class="cl">    B --&gt; S[BM25 加分]
+</span></span><span class="line"><span class="cl">    X --&gt; G[Entity Boost]
+</span></span><span class="line"><span class="cl">    C --&gt; F[融合分数]
+</span></span><span class="line"><span class="cl">    S --&gt; F
+</span></span><span class="line"><span class="cl">    G --&gt; F
+</span></span><span class="line"><span class="cl">    F --&gt; R[可选 Reranker]
+</span></span><span class="line"><span class="cl">    R --&gt; O[Memory 列表]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>检索会从 Dense Store 超额召回，按可用信号加入 BM25 和 Entity Boost，再做阈值、Top K 和可选重排。</p>
+<p>当前实现的候选集只来自 Dense Search；BM25 和 Entity 主要为这些 Dense 候选加分，无法把完全未被 Dense 命中的 Memory 加入候选。这与“多路候选取并集”不同。</p>
+<p>Mem0 只返回 Memory，不负责最终回答、文档上下文构建和引用。宿主 Agent 需要决定怎样把 Memory、业务文档和当前会话组合进 Prompt。</p>
+<h2 id="7-显式更新删除与边界">7. 显式更新、删除与边界</h2>
+<p>Mem0 提供 <code>update(memory_id)</code>、<code>delete(memory_id)</code>、<code>delete_all(scope)</code> 和 <code>history(memory_id)</code>：</p>
+<ul>
+<li>Update 重新生成向量并记录 UPDATE。</li>
+<li>Delete 删除向量、清理实体关联并记录 DELETE。</li>
+<li>Scope 身份字段不能通过普通 Metadata 修改。</li>
+<li><code>expiration_date</code> 可以让过期 Memory 默认退出检索。</li>
+</ul>
+<p>它的边界是：</p>
+<ul>
+<li>没有完整原始会话事实视图，只保留滚动近期消息。</li>
+<li>History 与向量 Store 非原子，也没有 CAS 和一键回退。</li>
+<li>ADD-only 自动管线不会自动解决冲突事实谁是当前状态。</li>
+<li>没有文档解析、父子 Chunk、页码引用和文档权限模型。</li>
+<li>OSS SDK 的实体 Collection 不是 Graph Memory。</li>
+</ul>
+<h2 id="8-本地代码依据">8. 本地代码依据</h2>
+<ul>
+<li><code>mem0/memory/main.py</code>：Scope、ADD-only 抽取、Memory/Entity 写入和检索。</li>
+<li><code>mem0/memory/storage.py</code>：SQLite <code>history</code>、<code>messages</code> 及最近 10 条逻辑。</li>
+<li><code>mem0/configs/prompts.py</code>：Additive Extraction Prompt。</li>
+<li><code>mem0/utils/entity_extraction.py</code>：实体类型与抽取。</li>
+<li><code>mem0/utils/scoring.py</code>：Semantic、BM25、Entity Boost 融合。</li>
+<li><code>mem0/vector_stores/pgvector.py</code>：pgvector 表和搜索实现。</li>
+<li><code>server/main.py</code>、<code>server/docker-compose.yaml</code>：REST Server 默认 pgvector 与 SQLite 配置。</li>
+</ul>
+<p>上一篇：<a href="./004_ragflow.md" rel="">RAGFlow 详解</a>。对比与选型见：<a href="./006_rag_framework_comparison.md" rel="">RAG 框架对比与选型</a>。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-16&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/1715a691f0a021a83e97aae252c93d184be0d68c" target="_blank" title="commit by tao(tao@example.com) 1715a691f0a021a83e97aae252c93d184be0d68c: rag">
+                                    <i class="fas fa-hashtag fa-fw"></i>1715a69</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/rag/005_mem0/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/rag/005_mem0/" data-title="Mem0 详解：长期记忆、Scope 与检索流程" data-hashtags="RAG,Mem0,Agent Memory"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/rag/005_mem0/" data-hashtag="RAG"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/rag/005_mem0/" data-title="Mem0 详解：长期记忆、Scope 与检索流程"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/rag/005_mem0/" data-title="Mem0 详解：长期记忆、Scope 与检索流程"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/rag/005_mem0/" data-title="Mem0 详解：长期记忆、Scope 与检索流程" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/rag/">RAG</a>,&nbsp;<a href="/tags/mem0/">Mem0</a>,&nbsp;<a href="/tags/agent-memory/">Agent Memory</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/hugo/loveit_emoji/" class="prev" rel="prev" title="Loveit Emoji 支持"><i class="fas fa-angle-left fa-fw"></i>Loveit Emoji 支持</a>
+            <a href="/posts/hugo/markdown/" class="next" rel="next" title="Markdown 基本语法">Markdown 基本语法<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2026-08-15T12:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"Mem0 详解：长期记忆、Scope 与检索流程"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>RAGFlow 详解：架构、数据层级与检索流程 - LoveIt</title><meta name="Description" content="从本地代码分析 RAGFlow 的架构、Tenant/KB/Document 层级、摄取、检索、结构增强与引用"><meta property="og:url" content="https://hotttao.github.io/posts/aigc/rag/004_ragflow/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="RAGFlow 详解：架构、数据层级与检索流程">
+	<meta property="og:description" content="从本地代码分析 RAGFlow 的架构、Tenant/KB/Document 层级、摄取、检索、结构增强与引用">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-08-15T12:00:00+08:00">
+		<meta property="article:modified_time" content="2026-08-16T23:21:16+08:00">
+		<meta property="article:tag" content="RAG">
+		<meta property="article:tag" content="RAGFlow">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="RAGFlow 详解：架构、数据层级与检索流程">
+	<meta name="twitter:description" content="从本地代码分析 RAGFlow 的架构、Tenant/KB/Document 层级、摄取、检索、结构增强与引用">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/rag/004_ragflow/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/workflow/004_langgraph_stream/" /><link rel="next" href="https://hotttao.github.io/posts/hugo/loveit_shortcodes/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "RAGFlow 详解：架构、数据层级与检索流程",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/rag\/004_ragflow\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "RAG, RAGFlow","wordcount":  16342 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/rag\/004_ragflow\/","datePublished": "2026-08-15T12:00:00+08:00","dateModified": "2026-08-16T23:21:16+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "从本地代码分析 RAGFlow 的架构、Tenant/KB/Document 层级、摄取、检索、结构增强与引用"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent_core/"><i class="far fa-folder-open fa-fw"></i>&nbsp;agent_core</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">RAG</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/rag/003_rag_index_enhancement/">RAG 索引增强：从原始事实到多路检索投影</a></li><li><a href="/posts/aigc/rag/004_ragflow/" class="active">RAGFlow 详解：架构、数据层级与检索流程</a></li><li><a href="/posts/aigc/rag/005_mem0/">Mem0 详解：长期记忆、Scope 与检索流程</a></li><li><a href="/posts/aigc/rag/006_rag_framework_comparison/">RAG 框架对比与选型：RAGFlow、Mem0</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">RAGFlow 详解：架构、数据层级与检索流程</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent_core/"><i class="far fa-folder fa-fw"></i>Agent_core</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-08-15">2026-08-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 16342 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 33 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-总体架构与底层存储">1. 总体架构与底层存储</a></li>
+    <li><a href="#2-tenantkbdocument-与-chunk-层级">2. Tenant、KB、Document 与 Chunk 层级</a>
+      <ul>
+        <li><a href="#21-tenant数据与模型配置的工作空间">2.1 Tenant：数据与模型配置的工作空间</a></li>
+        <li><a href="#22-knowledgebase同一主题的文档集合">2.2 Knowledgebase：同一主题的文档集合</a></li>
+        <li><a href="#23-document来源和处理状态">2.3 Document：来源和处理状态</a></li>
+        <li><a href="#24-chunk-如何保存归属">2.4 Chunk 如何保存归属</a></li>
+        <li><a href="#25-本文贯穿示例mysql索引md">2.5 本文贯穿示例：<code>MySQL索引.md</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#3-层级权限和读取过滤">3. 层级权限和读取过滤</a>
+      <ul>
+        <li><a href="#31-api-层先判断能否访问-kb">3.1 API 层先判断能否访问 KB</a></li>
+        <li><a href="#32-先确定检索范围再计算内容相关性">3.2 先确定检索范围，再计算内容相关性</a>
+          <ul>
+            <li><a href="#tenant_id-选择租户索引是什么意思"><code>tenant_id</code> 选择租户索引是什么意思</a></li>
+            <li><a href="#系统怎么知道问题与哪个-kb-相关">系统怎么知道问题与哪个 KB 相关</a></li>
+            <li><a href="#完整过滤和召回顺序">完整过滤和召回顺序</a></li>
+          </ul>
+        </li>
+        <li><a href="#33-权限模型的边界">3.3 权限模型的边界</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-写入文档摄取流程">4. 写入：文档摄取流程</a></li>
+    <li><a href="#5-读取混合召回与重排">5. 读取：混合召回与重排</a>
+      <ul>
+        <li><a href="#51-一次完整查询的主链">5.1 一次完整查询的主链</a>
+          <ul>
+            <li><a href="#q1-整理本次用于检索的问题">[Q1] 整理本次用于检索的问题</a></li>
+            <li><a href="#q2-确定允许检索的数据范围">[Q2] 确定允许检索的数据范围</a></li>
+            <li><a href="#q3-从同一个问题生成三种查询数据">[Q3] 从同一个问题生成三种查询数据</a></li>
+            <li><a href="#q4-es-初召回一个候选窗口">[Q4] ES 初召回一个候选窗口</a></li>
+            <li><a href="#q5-清除搜索索引中的失效记录">[Q5] 清除搜索索引中的失效记录</a></li>
+            <li><a href="#q6-为每个候选取得最终排序所需的信号">[Q6] 为每个候选取得最终排序所需的信号</a></li>
+            <li><a href="#q7-融合分数得到基础-top-chunk">[Q7] 融合分数，得到基础 Top Chunk</a></li>
+            <li><a href="#q8-可选的-toc-导航增强">[Q8] 可选的 TOC 导航增强</a></li>
+            <li><a href="#q9-把命中的子-chunk-替换为父-chunk">[Q9] 把命中的子 Chunk 替换为父 Chunk</a></li>
+            <li><a href="#q10-可选地合并外部搜索结果">[Q10] 可选地合并外部搜索结果</a></li>
+            <li><a href="#q11-可选地插入-graphrag-证据">[Q11] 可选地插入 GraphRAG 证据</a></li>
+            <li><a href="#q12-组装证据-prompt-并调用-llm">[Q12] 组装证据 Prompt 并调用 LLM</a></li>
+            <li><a href="#q13-校验或补插引用">[Q13] 校验或补插引用</a></li>
+            <li><a href="#检索增强位置总览">检索增强位置总览</a></li>
+          </ul>
+        </li>
+        <li><a href="#52-混合召回为什么包含两次-es-查询">5.2 混合召回为什么包含两次 ES 查询</a>
+          <ul>
+            <li><a href="#weighted_sum-fusion-是什么"><code>weighted_sum Fusion</code> 是什么</a>
+              <ul>
+                <li><a href="#第一次召回拿到哪些记录和分数">第一次召回：拿到哪些记录和分数</a></li>
+                <li><a href="#第二次搜索只为候选记录重新取得-knn-分数">第二次搜索：只为候选记录重新取得 KNN 分数</a></li>
+                <li><a href="#在-python-中计算最终分数并排序">在 Python 中计算最终分数并排序</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><a href="#53-父子-chunk-和-toc">5.3 父子 Chunk 和 TOC</a>
+          <ul>
+            <li><a href="#父子-chunk从章节大块切出检索小块">父子 Chunk：从章节大块切出检索小块</a></li>
+            <li><a href="#toc从已有-chunk-生成章节导航">TOC：从已有 Chunk 生成章节导航</a></li>
+          </ul>
+        </li>
+        <li><a href="#54-raptor-与-graphrag">5.4 RAPTOR 与 GraphRAG</a>
+          <ul>
+            <li><a href="#raptor从六个基础-chunk-生成多层摘要">RAPTOR：从六个基础 Chunk 生成多层摘要</a></li>
+            <li><a href="#graphrag如何启用">GraphRAG：如何启用</a></li>
+            <li><a href="#graphrag-使用什么数据库">GraphRAG 使用什么数据库</a></li>
+            <li><a href="#graphrag-如何构建更新和检索">GraphRAG 如何构建、更新和检索</a></li>
+          </ul>
+        </li>
+        <li><a href="#55-引用如何生成">5.5 引用如何生成</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-主要问题与解决方案">6. 主要问题与解决方案</a></li>
+    <li><a href="#7-事实源与检索投影的边界">7. 事实源与检索投影的边界</a></li>
+    <li><a href="#8-本地代码依据">8. 本地代码依据</a></li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>RAGFlow 是一个完整的文档 RAG 平台，覆盖文件上传、解析、分块、索引、混合检索、重排、上下文扩展、LLM 生成和引用回填。它适合处理 PDF、Word、网页、表格和扫描件等企业资料，而不只是提供一个向量检索 SDK。</p>
+<p>它解决的核心问题是：<strong>如何把复杂文档加工成可检索、可解释、可用于生成答案的证据。</strong></p>
+<!-- more -->
+<blockquote>
+<p>本文依据本地 RAGFlow 提交 <code>554fb1133ac3861732235ad9c377eb5e0a770665</code> 分析，以默认 Python API/Ingestion 和 Elasticsearch 路径为主。</p>
+</blockquote>
+<h2 id="1-总体架构与底层存储">1. 总体架构与底层存储</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart TB
+</span></span><span class="line"><span class="cl">    U[Web / REST API / SDK] --&gt; API[Quart API Server]
+</span></span><span class="line"><span class="cl">    API --&gt; SQL[(MySQL：控制面与业务元数据)]
+</span></span><span class="line"><span class="cl">    API --&gt; OBJ[(MinIO：原始文件与图片)]
+</span></span><span class="line"><span class="cl">    API --&gt; Q[(Redis Streams：任务队列)]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    Q --&gt; W[Task Executor]
+</span></span><span class="line"><span class="cl">    W --&gt; OBJ
+</span></span><span class="line"><span class="cl">    W --&gt; P[Parser / DeepDoc / OCR]
+</span></span><span class="line"><span class="cl">    P --&gt; C[分块与增强]
+</span></span><span class="line"><span class="cl">    C --&gt; E[Embedding]
+</span></span><span class="line"><span class="cl">    E --&gt; IDX[(Elasticsearch：全文与向量索引)]
+</span></span><span class="line"><span class="cl">    W --&gt; SQL
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    API --&gt; R[Dealer Retriever]
+</span></span><span class="line"><span class="cl">    R --&gt; IDX
+</span></span><span class="line"><span class="cl">    R --&gt; RR[融合与 Rerank]
+</span></span><span class="line"><span class="cl">    RR --&gt; L[LLM]
+</span></span><span class="line"><span class="cl">    L --&gt; CI[引用插入与修复]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><table>
+	<thead>
+			<tr>
+					<th>存储</th>
+					<th>默认实现</th>
+					<th>保存内容</th>
+					<th>角色</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>关系数据库</td>
+					<td>MySQL</td>
+					<td>Tenant、用户、KB、Document、Task、Dialog、配置</td>
+					<td>控制面和层级关系</td>
+			</tr>
+			<tr>
+					<td>对象存储</td>
+					<td>MinIO</td>
+					<td>原始文件、Chunk 图片、缩略图</td>
+					<td>原始二进制事实</td>
+			</tr>
+			<tr>
+					<td>文档引擎</td>
+					<td>Elasticsearch</td>
+					<td>Chunk 文本、向量、关键词、位置、图和摘要数据</td>
+					<td>检索投影</td>
+			</tr>
+			<tr>
+					<td>Redis</td>
+					<td>Redis Streams</td>
+					<td>任务、进度、取消、缓存和分布式状态</td>
+					<td>异步协调</td>
+			</tr>
+	</tbody>
+</table>
+<p>因此 RAGFlow 并没有把所有内容都放入“向量数据库”：原始文件、业务状态与检索投影分别存储。</p>
+<h2 id="2-tenantkbdocument-与-chunk-层级">2. Tenant、KB、Document 与 Chunk 层级</h2>
+<p>RAGFlow 原生维护以下层级：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart TB
+</span></span><span class="line"><span class="cl">    T[Tenant：租户 / 工作空间] --&gt; K[Knowledgebase：知识库]
+</span></span><span class="line"><span class="cl">    K --&gt; D[Document：来源文档]
+</span></span><span class="line"><span class="cl">    D --&gt; C1[Chunk：检索片段]
+</span></span><span class="line"><span class="cl">    D --&gt; C2[Chunk：检索片段]
+</span></span><span class="line"><span class="cl">    U[User] --&gt; UT[UserTenant：成员与角色]
+</span></span><span class="line"><span class="cl">    UT --&gt; T
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="21-tenant数据与模型配置的工作空间">2.1 Tenant：数据与模型配置的工作空间</h3>
+<p>MySQL 的 <code>tenant</code> 表保存租户 ID、名称、默认 LLM、Embedding、Rerank、OCR 和 Parser 等配置。<code>user_tenant</code> 表使用 <code>user_id + tenant_id + role</code> 表示用户加入了哪些 Tenant 以及角色。</p>
+<p>Tenant 是最大的隔离边界，但不等于单个用户。一个工作空间可以有多个成员；代码中知识库创建者的用户 ID 也常作为租户所有者 ID 使用。</p>
+<p>搜索侧会通过 Tenant 生成索引名：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">ragflow_&lt;tenant_id&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此 Tenant 不只是 Chunk 上的普通标签，它还参与选择物理搜索索引。</p>
+<h3 id="22-knowledgebase同一主题的文档集合">2.2 Knowledgebase：同一主题的文档集合</h3>
+<p>MySQL 的 <code>knowledgebase</code> 表通过 <code>tenant_id</code> 归属 Tenant，并保存：</p>
+<ul>
+<li>名称、描述、语言和创建者。</li>
+<li><code>permission=me|team</code> 的可见范围。</li>
+<li>默认 Embedding、Parser、相似度阈值与向量权重。</li>
+<li>文档数、Chunk 数和 Token 数。</li>
+<li>GraphRAG、RAPTOR 等知识库级任务状态。</li>
+</ul>
+<p>KB 是逻辑集合，不代表每个知识库单独部署一套 Elasticsearch。Chunk 通常仍在租户索引中，通过 <code>kb_id</code> 区分。</p>
+<h3 id="23-document来源和处理状态">2.3 Document：来源和处理状态</h3>
+<p>MySQL 的 <code>document</code> 表通过 <code>kb_id</code> 归属某个 Knowledgebase，并保存文件名、类型、来源、对象存储位置、Parser、解析状态、Chunk 数、Token 数等。</p>
+<p>Document 是管理和来源单位；Chunk 是它解析后产生的检索单位。普通 Chunk 正文主要保存在 Elasticsearch，而不是作为 MySQL 子表逐条保存。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Document：MySQL索引.md
+</span></span><span class="line"><span class="cl">  ├─ Chunk 1：B+ 树的节点结构
+</span></span><span class="line"><span class="cl">  ├─ Chunk 2：叶子页与范围查询
+</span></span><span class="line"><span class="cl">  ├─ Chunk 3：二级索引与回表
+</span></span><span class="line"><span class="cl">  └─ Chunk 4：全文索引与倒排表
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>File</code> 是另一套文件树模型，具有 <code>parent_id</code> 和 <code>tenant_id</code>，负责文件夹与原始文件管理。它不要和 Document→Chunk 的检索层级混为一谈。</p>
+<h3 id="24-chunk-如何保存归属">2.4 Chunk 如何保存归属</h3>
+<p>一条简化后的 Elasticsearch Chunk 类似：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;c-btree-2&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;docnm_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;MySQL索引.md&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子节点有序排列并通过链表连接，因此适合范围查询&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_ltks&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子 节点 链表 范围 查询&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.018</span><span class="p">,</span> <span class="mf">-0.032</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;page_num_int&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Chunk 不需要重复保存 <code>tenant_id</code>：调用方先用 Tenant 选择 <code>ragflow_&lt;tenant_id&gt;</code> 索引，再在索引内部按照 <code>kb_id</code>、<code>doc_id</code> 等字段过滤。</p>
+<h3 id="25-本文贯穿示例mysql索引md">2.5 本文贯穿示例：<code>MySQL索引.md</code></h3>
+<p>后文不再使用互不相关的零散样例，而是始终追踪同一篇文档在各阶段生成了什么记录。假设向 <code>database-kb</code> 上传 <code>MySQL索引.md</code>，Document ID 为 <code>mysql-index-doc</code>，原文如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl"># MySQL 索引
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">索引用额外的存储结构减少数据库需要扫描的数据量。不同索引适合解决不同查询问题，
+</span></span><span class="line"><span class="cl">并不是索引越多越好，因为索引还会占用空间，并增加插入、更新和删除的维护成本。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">## 一、B+ 树索引
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">InnoDB 的普通索引主要使用 B+ 树。B+ 树由根节点、中间节点和叶子节点组成。
+</span></span><span class="line"><span class="cl">根节点和中间节点主要保存键值及下一层页面的指针，真正的索引记录集中在叶子节点。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">叶子节点按照索引键有序排列，而且相邻叶子页之间存在链表指针。因此查询 id=100 时，
+</span></span><span class="line"><span class="cl">可以从根节点逐层定位叶子页；查询 id between 100 and 200 时，定位起点后可以沿叶子页顺序扫描。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">聚簇索引的叶子节点保存完整行数据，二级索引的叶子节点保存索引列和主键值。
+</span></span><span class="line"><span class="cl">使用二级索引查询其他列时，可能需要根据主键再次访问聚簇索引，这个过程通常称为回表。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">## 二、全文索引
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">全文索引适合对较长文本做关键词搜索。它不会按照整段文本建立 B+ 树查找路径，
+</span></span><span class="line"><span class="cl">而是先对文本分词，再维护“词语到文档或记录”的倒排映射。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">例如文章 A 包含 mysql 和 transaction，文章 B 包含 mysql 和 index，倒排表会记录
+</span></span><span class="line"><span class="cl">mysql -&gt; [A, B]、transaction -&gt; [A]、index -&gt; [B]。查询时可以根据关键词快速找到候选记录。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL 可以使用 MATCH(column) AGAINST(keyword) 执行全文查询。全文索引适合文章内容搜索，
+</span></span><span class="line"><span class="cl">但不适合替代主键查询、精确等值查询和范围查询；这些场景通常仍应使用 B+ 树索引。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面使用的 <code>c-btree-1</code>、<code>m-btree</code> 等 ID 都是为了便于阅读而简化的。真实 ID 通常是 UUID 或内容哈希；分词和完整向量也会省略，只保留能说明生成与索引过程的字段。</p>
+<h2 id="3-层级权限和读取过滤">3. 层级权限和读取过滤</h2>
+<p>层级关系不仅用于组织页面，也参与授权和检索。</p>
+<h3 id="31-api-层先判断能否访问-kb">3.1 API 层先判断能否访问 KB</h3>
+<p><code>KnowledgebaseService.accessible(kb_id, user_id)</code> 的逻辑是：</p>
+<ol>
+<li>KB 必须存在且状态有效。</li>
+<li>如果用户就是 KB 所属 Tenant 的所有者，允许访问。</li>
+<li>否则 KB 必须是 <code>team</code> 权限。</li>
+<li>用户还必须是对应 Tenant 的有效成员。</li>
+</ol>
+<p><code>DocumentService.accessible(doc_id, user_id)</code> 先找到 Document，再把检查委托给它所属的 KB。因此 Document 权限继承自 KB，而不是每个 Document 单独维护一套 ACL。</p>
+<h3 id="32-先确定检索范围再计算内容相关性">3.2 先确定检索范围，再计算内容相关性</h3>
+<p>这里最容易产生的误解是：RAGFlow 会不会先分析用户问题，再依次推断 Tenant、KB 和 Document？</p>
+<p>标准对话流程并不是这样。它实际上把检索分成两个问题：</p>
+<table>
+	<thead>
+			<tr>
+					<th>阶段</th>
+					<th>回答的问题</th>
+					<th>决定依据</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>范围选择</td>
+					<td>允许去哪里搜索？</td>
+					<td>Dialog 配置、用户选择、API 参数和权限</td>
+			</tr>
+			<tr>
+					<td>相关性计算</td>
+					<td>范围内哪些 Chunk 与问题相关？</td>
+					<td>全文检索、向量检索和 Reranker</td>
+			</tr>
+	</tbody>
+</table>
+<p>也就是说，<code>tenant_ids</code>、<code>kb_ids</code> 和可选的 <code>doc_ids</code> 通常在调用 Retriever 前就已经确定。用户问题主要用于在这个范围中搜索和排序 Chunk。</p>
+<h4 id="tenant_id-选择租户索引是什么意思"><code>tenant_id</code> 选择租户索引是什么意思</h4>
+<p>Elasticsearch 的 Index 可以理解为一张逻辑表或一个顶层数据集合。RAGFlow 按 Tenant 生成索引名：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">tenant_id = company-a
+</span></span><span class="line"><span class="cl">        ↓
+</span></span><span class="line"><span class="cl">Elasticsearch Index = ragflow_company-a
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>同一个 Tenant 的多个 KB 通常共享这个索引，再通过 Chunk 上的 <code>kb_id</code> 区分：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">ragflow_company-a
+</span></span><span class="line"><span class="cl">├── kb_id = database-kb
+</span></span><span class="line"><span class="cl">├── kb_id = redis-kb
+</span></span><span class="line"><span class="cl">└── kb_id = hr-policy
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此“选择租户索引”表示先决定向哪个 Elasticsearch Index 发查询，不是根据问题预测一个 Tenant 标签。如果选择的共享 KB 分别属于多个 Tenant，Retriever 也可以同时查询多个 <code>ragflow_&lt;tenant_id&gt;</code> 索引。</p>
+<p>Tenant ID 也不是直接从问题得到的，而是由已选 KB 反查：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">kbs</span> <span class="o">=</span> <span class="n">KnowledgebaseService</span><span class="o">.</span><span class="n">get_by_ids</span><span class="p">(</span><span class="n">dialog</span><span class="o">.</span><span class="n">kb_ids</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">tenant_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">kb</span><span class="o">.</span><span class="n">tenant_id</span> <span class="k">for</span> <span class="n">kb</span> <span class="ow">in</span> <span class="n">kbs</span><span class="p">})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行顺序是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">先取得已选 kb_ids
+</span></span><span class="line"><span class="cl">      ↓
+</span></span><span class="line"><span class="cl">读取这些 KB 的 tenant_id
+</span></span><span class="line"><span class="cl">      ↓
+</span></span><span class="line"><span class="cl">生成 ragflow_&lt;tenant_id&gt; 索引名
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="系统怎么知道问题与哪个-kb-相关">系统怎么知道问题与哪个 KB 相关</h4>
+<p>标准 <code>Dialog</code> 路径通常不会在检索前自动判断问题属于哪个 KB。创建 Chat 应用时，管理员已经为它配置了一组 <code>dialog.kb_ids</code>，例如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;dialog_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-assistant&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_ids&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;database-kb&#34;</span><span class="p">,</span> <span class="s2">&#34;redis-kb&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用户提问后，RAGFlow 会同时搜索这两个 KB，统一比较其中 Chunk 的分数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">database-kb
+</span></span><span class="line"><span class="cl">├── B+ 树范围查询 Chunk  0.91
+</span></span><span class="line"><span class="cl">└── 全文索引 Chunk       0.48
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">redis-kb
+</span></span><span class="line"><span class="cl">├── Redis Sorted Set     0.22
+</span></span><span class="line"><span class="cl">└── Redis Stream         0.16
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用户提问“为什么 B+ 树适合范围查询”后，经过阈值和排序，最终可能只返回得分为 0.91 的 B+ 树 Chunk。换句话说：<strong>KB 决定搜索空间，问题决定这个空间中哪些 Chunk 排名靠前。</strong></p>
+<p>KB 范围主要有三种来源：</p>
+<ol>
+<li>创建 Chat/Dialog 时由管理员预先绑定，这是标准对话路径。</li>
+<li>用户在搜索界面选择，或者调用方通过 API 显式传入 <code>kb_ids</code>。</li>
+<li>在 Retriever 前增加业务 Router，通过规则、KB 描述向量、LLM 分类或 Agent 工作流动态选择 KB。</li>
+</ol>
+<p>第三种属于额外的查询路由能力；底层 <code>Dealer.retrieval()</code> 接收到的已经是确定的 <code>kb_ids</code>，它本身不会再做 KB 语义分类。如果有大量不同主题的 KB，不希望每次全部搜索，就需要在上层增加 Router。</p>
+<h4 id="完整过滤和召回顺序">完整过滤和召回顺序</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart LR
+</span></span><span class="line"><span class="cl">    U[已认证用户] --&gt; B[Dialog / API 给出 kb_ids]
+</span></span><span class="line"><span class="cl">    B --&gt; A[检查 KB 可访问性]
+</span></span><span class="line"><span class="cl">    A --&gt; T[由 KB 反查 tenant_ids]
+</span></span><span class="line"><span class="cl">    T --&gt; I[选择 ragflow_tenant 索引]
+</span></span><span class="line"><span class="cl">    I --&gt; K[kb_id Filter]
+</span></span><span class="line"><span class="cl">    K --&gt; D[可选 doc_id / Metadata Filter]
+</span></span><span class="line"><span class="cl">    D --&gt; V[available_int=1]
+</span></span><span class="line"><span class="cl">    V --&gt; R[全文 + Dense 召回和排序]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>Dealer.retrieval()</code> 最终收到的请求类似：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;tenant_ids&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;company-a&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_ids&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;database-kb&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;doc_ids&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;question&#34;</span><span class="p">:</span> <span class="s2">&#34;为什么 B+ 树适合范围查询&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中 <code>tenant_ids</code> 用来生成索引名；<code>Dealer.get_filters()</code> 把 <code>kb_ids</code> 映射为索引字段 <code>kb_id</code>，把 <code>doc_ids</code> 映射为 <code>doc_id</code>。过滤条件与全文和 KNN 查询一起交给文档引擎，所以执行语义近似为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">INDEX = ragflow_company-a
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">WHERE kb_id IN (database-kb)
+</span></span><span class="line"><span class="cl">  AND doc_id IN (mysql-index-doc)
+</span></span><span class="line"><span class="cl">  AND available_int = 1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MATCH 全文 OR Dense KNN
+</span></span><span class="line"><span class="cl">ORDER BY 融合相关性
+</span></span><span class="line"><span class="cl">LIMIT Top K
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Metadata 条件会先解析为匹配的 <code>scoped_doc_ids</code>，再作为 <code>doc_id</code> Filter 进入后端搜索。这虽然包含“计算文档范围、执行搜索”两步，但不是取回全局 Top K 后再删除不匹配结果。</p>
+<p>检索后还有 <code>_prune_deleted_chunks()</code>，用于清除 MySQL 中 Document 已删除但搜索索引尚有残留的 Chunk。这是最终一致性兜底，不是主要授权机制。</p>
+<h3 id="33-权限模型的边界">3.3 权限模型的边界</h3>
+<p>RAGFlow 主要提供 Tenant、KB、Document 粒度的范围控制，并不是通用 Chunk 行级 ACL 引擎。安全性依赖 API 层先完成可访问性检查，并始终把允许的 Tenant/KB/Document 范围传给 Retriever。</p>
+<h2 id="4-写入文档摄取流程">4. 写入：文档摄取流程</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">sequenceDiagram
+</span></span><span class="line"><span class="cl">    participant C as Client
+</span></span><span class="line"><span class="cl">    participant A as API
+</span></span><span class="line"><span class="cl">    participant M as MySQL
+</span></span><span class="line"><span class="cl">    participant O as MinIO
+</span></span><span class="line"><span class="cl">    participant Q as Redis
+</span></span><span class="line"><span class="cl">    participant W as Worker
+</span></span><span class="line"><span class="cl">    participant P as Parser
+</span></span><span class="line"><span class="cl">    participant E as Embedding
+</span></span><span class="line"><span class="cl">    participant S as Search Engine
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    C-&gt;&gt;A: 上传文件并创建 Document
+</span></span><span class="line"><span class="cl">    A-&gt;&gt;O: 保存原始文件
+</span></span><span class="line"><span class="cl">    A-&gt;&gt;M: 保存 File、Document、Task
+</span></span><span class="line"><span class="cl">    A-&gt;&gt;Q: 发布解析任务
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;Q: 消费任务
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;O: 读取文件
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;P: OCR、版面分析与分块
+</span></span><span class="line"><span class="cl">    P--&gt;&gt;W: Chunk + 页码 + 坐标 + 标题
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;W: 关键词、问题、Tag 等增强
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;E: 批量生成向量
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;S: 写入 Chunk 与向量
+</span></span><span class="line"><span class="cl">    W-&gt;&gt;M: 更新进度和计数
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>解析器会根据文档类型处理 PDF、Word、PPT、Excel、网页和图片。标准 Chunk 还可以携带标题、页码、版面坐标、图片、关键词、候选问题、标签和 Metadata。</p>
+<p>以贯穿示例 <code>MySQL索引.md</code> 为例，如果没有开启父子 Chunk，Parser 可能先生成六个普通 Chunk：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">c-btree-1   B+ 树的根节点、中间节点和叶子节点
+</span></span><span class="line"><span class="cl">c-btree-2   有序叶子页为什么支持等值与范围查询
+</span></span><span class="line"><span class="cl">c-btree-3   聚簇索引、二级索引与回表
+</span></span><span class="line"><span class="cl">c-fulltext-1  全文索引的分词与倒排映射
+</span></span><span class="line"><span class="cl">c-fulltext-2  mysql -&gt; [A,B] 的倒排表示例
+</span></span><span class="line"><span class="cl">c-fulltext-3  MATCH AGAINST 和适用场景
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中一条写入搜索索引的记录可以简化为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;c-btree-2&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;docnm_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;MySQL索引.md&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子节点按照索引键有序排列，而且相邻叶子页之间存在链表指针……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_ltks&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子 节点 索引键 有序 范围 查询&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.018</span><span class="p">,</span> <span class="mf">-0.032</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这就是后续增强的基础：父子 Chunk 会改变它的切分粒度并增加引用；TOC 会引用这些 Chunk ID；RAPTOR 会读取这些 Chunk 再生成摘要；GraphRAG 会读取这些 Chunk 再抽取实体和关系。</p>
+<p>原始文件在 MinIO，Document 状态在 MySQL，Chunk 投影在 Elasticsearch；跨存储依赖任务状态、重试和清理实现最终一致。</p>
+<h2 id="5-读取混合召回与重排">5. 读取：混合召回与重排</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart TD
+</span></span><span class="line"><span class="cl">    Q1[&#34;Q1 整理用户问题&#34;] --&gt; Q2[&#34;Q2 确定 Tenant / KB / Document 范围&#34;]
+</span></span><span class="line"><span class="cl">    Q2 --&gt; Q3[&#34;Q3 生成全文表达式、keywords 和问题向量&#34;]
+</span></span><span class="line"><span class="cl">    Q3 --&gt; Q4[&#34;Q4 ES 全文门槛 + KNN 初召回&#34;]
+</span></span><span class="line"><span class="cl">    Q4 --&gt; Q5[&#34;Q5 清除失效 Document 的残留 Chunk&#34;]
+</span></span><span class="line"><span class="cl">    Q5 --&gt; Q6[&#34;Q6 取得词项、向量和 Rank Feature 分数&#34;]
+</span></span><span class="line"><span class="cl">    Q6 --&gt; Q7[&#34;Q7 融合、排序、阈值过滤和分页&#34;]
+</span></span><span class="line"><span class="cl">    Q7 --&gt; Q8[&#34;Q8 可选 TOC 导航增强&#34;]
+</span></span><span class="line"><span class="cl">    Q8 --&gt; Q9[&#34;Q9 父子 Chunk 上下文替换&#34;]
+</span></span><span class="line"><span class="cl">    Q9 --&gt; Q10[&#34;Q10 可选外部搜索结果合并&#34;]
+</span></span><span class="line"><span class="cl">    Q10 --&gt; Q11[&#34;Q11 可选 GraphRAG 独立检索并插入图证据&#34;]
+</span></span><span class="line"><span class="cl">    Q11 --&gt; Q12[&#34;Q12 组装 Evidence Prompt 并调用 LLM&#34;]
+</span></span><span class="line"><span class="cl">    Q12 --&gt; Q13[&#34;Q13 校验或补插 Chunk 引用&#34;]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="51-一次完整查询的主链">5.1 一次完整查询的主链</h3>
+<p>下面以用户在 <code>database-assistant</code> 中提问“为什么 B+ 树适合范围查询”为例。Dialog 已经绑定 <code>database-kb</code>，<code>MySQL索引.md</code> 的 Document ID 是 <code>mysql-index-doc</code>。</p>
+<h4 id="q1-整理本次用于检索的问题">[Q1] 整理本次用于检索的问题</h4>
+<p>标准路径默认只取最后一条用户问题。根据 Dialog 配置，还可以先执行：</p>
+<ul>
+<li><code>refine_multiturn</code>：把多轮对话改写成一个完整问题。</li>
+<li><code>cross_languages</code>：把问题扩展成指定语言。</li>
+<li><code>keyword</code>：调用 LLM 抽取关键词并追加到问题。</li>
+</ul>
+<p>假设这些功能没有开启，本步骤输出仍然是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">为什么 B+ 树适合范围查询
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="q2-确定允许检索的数据范围">[Q2] 确定允许检索的数据范围</h4>
+<p>这一阶段不计算内容相关性。系统先取得 Dialog 或 API 指定且用户有权访问的 <code>kb_ids</code>，再由 KB 反查 <code>tenant_ids</code>；Metadata 条件会先转换成 <code>scoped_doc_ids</code>。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">tenant_ids = [company-a]           → 选择 ragflow_company-a
+</span></span><span class="line"><span class="cl">kb_ids     = [database-kb]         → 只允许该 KB
+</span></span><span class="line"><span class="cl">doc_ids    = [mysql-index-doc]     → 可选，只允许指定 Document
+</span></span><span class="line"><span class="cl">available_int = 1                  → 只允许普通可检索记录
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这些范围随后作为 ES Filter 进入初召回，不是先取得全库结果再做权限删除。</p>
+<h4 id="q3-从同一个问题生成三种查询数据">[Q3] 从同一个问题生成三种查询数据</h4>
+<p><code>FulltextQueryer.question()</code> 对问题做大小写与字符规范化、分词、停用词处理、词项加权、细粒度切分和同义词扩展，产生两个不同结果；Embedding 模型再产生第三个结果：</p>
+<table>
+	<thead>
+			<tr>
+					<th>结果</th>
+					<th>用在哪里</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>matchText.matching_text</code></td>
+					<td>[Q4] ES 全文条件</td>
+					<td>带单词、短语、近邻短语和同义词的 Lucene 查询表达式</td>
+			</tr>
+			<tr>
+					<td><code>keywords</code></td>
+					<td>[Q6] <code>term_similarity</code></td>
+					<td>Python 后续计算查询词项覆盖率时使用的词项列表</td>
+			</tr>
+			<tr>
+					<td><code>query_vector</code></td>
+					<td>[Q4] 和 [Q6] Dense KNN</td>
+					<td>整个问题的 Embedding，例如 <code>q_1024_vec</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>因此“全文至少匹配 30%”针对的是 <code>matching_text</code> 被 ES 解析后的查询子句，不是简单数原句里有几个中文词，也不等于后续的 <code>keywords</code> 数组。</p>
+<h4 id="q4-es-初召回一个候选窗口">[Q4] ES 初召回一个候选窗口</h4>
+<p>ES 同时执行范围限制、全文准入和 Dense KNN：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">可参加 KNN 的记录
+</span></span><span class="line"><span class="cl">= 指定 Tenant 索引
+</span></span><span class="line"><span class="cl"> ∩ kb_id / 可选 doc_id
+</span></span><span class="line"><span class="cl"> ∩ available_int=1
+</span></span><span class="line"><span class="cl"> ∩ 满足全文 minimum_should_match 的记录
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当前固定的 <code>FusionExpr(&quot;weighted_sum&quot;, {&quot;weights&quot;:&quot;0.001,1&quot;})</code> 在 ES 适配器中只使用第二个 <code>1</code>：全文条件仍决定记录能否参加，但全文 Boost 为 0，初召回顺序主要由 KNN <code>_score</code> 决定。</p>
+<p>本步骤返回一个约 64 条的候选窗口，包括每条 Hit 的 <code>_id</code>、初始 <code>_score</code> 和所需 <code>_source</code> 字段。<strong>RAPTOR 摘要如果已经构建，会在 [Q4] 作为普通可检索记录和原始 Chunk 一起竞争；父记录、TOC 和 Graph 记录通常 <code>available_int=0</code>，不会进入这一步。</strong></p>
+<h4 id="q5-清除搜索索引中的失效记录">[Q5] 清除搜索索引中的失效记录</h4>
+<p>初召回返回后，<code>_prune_deleted_chunks()</code> 根据候选的 <code>doc_id</code> 查询 MySQL。如果某个 Chunk 所属 Document 已经删除，但 ES 尚未完成清理，就从候选窗口中移除。这是搜索索引最终一致性的兜底，不是主要权限过滤。</p>
+<h4 id="q6-为每个候选取得最终排序所需的信号">[Q6] 为每个候选取得最终排序所需的信号</h4>
+<p>默认 Elasticsearch 路径执行：</p>
+<ol>
+<li>对 [Q5] 留下的候选 ID 做第二次 KNN-only 搜索，只取得干净的 <code>ID → KNN _score</code>，不再读取 <code>_source</code>。</li>
+<li>使用 [Q3] 的 <code>keywords</code> 与第一次 <code>_source</code> 中的 <code>content_ltks</code>、<code>title_tks</code>、<code>important_kwd</code>、<code>question_tks</code> 计算 <code>term_similarity</code>。</li>
+<li>读取可选的 Tag Feature 和 <code>pagerank_fea</code>，计算 <code>rank_feature</code>。</li>
+</ol>
+<p><code>term_similarity</code> 不是 ES 全文 <code>_score</code>，也不是索引中预存的字段。代码把查询 <code>keywords</code> 和 Chunk 词项分别转换成单词及相邻二元词特征，然后计算“查询特征被 Chunk 覆盖的加权比例”：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">term_similarity
+</span></span><span class="line"><span class="cl">= Chunk 中存在的查询特征权重之和
+</span></span><span class="line"><span class="cl">  ÷ 全部查询特征权重之和
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>例如 [Q3] 返回的简化 <code>keywords=[B+树, 范围查询, 叶子节点]</code>，A 同时包含三项，覆盖率高；B 只有 <code>B+树、叶子节点</code>，覆盖率较低；C 只有无关的“倒排表”，覆盖率接近 0。真实数值还会受到分词权重和相邻二元词影响。</p>
+<p>如果配置了外部 Reranker，本步骤改为使用 Reranker 模型给问题与候选正文打分，不执行默认的第二次 KNN-only 分支。</p>
+<h4 id="q7-融合分数得到基础-top-chunk">[Q7] 融合分数，得到基础 Top Chunk</h4>
+<p>没有外部 Reranker 时，默认公式是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">similarity = (1 - vector_similarity_weight) × term_similarity
+</span></span><span class="line"><span class="cl">           + vector_similarity_weight × vector_similarity
+</span></span><span class="line"><span class="cl">           + rank_feature
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码随后稳定降序排列，删除低于 <code>similarity_threshold</code> 的候选，再按 <code>page_size</code> 截取当前页。这时得到的是“基础 Top Chunk”，还不是最终送给 LLM 的证据。</p>
+<h4 id="q8-可选的-toc-导航增强">[Q8] 可选的 TOC 导航增强</h4>
+<p>仅在 <code>toc_enhance=true</code> 时执行。系统把 [Q7] 的 Chunk 按 Document 汇总分数，选出最相关 Document，读取它的 TOC 特殊记录，让 LLM 根据问题选择目录节点对应的 Chunk ID：</p>
+<ul>
+<li>已在 [Q7] 结果中的 Chunk：增加 TOC 相关分。</li>
+<li>不在 [Q7] 结果中的 Chunk：按 TOC 给出的 ID 补取正文并加入。</li>
+<li>最后重新按相似度排序并截取 <code>top_n</code>。</li>
+</ul>
+<p>所以 TOC 改写的是 [Q7] 的基础结果列表，而不是参与 [Q4] 的普通混合召回。</p>
+<h4 id="q9-把命中的子-chunk-替换为父-chunk">[Q9] 把命中的子 Chunk 替换为父 Chunk</h4>
+<p><code>retrieval_by_children()</code> 检查 [Q8] 输出中的 <code>mom_id</code>。带有同一个 <code>mom_id</code> 的命中子块会被移出列表，系统按该 ID 读取不可直接检索的母记录，再放入一条父 Chunk：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">正文       = 父 Chunk 的完整原文
+</span></span><span class="line"><span class="cl">检索词项   = 命中子 Chunk 的 content_ltks 合并
+</span></span><span class="line"><span class="cl">similarity = 这些命中子 Chunk 的 similarity 平均值
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此父子 Chunk 的作用位置是“检索小块已经命中以后扩大上下文”，不会改变 [Q4] 初召回的搜索粒度。</p>
+<h4 id="q10-可选地合并外部搜索结果">[Q10] 可选地合并外部搜索结果</h4>
+<p>如果开启 Web Search，系统在父子替换后取得网页 Chunk，并追加到当前 Chunk 列表和 Document 聚合中。这条分支与 RAGFlow 知识库索引无关。</p>
+<h4 id="q11-可选地插入-graphrag-证据">[Q11] 可选地插入 GraphRAG 证据</h4>
+<p>仅在 <code>use_kg=true</code> 时执行。<code>KGSearch</code> 不复用 [Q4] 的普通 Chunk 候选，而是在相同 Tenant/KB 范围内独立检索 <code>entity</code>、<code>relation</code> 和可选 <code>community_report</code> 记录，结合预计算的 N-hop 与 PageRank，组装出一条临时 Chunk：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">docnm_kwd = Related content in Knowledge Graph
+</span></span><span class="line"><span class="cl">content   = Entities 表 + Relations 表 + 可选 Community Report
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>只要内容非空，这条图证据就插在当前 Chunk 列表第一个位置。因此 GraphRAG 是一条在 [Q11] 汇入的并行证据分支，不参与 [Q6] 的普通 Chunk 融合公式。</p>
+<h4 id="q12-组装证据-prompt-并调用-llm">[Q12] 组装证据 Prompt 并调用 LLM</h4>
+<p><code>kb_prompt()</code> 根据 Token 预算把当前 Chunk 转成 <code>knowledges</code>，填入系统 Prompt 的 <code>{knowledge}</code>。此时证据可能同时包含：</p>
+<ul>
+<li>[Q4] 命中的普通 Chunk 或 RAPTOR 摘要。</li>
+<li>[Q8] 通过 TOC 补取或加权的 Chunk。</li>
+<li>[Q9] 替换后的父 Chunk。</li>
+<li>[Q10] 外部网页 Chunk。</li>
+<li>[Q11] 插在最前面的 GraphRAG 合成 Chunk。</li>
+</ul>
+<p>系统还会加入引用格式要求，然后调用回答模型生成答案。</p>
+<h4 id="q13-校验或补插引用">[Q13] 校验或补插引用</h4>
+<p>如果 LLM 已经输出合法 <code>[ID:n]</code>，系统校验编号并修复格式。如果没有引用，系统按需读取当前证据 Chunk 的向量，把答案分句，并根据答案句子与 Chunk 的词项/向量相似度补插 <code>[ID:n]</code>，最后只保留实际引用 Document 的资料信息。</p>
+<h4 id="检索增强位置总览">检索增强位置总览</h4>
+<table>
+	<thead>
+			<tr>
+					<th>能力</th>
+					<th>构建时生成什么</th>
+					<th>查询时介入位置</th>
+					<th>具体改变</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Metadata / 权限范围</td>
+					<td>MySQL 层级和 Document Metadata</td>
+					<td>[Q2]、[Q4]</td>
+					<td>先缩小允许搜索的索引、KB 和 Document，再召回</td>
+			</tr>
+			<tr>
+					<td>全文 + Dense KNN</td>
+					<td>普通 Chunk 的分词字段和向量</td>
+					<td>[Q3]、[Q4]</td>
+					<td>全文设置候选门槛，KNN 形成初始候选顺序</td>
+			</tr>
+			<tr>
+					<td>本地融合 / Reranker</td>
+					<td>不生成新索引记录</td>
+					<td>[Q6]、[Q7]</td>
+					<td>重算候选分数、排序、阈值过滤和分页</td>
+			</tr>
+			<tr>
+					<td>RAPTOR</td>
+					<td>带 <code>raptor_kwd</code> 的可检索摘要 Chunk</td>
+					<td>[Q4]，随后经过 [Q6]、[Q7]</td>
+					<td>摘要和原始 Chunk 在同一个候选空间直接竞争</td>
+			</tr>
+			<tr>
+					<td>TOC</td>
+					<td><code>available_int=0、toc_kwd=toc</code> 的目录记录</td>
+					<td>[Q8]</td>
+					<td>根据基础结果选 Document，再用目录补取或加权 Chunk</td>
+			</tr>
+			<tr>
+					<td>父子 Chunk</td>
+					<td>子记录的 <code>mom_id</code> 和不可直接召回的母记录</td>
+					<td>[Q9]</td>
+					<td>用小块命中，再把命中子块替换成父块完整正文</td>
+			</tr>
+			<tr>
+					<td>GraphRAG</td>
+					<td><code>entity/relation/subgraph/graph/community_report</code> 记录</td>
+					<td>[Q11]</td>
+					<td>独立检索图记录，组装一条图证据插到普通证据之前</td>
+			</tr>
+			<tr>
+					<td>引用</td>
+					<td>不生成新的索引结构</td>
+					<td>[Q12]、[Q13]</td>
+					<td>要求 LLM 引用证据；缺失时按答案与 Chunk 相似度补插</td>
+			</tr>
+	</tbody>
+</table>
+<h3 id="52-混合召回为什么包含两次-es-查询">5.2 混合召回为什么包含两次 ES 查询</h3>
+<p>第一次是 [Q4] 的候选召回：<code>Dealer.search()</code> 同时构造全文 Match、Dense KNN 和 <code>weighted_sum</code> Fusion，通过一次 <code>dataStore.search()</code> 交给后端。它不是应用层先查全文、再查向量、最后手工取并集。第二次是 [Q6] 针对候选 ID 的 KNN-only 计分，不会扩大候选集合。</p>
+<h4 id="weighted_sum-fusion-是什么"><code>weighted_sum Fusion</code> 是什么</h4>
+<p>这里有两套容易混在一起的权重：</p>
+<table>
+	<thead>
+			<tr>
+					<th>所在阶段</th>
+					<th>权重</th>
+					<th>实际用途</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>第一次 ES 召回</td>
+					<td>固定的 <code>&quot;0.001,1&quot;</code></td>
+					<td>当前 ES 适配器只读取第二个 <code>1</code>，把全文查询的 Boost 设为 <code>0</code>；第一个 <code>0.001</code> 没有使用</td>
+			</tr>
+			<tr>
+					<td>第二步重新打分</td>
+					<td>KB/Dialog 的 <code>vector_similarity_weight</code>，默认 <code>0.3</code></td>
+					<td>在 Python 中真正计算 <code>0.7 × 词项相似度 + 0.3 × KNN 分数</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>所以 <code>&quot;0.001,1&quot;</code> 不是最终分数公式。它只服务于第一次取得一个较大的候选池；真正决定最终排序的是第二套可配置权重。</p>
+<p>第二套 <code>vector_similarity_weight</code> 按设计应位于 <code>[0,1]</code>，词项权重由 <code>1 - vector_similarity_weight</code> 得到。当前这段代码没有主动截断越界值，因此调用方仍应保证配置合法。</p>
+<p>下面继续使用问题“为什么 B+ 树适合范围查询”。为便于观察，假设租户索引中原本有以下记录。表里的分数是说明流程的示例值，不是对这段文字实际运行模型得到的值。</p>
+<table>
+	<thead>
+			<tr>
+					<th>Chunk</th>
+					<th>内容摘要</th>
+					<th>KB / Document</th>
+					<th style="text-align: right"><code>available_int</code></th>
+					<th style="text-align: right">与问题的向量接近程度</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>A</td>
+					<td>叶子节点有序，并通过链表连接，适合范围扫描</td>
+					<td><code>database-kb</code> / <code>mysql-index-doc</code></td>
+					<td style="text-align: right">1</td>
+					<td style="text-align: right">高</td>
+			</tr>
+			<tr>
+					<td>B</td>
+					<td>B+ 树的根节点、中间节点和叶子节点</td>
+					<td><code>database-kb</code> / <code>mysql-index-doc</code></td>
+					<td style="text-align: right">1</td>
+					<td style="text-align: right">较高</td>
+			</tr>
+			<tr>
+					<td>C</td>
+					<td>全文索引使用倒排表</td>
+					<td><code>database-kb</code> / <code>mysql-index-doc</code></td>
+					<td style="text-align: right">1</td>
+					<td style="text-align: right">一般</td>
+			</tr>
+			<tr>
+					<td>D</td>
+					<td>Redis Sorted Set 的跳表实现</td>
+					<td><code>redis-kb</code> / <code>redis-doc</code></td>
+					<td style="text-align: right">1</td>
+					<td style="text-align: right">很高</td>
+			</tr>
+			<tr>
+					<td>E</td>
+					<td>B+ 树范围扫描的旧版本内容</td>
+					<td><code>database-kb</code> / <code>mysql-index-doc</code></td>
+					<td style="text-align: right">0</td>
+					<td style="text-align: right">很高</td>
+			</tr>
+	</tbody>
+</table>
+<h5 id="第一次召回拿到哪些记录和分数">第一次召回：拿到哪些记录和分数</h5>
+<p>第一次搜索在 ES 内先应用以下限制：</p>
+<ul>
+<li>只搜索调用方给出的 Tenant 索引。</li>
+<li><code>kb_id</code> 必须属于本次选择的 KB。</li>
+<li>传入 <code>doc_ids</code> 时，<code>doc_id</code> 必须在指定范围内。</li>
+<li><code>available_int=1</code>。</li>
+<li>默认 <code>vector_similarity_weight=0.3 &lt; 0.8</code>，因此全文条件要求至少匹配约 30% 的查询词；这个全文条件也被放进 KNN Filter。</li>
+</ul>
+<p>因此，即使 D、E 的向量分数很高，也不会进入候选池：D 属于错误的 KB，E 已经不可用。若某条记录完全不满足全文条件，它同样不会参加这一次 KNN 排名。</p>
+<p>在当前 ES 适配器中，<code>&quot;0.001,1&quot;</code> 被处理为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">vector_similarity_weight = 1
+</span></span><span class="line"><span class="cl">全文查询 boost = 1 - 1 = 0
+</span></span><span class="line"><span class="cl">KNN boost = 未显式设置
+</span></span><span class="line"><span class="cl">第一个 0.001 = 未使用
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>全文条件仍然负责筛选“有没有资格参加”，但它的打分贡献被设为 0。因此第一次返回结果可以理解为：</p>
+<table>
+	<thead>
+			<tr>
+					<th style="text-align: right">初召回顺序</th>
+					<th>Chunk</th>
+					<th>为什么留下</th>
+					<th style="text-align: right">ES 返回的初始 <code>_score</code>（示例）</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td style="text-align: right">1</td>
+					<td>A</td>
+					<td>范围正确、满足全文条件、向量最接近</td>
+					<td style="text-align: right">0.92</td>
+			</tr>
+			<tr>
+					<td style="text-align: right">2</td>
+					<td>B</td>
+					<td>范围正确、满足全文条件、向量较接近</td>
+					<td style="text-align: right">0.89</td>
+			</tr>
+			<tr>
+					<td style="text-align: right">3</td>
+					<td>C</td>
+					<td>范围正确、勉强满足全文条件、向量一般</td>
+					<td style="text-align: right">0.55</td>
+			</tr>
+	</tbody>
+</table>
+<p>这个 <code>_score</code> 主要是 ES 的 KNN <code>_score</code>，不是 <code>0.001 × 全文分数 + 1 × 向量分数</code>。对于 cosine 向量，ES 返回的是它自己的 KNN 计分结果；RAGFlow 在此处不把它还原成原始向量，也不使用第一个 <code>0.001</code> 重新计算。</p>
+<p>第一次返回的每个 Hit 大致包含两部分：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;_id&#34;</span><span class="p">:</span> <span class="s2">&#34;A&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;_score&#34;</span><span class="p">:</span> <span class="mf">0.92</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;_source&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子节点按照索引键有序排列……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;content_ltks&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子 节点 索引键 有序 范围 查询&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;title_tks&#34;</span><span class="p">:</span> <span class="s2">&#34;MySQL 索引 B+ 树&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;important_kwd&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;B+树&#34;</span><span class="p">,</span> <span class="s2">&#34;范围查询&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;pagerank_fea&#34;</span><span class="p">:</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>_source</code> 不是计算出来的分数，它只是这条 Chunk 原来存储的正文和元数据。<code>Dealer.search()</code> 把 <code>_source</code> 保存到 <code>sres.field[A]</code>，同时把第一次的 <code>_score</code> 也暂存在其中。主检索为了减少传输，不取回 Chunk 向量。</p>
+<p><code>top=1024</code> 表示 ES 的 KNN 最多寻找 1024 个邻居，并不表示最终直接返回 1024 条给用户。RAGFlow 实际只从 ES 取一个约 64 条的重排窗口；例如 <code>page_size=10</code> 时窗口向上取整为 70 条。</p>
+<h5 id="第二次搜索只为候选记录重新取得-knn-分数">第二次搜索：只为候选记录重新取得 KNN 分数</h5>
+<p>第一次得到 A、B、C 后，<code>_knn_scores()</code> 发起第二次 KNN-only 搜索。它的范围不是整个知识库，而是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">id IN [A, B, C]
+</span></span><span class="line"><span class="cl">AND kb_id IN [database-kb]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这一步传入的 <code>select_fields=[]</code>，所以不读取 <code>_source</code>，只取每条候选的 <code>_id</code> 和 <code>_score</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;A&#34;</span><span class="p">:</span> <span class="mf">0.92</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;B&#34;</span><span class="p">:</span> <span class="mf">0.89</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="mf">0.55</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码把这个结果称为 <code>knn_scores</code>。它的作用是得到不混入全文打分和 Rank Feature 的 KNN 分数，并按照 ID 映射回第一次取得的 A、B、C；正文等 <code>_source</code> 数据仍然复用第一次查询的结果。</p>
+<p>第二次搜索没有再次携带 <code>doc_id</code> 和 <code>available_int</code>，但不会因此把 D、E 加回来，因为它只能搜索第一次候选 ID <code>[A,B,C]</code>。第一次结果返回后，代码还会查询 MySQL，删除所属 Document 已不存在的残留 Chunk。</p>
+<h5 id="在-python-中计算最终分数并排序">在 Python 中计算最终分数并排序</h5>
+<p>接下来 <code>rerank_with_knn()</code> 为每个候选计算两个值：</p>
+<ol>
+<li><code>term_similarity</code>：问题关键词在 Chunk 的 <code>content_ltks</code>、<code>title_tks</code>、<code>important_kwd</code> 和 <code>question_tks</code> 中的覆盖程度。</li>
+<li><code>vector_similarity</code>：第二次 ES 搜索返回的 KNN <code>_score</code>。</li>
+</ol>
+<p>默认 <code>vector_similarity_weight=0.3</code>，所以 <code>term_similarity_weight=0.7</code>。没有额外 Tag 或 PageRank 加分时：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">final_similarity = 0.7 × term_similarity
+</span></span><span class="line"><span class="cl">                 + 0.3 × vector_similarity
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>把示例记录代入：</p>
+<table>
+	<thead>
+			<tr>
+					<th>Chunk</th>
+					<th style="text-align: right"><code>term_similarity</code></th>
+					<th style="text-align: right">第二次 KNN <code>vector_similarity</code></th>
+					<th>计算</th>
+					<th style="text-align: right">最终 <code>similarity</code></th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>A</td>
+					<td style="text-align: right">0.90</td>
+					<td style="text-align: right">0.92</td>
+					<td><code>0.7×0.90 + 0.3×0.92</code></td>
+					<td style="text-align: right">0.906</td>
+			</tr>
+			<tr>
+					<td>B</td>
+					<td style="text-align: right">0.55</td>
+					<td style="text-align: right">0.89</td>
+					<td><code>0.7×0.55 + 0.3×0.89</code></td>
+					<td style="text-align: right">0.652</td>
+			</tr>
+			<tr>
+					<td>C</td>
+					<td style="text-align: right">0.02</td>
+					<td style="text-align: right">0.55</td>
+					<td><code>0.7×0.02 + 0.3×0.55</code></td>
+					<td style="text-align: right">0.179</td>
+			</tr>
+	</tbody>
+</table>
+<p>如果配置了 Tag Feature 或 <code>pagerank_fea</code>，它们还会作为 <code>rank_feature</code> 加到上述结果上：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">final_similarity = 词项权重 × term_similarity
+</span></span><span class="line"><span class="cl">                 + 向量权重 × vector_similarity
+</span></span><span class="line"><span class="cl">                 + rank_feature
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后代码按 <code>final_similarity</code> 稳定降序排列，再应用 <code>similarity_threshold</code>。默认阈值假设为 <code>0.2</code>，那么 C 的 <code>0.179</code> 会被删除，剩下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">A  0.906
+</span></span><span class="line"><span class="cl">B  0.652
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后才按照分页取 <code>page_size</code> 条。例如候选窗口有 70 条、<code>page_size=10</code>，流程是：先对 70 条重算分数并排序，删除低于阈值的记录，再返回当前页前 10 条。这 10 条才是调用方实际得到的最终 Top 结果。</p>
+<p>返回给上层的 Chunk 会明确区分三种分数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;chunk_id&#34;</span><span class="p">:</span> <span class="s2">&#34;A&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子节点按照索引键有序排列……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;similarity&#34;</span><span class="p">:</span> <span class="mf">0.906</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;term_similarity&#34;</span><span class="p">:</span> <span class="mf">0.90</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;vector_similarity&#34;</span><span class="p">:</span> <span class="mf">0.92</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因此，不要使用第一次 ES 返回的 <code>_score=0.92</code> 解释最终排名。最终采用的是 Python 重新计算的 <code>similarity=0.906</code>。如果启用了外部 Reranker，第二次 KNN-only 分支会被 Reranker 模型分数替代，但之后仍然执行降序、阈值过滤和分页。</p>
+<h3 id="53-父子-chunk-和-toc">5.3 父子 Chunk 和 TOC</h3>
+<h4 id="父子-chunk从章节大块切出检索小块">父子 Chunk：从章节大块切出检索小块</h4>
+<p>父子关系在写入阶段生成，在查询阶段只影响 <strong>[Q9]</strong>。子 Chunk 正常参加 [Q4]～[Q7]，母记录不参加普通召回。</p>
+<p>父子 Chunk 使用两次确定性的切分，不需要 LLM 判断关系。以 <code>MySQL索引.md</code> 的 B+ 树章节为例：</p>
+<ol>
+<li>主分块先按 <code>delimiter</code> 和 <code>chunk_token_num</code> 把整个“B+ 树索引”章节形成一个较大的块 <code>M1</code>。它包含树结构、范围查询、聚簇索引和回表。</li>
+<li>开启 <code>parent_child.use_parent_child</code> 后，执行层根据 <code>children_delimiter</code> 把 <code>M1</code> 按段落继续切成 <code>c-btree-1</code>、<code>c-btree-2</code>、<code>c-btree-3</code>。</li>
+<li>每个子对象临时保存同一份完整母文本 <code>mom=M1.text</code>。</li>
+<li>写索引时，RAGFlow 对母文本做 <code>xxhash64</code>，得到简化表示 <code>m-btree</code>。子记录增加 <code>mom_id=m-btree</code>，同时额外写入一条 <code>id=m-btree</code> 的母记录。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">M1：B+ 树章节完整原文
+</span></span><span class="line"><span class="cl"> ├─ c-btree-1：根节点、中间节点和叶子节点
+</span></span><span class="line"><span class="cl"> ├─ c-btree-2：有序叶子页与范围查询
+</span></span><span class="line"><span class="cl"> └─ c-btree-3：聚簇索引、二级索引与回表
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 <code>ragflow_&lt;tenant_id&gt;</code> 搜索索引中，核心记录可以简化为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span> <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;c-btree-1&#34;</span><span class="p">,</span> <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span> <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;B+ 树由根节点、中间节点和叶子节点组成……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;mom_id&#34;</span><span class="p">:</span> <span class="s2">&#34;m-btree&#34;</span><span class="p">,</span> <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.018</span><span class="p">,</span> <span class="mf">-0.027</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;c-btree-2&#34;</span><span class="p">,</span> <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span> <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;叶子节点有序排列并通过链表连接，因此适合范围查询。&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;mom_id&#34;</span><span class="p">:</span> <span class="s2">&#34;m-btree&#34;</span><span class="p">,</span> <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.011</span><span class="p">,</span> <span class="mf">-0.032</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;m-btree&#34;</span><span class="p">,</span> <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span> <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;B+ 树章节的完整原文：结构、范围查询、聚簇索引和回表……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">0</span> <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>全文索引章节会以相同方式生成 <code>c-fulltext-1..3</code> 和 <code>m-fulltext</code>。父子关系只有一跳：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">c-btree-1.mom_id ─┐
+</span></span><span class="line"><span class="cl">c-btree-2.mom_id ─┼──&gt; m-btree.id
+</span></span><span class="line"><span class="cl">c-btree-3.mom_id ─┘
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>母记录没有 <code>children</code> 数组，也没有单独的 <code>mother_kwd</code>。它的身份来自“自己的 <code>id</code> 被子块的 <code>mom_id</code> 引用”，所以这不是可递归遍历的任意层级树。</p>
+<p>查询“为什么 B+ 树适合范围查询”时：</p>
+<ol>
+<li><strong>[Q4]～[Q7]</strong>：普通检索只搜索 <code>available_int=1</code> 的小块，<code>c-btree-2</code> 容易精确命中并完成基础排序。</li>
+<li><strong>[Q9]</strong>：<code>retrieval_by_children()</code> 发现它带有 <code>mom_id=m-btree</code>。</li>
+<li><strong>[Q9]</strong>：系统按 ID 读取 <code>available_int=0</code> 的 <code>m-btree</code>。</li>
+<li><strong>[Q12]</strong>：最终把 B+ 树章节的大块原文交给 LLM，实现“用小块搜索、用大块回答”。</li>
+</ol>
+<h4 id="toc从已有-chunk-生成章节导航">TOC：从已有 Chunk 生成章节导航</h4>
+<p>TOC 在写入阶段生成目录记录，在查询阶段只影响 <strong>[Q8]</strong>。它读取 [Q7] 已经排好的基础结果，但不参加 [Q4] 初召回。</p>
+<p>TOC 不会改变上述 Chunk，也不使用 <code>mom_id</code>。普通 Chunk 生成后，LLM 阅读 <code>MySQL索引.md</code> 的标题和内容，输出目录层级及每个章节对应的 Chunk ID。系统把整个目录作为一条特殊记录写入同一搜索索引：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;toc-mysql-index&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;toc_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;toc&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;[{&#39;level&#39;:1,&#39;title&#39;:&#39;MySQL 索引&#39;}, {&#39;level&#39;:2,&#39;title&#39;:&#39;B+ 树索引&#39;,&#39;chunk_ids&#39;:[&#39;c-btree-1&#39;,&#39;c-btree-2&#39;,&#39;c-btree-3&#39;]}, {&#39;level&#39;:2,&#39;title&#39;:&#39;全文索引&#39;,&#39;chunk_ids&#39;:[&#39;c-fulltext-1&#39;,&#39;c-fulltext-2&#39;,&#39;c-fulltext-3&#39;]}]&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这条记录表达的是“目录标题 → 已有 Chunk ID”，而不是父 Chunk：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">B+ 树索引 ──&gt; c-btree-1、c-btree-2、c-btree-3
+</span></span><span class="line"><span class="cl">全文索引   ──&gt; c-fulltext-1、c-fulltext-2、c-fulltext-3
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查询“这篇文章介绍了哪两种索引”时，系统先在 [Q4]～[Q7] 通过普通召回确定 <code>MySQL索引.md</code> 最相关；[Q8] 再按 <code>doc_id + toc_kwd=&quot;toc&quot;</code> 读取目录，让 LLM 选择“B+ 树索引”和“全文索引”两个章节，最后按 <code>chunk_ids</code> 加权或补取正文。TOC 自身 <code>available_int=0</code>，不会作为普通正文命中。</p>
+<h3 id="54-raptor-与-graphrag">5.4 RAPTOR 与 GraphRAG</h3>
+<h4 id="raptor从六个基础-chunk-生成多层摘要">RAPTOR：从六个基础 Chunk 生成多层摘要</h4>
+<p>RAPTOR 在写入阶段增加摘要记录，在查询阶段影响 <strong>[Q4]～[Q7]</strong>。它没有单独的查询后处理步骤：可检索摘要直接与普通 Chunk 一起召回、重新打分和排序。</p>
+<p>RAPTOR 不按标题建立父子关系，而是读取前面已经写入的普通 Chunk 文本和向量，然后循环执行“相邻语义聚类 → LLM 摘要 → 摘要 Embedding → 再聚类”。在本例中可以形成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">第 0 层（已有普通 Chunk）
+</span></span><span class="line"><span class="cl">  c-btree-1、c-btree-2、c-btree-3
+</span></span><span class="line"><span class="cl">  c-fulltext-1、c-fulltext-2、c-fulltext-3
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">第 1 层（两个主题摘要）
+</span></span><span class="line"><span class="cl">  r-btree：B+ 树通过有序叶子页支持等值和范围查询，二级索引可能回表……
+</span></span><span class="line"><span class="cl">  r-fulltext：全文索引通过分词和倒排表支持长文本关键词搜索……
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">第 2 层（整篇文档摘要）
+</span></span><span class="line"><span class="cl">  r-all：MySQL 会根据查询类型选择 B+ 树索引或全文索引……
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>算法运行时使用 <code>parent_child_map</code> 暂时记录 <code>r-all → [r-btree,r-fulltext]</code>，并向上合并叶子来源。但普通可检索模式不会像父子 Chunk 那样持久化 <code>mom_id</code>，而是把每个摘要独立写成可检索记录：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span> <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;r-btree&#34;</span><span class="p">,</span> <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span> <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;raptor_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;raptor&#34;</span><span class="p">,</span> <span class="nt">&#34;raptor_layer_int&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;B+ 树通过有序叶子页支持等值和范围查询，二级索引可能回表……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_ltks&#34;</span><span class="p">:</span> <span class="s2">&#34;B+树 叶子页 等值 范围查询 二级索引 回表&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.021</span><span class="p">,</span> <span class="mf">-0.018</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;r-fulltext&#34;</span><span class="p">,</span> <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span> <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;raptor_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;raptor&#34;</span><span class="p">,</span> <span class="nt">&#34;raptor_layer_int&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;全文索引通过分词和倒排表支持长文本关键词搜索……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.017</span><span class="p">,</span> <span class="mf">-0.012</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">{</span> <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;r-all&#34;</span><span class="p">,</span> <span class="nt">&#34;doc_id&#34;</span><span class="p">:</span> <span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">,</span> <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;raptor_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;raptor&#34;</span><span class="p">,</span> <span class="nt">&#34;raptor_layer_int&#34;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;MySQL 会根据查询类型选择 B+ 树索引或全文索引……&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.008</span><span class="p">,</span> <span class="mf">-0.006</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span> <span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>raptor_kwd=&quot;raptor&quot;</code> 说明它是摘要 Chunk，<code>raptor_layer_int</code> 说明摘要层级。普通 Chunk 与这些摘要都有分词和向量，所以一起参加全文 + Dense KNN：</p>
+<ul>
+<li>问“叶子节点为什么适合范围扫描”，更可能命中原始 <code>c-btree-2</code>。</li>
+<li>问“B+ 树索引有哪些特点”，更可能命中 <code>r-btree</code>。</li>
+<li>问“B+ 树和全文索引应该如何选择”，更可能命中总摘要 <code>r-all</code>。</li>
+</ul>
+<p>查询不会先命中叶子再沿 <code>parent_id</code> 上行。RAPTOR 的主要作用是把不同抽象层级的摘要直接加入候选空间。部分路径会保存 <code>source_chunk_ids</code>；结构展示模式也可以额外保存一条 <code>raptor_kwd=&quot;raptor_tree&quot;、available_int=0</code> 的嵌套树 JSON，但它不参加普通召回。</p>
+<p>构建配置位于 <code>parser_config.raptor</code>，包括 <code>use_raptor</code>、<code>scope=file|dataset</code>、摘要 <code>prompt</code>、<code>max_token</code>、<code>max_cluster</code>、<code>clustering_threshold</code>、<code>clustering_ratio</code> 和 <code>random_seed</code>。它作为后台任务执行；重新构建时先写入新摘要，再清理旧摘要。</p>
+<h4 id="graphrag如何启用">GraphRAG：如何启用</h4>
+<p>GraphRAG 在写入阶段生成图记录，在查询阶段通过独立的 <strong>[Q11]</strong> 分支检索；它不参加普通 Chunk 的 [Q4]～[Q7] 排名。</p>
+<p>GraphRAG 有两个独立开关，缺一不可：</p>
+<ol>
+<li><strong>构建开关</strong>：在 KB 的 <code>parser_config.graphrag</code> 中设置 <code>use_graphrag=true</code>，并执行 GraphRAG/Graph 索引任务，生成图数据。</li>
+<li><strong>查询开关</strong>：对话的 <code>prompt_config.use_kg=true</code>，或者检索 API 请求传 <code>use_kg=true</code>，查询阶段才会额外调用 <code>KGSearch</code>。</li>
+</ol>
+<p>示意配置如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;graphrag&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;use_graphrag&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;method&#34;</span><span class="p">:</span> <span class="s2">&#34;light&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;entity_types&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;organization&#34;</span><span class="p">,</span> <span class="s2">&#34;person&#34;</span><span class="p">,</span> <span class="s2">&#34;geo&#34;</span><span class="p">,</span> <span class="s2">&#34;event&#34;</span><span class="p">,</span> <span class="s2">&#34;category&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;resolution&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;community&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;batch_chunk_token_size&#34;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;retry_attempts&#34;</span><span class="p">:</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li><code>method=light</code>：LightRAG 风格的 LLM 抽取，当前默认。</li>
+<li><code>method=general</code>：较完整的 LLM 图抽取路径。</li>
+<li><code>method=ner</code>：基于 NER 的抽取路径，实体/关系抽取本身不依赖 LLM。</li>
+<li><code>resolution=true</code>：做实体消歧与合并，例如把“OpenAI”和“Open AI”合并。</li>
+<li><code>community=true</code>：做社区划分并让 LLM 生成社区报告，适合全局性问题，但构建更慢、成本更高。</li>
+</ul>
+<p>本地代码还提供构建、合并、实体消歧和社区阶段的超时与重试配置。需要特别注意当前 checkout 的接口演进：兼容层注释把旧 <code>/run_graphrag</code> 指向 <code>/index?type=graph</code>，但统一索引服务又把 <code>type=graph</code> 映射为新的 <code>structure_graph</code> 任务；旧的 <code>task_type=&quot;graphrag&quot;</code> 处理器仍然存在。也就是说，<strong>这个提交中的“Graph/Structure Graph”和旧 GraphRAG 构建入口正在合并演进，不能只凭 URL 名称判断执行了哪条代码路径</strong>。部署时应以实际版本产生的任务类型和索引记录为准。</p>
+<h4 id="graphrag-使用什么数据库">GraphRAG 使用什么数据库</h4>
+<p>RAGFlow 没有为 GraphRAG 单独配置 Neo4j、NebulaGraph 之类的图数据库。图构建过程在内存中使用 NetworkX，持久化仍通过统一 <code>docStoreConn</code> 写入当前文档引擎；默认 Elasticsearch 部署中，它们仍位于 <code>ragflow_&lt;tenant_id&gt;</code> 索引，并用 <code>kb_id</code> 隔离 KB。</p>
+<p>MySQL 保存 KB 配置和任务状态，Redis 用于任务、锁、缓存与阶段标记；它们都不是 GraphRAG 的图查询数据库。若部署切换其他文档引擎，GraphRAG 也是走对应的文档引擎适配器，而不是另配一套图数据库连接。</p>
+<p>GraphRAG 从本例的六个基础 Chunk 中抽取出的内容可能是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">实体：B+ 树索引、叶子节点、范围查询、二级索引、回表、全文索引、倒排表
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">关系：
+</span></span><span class="line"><span class="cl">  B+ 树索引 ──支持──&gt; 范围查询
+</span></span><span class="line"><span class="cl">  二级索引  ──可能触发──&gt; 回表
+</span></span><span class="line"><span class="cl">  全文索引  ──使用──&gt; 倒排表
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>RAGFlow 没有把这些数据写入 Neo4j，而是把每个实体和关系转换为带向量的搜索索引记录：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;e-btree&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;knowledge_graph_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;entity&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;entity_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;B+ 树索引&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;entity_type_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;category&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;{\&#34;description\&#34;:\&#34;适合等值和范围查询的有序树索引结构\&#34;}&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;source_id&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;rank_flt&#34;</span><span class="p">:</span> <span class="mf">0.031</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;n_hop_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;[...]&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.013</span><span class="p">,</span> <span class="mf">-0.019</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;rel-btree-range&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;knowledge_graph_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;relation&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;from_entity_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;B+ 树索引&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;to_entity_kwd&#34;</span><span class="p">:</span> <span class="s2">&#34;范围查询&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content_with_weight&#34;</span><span class="p">:</span> <span class="s2">&#34;{\&#34;description\&#34;:\&#34;B+ 树的叶子页有序并通过链表连接，因此支持范围查询\&#34;,\&#34;weight\&#34;:3}&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;source_id&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;mysql-index-doc&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;weight_int&#34;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;kb_id&#34;</span><span class="p">:</span> <span class="s2">&#34;database-kb&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;available_int&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;q_1024_vec&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.009</span><span class="p">,</span> <span class="mf">-0.014</span><span class="p">,</span> <span class="s2">&#34;...&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>完成实体和关系写入后，还会保存图的整体结构：</p>
+<ul>
+<li><code>knowledge_graph_kwd=&quot;subgraph&quot;</code>：<code>MySQL索引.md</code> 的 NetworkX node-link JSON，<code>source_id=[&quot;mysql-index-doc&quot;]</code>，既是文档级图，也是构建断点。</li>
+<li><code>knowledge_graph_kwd=&quot;graph&quot;</code>：把 <code>database-kb</code> 中所有 Document 子图合并后的 KB 图快照，<code>source_id</code> 包含所有来源 Document ID。</li>
+<li><code>knowledge_graph_kwd=&quot;community_report&quot;</code>：可选的社区摘要与证据。</li>
+</ul>
+<p>这些记录的 <code>available_int=0</code> 表示不进入普通 Chunk 召回；它们由专门的 <code>KGSearch</code> 查询。</p>
+<h4 id="graphrag-如何构建更新和检索">GraphRAG 如何构建、更新和检索</h4>
+<p>构建流程是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Document 普通 Chunk
+</span></span><span class="line"><span class="cl">  → 按 token 预算分批
+</span></span><span class="line"><span class="cl">  → light/general/ner 抽取实体与关系
+</span></span><span class="line"><span class="cl">  → 保存每个 Document 的 subgraph
+</span></span><span class="line"><span class="cl">  → 合并成 KB graph
+</span></span><span class="line"><span class="cl">  → 计算 PageRank 与 N-hop 邻居
+</span></span><span class="line"><span class="cl">  → 可选实体消歧
+</span></span><span class="line"><span class="cl">  → 可选社区划分与社区报告
+</span></span><span class="line"><span class="cl">  → 写入 entity、relation、graph、subgraph、community_report 记录
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>更新不是查询时临时重新抽取。已有 <code>subgraph</code> 会被当作检查点并跳过 LLM 抽取，因此文档内容变化后，最稳妥的更新方式是使旧文档子图失效，或者重置 Graph 索引后重新运行构建。全量 wipe 会删除 <code>graph/subgraph/entity/relation/community_report</code> 并清除阶段标记，再重新排队构建。删除 Document 时，代码会从图记录的 <code>source_id</code> 中移除该 Document，并把总图标记为 <code>removed_kwd=&quot;Y&quot;</code>，后续可根据剩余子图重建。</p>
+<p>图更新时先准备新的图快照、子图和实体/关系向量，准备完成后再删除或替换旧的图记录；社区报告也采用先写新集合、再清理过期 ID 的方式，降低构建中断造成空图的风险。</p>
+<p>检索流程全部发生在 <strong>[Q11]</strong>：</p>
+<ol>
+<li>例如问题“哪些索引支持范围查询”，LLM 先抽取问题实体“范围查询”和可能的答案类型。</li>
+<li>在指定 <code>tenant index + kb_ids</code> 范围内，对 <code>knowledge_graph_kwd=&quot;entity&quot;</code> 做 Dense 检索，命中“范围查询”和“B+ 树索引”，并按实体类型、PageRank 和相似度补强。</li>
+<li>对 <code>knowledge_graph_kwd=&quot;relation&quot;</code> 做 Dense 检索，命中 <code>B+ 树索引 → 支持 → 范围查询</code>，再结合 N-hop 路径和关系权重排序。</li>
+<li>若启用社区报告，按相关实体读取高权重 <code>community_report</code>。</li>
+<li>把实体表、关系表和社区报告拼成一个临时结果：<code>docnm_kwd=&quot;Related content in Knowledge Graph&quot;</code>。</li>
+<li>将该合成 Chunk 插入普通检索证据的前面，再一起交给回答模型。</li>
+</ol>
+<p>因此 GraphRAG 不是让 Elasticsearch 执行图遍历，也不是把 Cypher 发给 Neo4j；它是“向量检索图记录 + RAGFlow Python 代码读取预计算的 N-hop/PageRank + 组装图证据”。</p>
+<p>简单说：<strong>父子 Chunk 持久化一跳外键；RAPTOR 算法生成摘要树、检索时主要使用扁平摘要节点；GraphRAG 把实体关系保存为专用文档记录，再由 KG Retriever 额外组织图证据。</strong></p>
+<h3 id="55-引用如何生成">5.5 引用如何生成</h3>
+<p>引用发生在 <strong>[Q12]～[Q13]</strong>，不会反过来改变 [Q4]～[Q11] 已经选出的证据。</p>
+<p>系统先在 Prompt 中把知识片段编号，要求 LLM 输出 <code>[ID:n]</code>。生成后会校验引用格式和范围。</p>
+<p>如果模型没有给出引用，<code>decorate_answer()</code> 会把答案拆成句子，对答案片段和候选 Chunk 计算词项与向量相似度，再给最相关的句子插入 <code>[ID:n]</code>，最多关联四个 Chunk。</p>
+<p>这种后插引用是相关性匹配，不是事实蕴含证明。高风险场景仍应增加 Claim Verification 或“证据不足则拒答”。</p>
+<h2 id="6-主要问题与解决方案">6. 主要问题与解决方案</h2>
+<table>
+	<thead>
+			<tr>
+					<th>问题</th>
+					<th>RAGFlow 的方案</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>PDF、表格和扫描件难解析</td>
+					<td>DeepDoc、OCR、版面识别和专用 Parser</td>
+			</tr>
+			<tr>
+					<td>固定分块破坏语义</td>
+					<td>结构分块、标题路径、父子 Chunk、TOC</td>
+			</tr>
+			<tr>
+					<td>纯向量漏掉精确词项</td>
+					<td>全文与 Dense KNN 混合召回</td>
+			</tr>
+			<tr>
+					<td>初召回顺序不准</td>
+					<td>词项/向量融合和可选 Reranker</td>
+			</tr>
+			<tr>
+					<td>概括性问题难命中</td>
+					<td>RAPTOR 摘要节点</td>
+			</tr>
+			<tr>
+					<td>跨 Chunk 关系难表达</td>
+					<td>GraphRAG 图证据</td>
+			</tr>
+			<tr>
+					<td>回答难以验证</td>
+					<td>Chunk 引用和引用资料返回</td>
+			</tr>
+			<tr>
+					<td>多租户数据混淆</td>
+					<td>Tenant 索引、KB/Document Filter 和访问检查</td>
+			</tr>
+			<tr>
+					<td>大文件处理耗时</td>
+					<td>Redis 任务、Worker、进度、取消和重试</td>
+			</tr>
+	</tbody>
+</table>
+<h2 id="7-事实源与检索投影的边界">7. 事实源与检索投影的边界</h2>
+<p>RAGFlow 保存原始文件，并把 Chunk 与向量作为解析投影，这是合理方向。但它还不是完整的动态文档版本系统：</p>
+<ul>
+<li>Chunk PATCH 会直接更新检索投影，不会回写原始文件。</li>
+<li>重新解析可能覆盖人工修改的 Chunk。</li>
+<li>没有统一的 <code>document_version_id</code> 和 ready-version 原子读指针。</li>
+<li>跨 MinIO、MySQL、Redis、Elasticsearch 的写入不是单一事务。</li>
+<li>File/Artifact Commit 尚未形成“提交原文版本—构建完整索引—原子发布—一键回退”的闭环。</li>
+</ul>
+<p>所以它适合以上传、同步和重新解析为主的企业知识库。如果需要多人频繁在线编辑同一文档，应在上层增加版本化事实源和发布协议。</p>
+<h2 id="8-本地代码依据">8. 本地代码依据</h2>
+<ul>
+<li><code>api/db/db_models.py</code>：Tenant、UserTenant、Knowledgebase、Document、File 等模型。</li>
+<li><code>api/db/services/knowledgebase_service.py</code>：KB 可访问性检查。</li>
+<li><code>api/db/services/document_service.py</code>：Document 权限、状态和任务。</li>
+<li><code>rag/svr/task_executor.py</code>、<code>rag/svr/task_executor_refactor/</code>：摄取、解析、增强、RAPTOR、Embedding 和索引。</li>
+<li><code>rag/nlp/search.py</code>、<code>rag/utils/es_conn.py</code>：租户索引、过滤、混合召回、ES 查询翻译、重排和结构扩展。</li>
+<li><code>rag/flow/chunker/title_chunker/hierarchy_chunker.py</code>、<code>token_chunker.py</code>：层级和父子 Chunk。</li>
+<li><code>rag/advanced_rag/knowlege_compile/raptor.py</code>：RAPTOR。</li>
+<li><code>rag/graphrag/general/index.py</code>、<code>rag/graphrag/utils.py</code>、<code>rag/graphrag/search.py</code>：GraphRAG 构建、持久化与查询。</li>
+<li><code>api/apps/services/dataset_api_service.py</code>：Graph、RAPTOR 等索引任务入口、重置与清理。</li>
+<li><code>api/db/services/dialog_service.py</code>、<code>rag/prompts/citation_prompt.md</code>：生成与引用。</li>
+</ul>
+<p>下一篇：<a href="./005_mem0.md" rel="">Mem0 详解</a>。对比与选型见：<a href="./006_rag_framework_comparison.md" rel="">RAG 框架对比与选型</a>。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-16&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/1715a691f0a021a83e97aae252c93d184be0d68c" target="_blank" title="commit by tao(tao@example.com) 1715a691f0a021a83e97aae252c93d184be0d68c: rag">
+                                    <i class="fas fa-hashtag fa-fw"></i>1715a69</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/rag/004_ragflow/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/rag/004_ragflow/" data-title="RAGFlow 详解：架构、数据层级与检索流程" data-hashtags="RAG,RAGFlow"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/rag/004_ragflow/" data-hashtag="RAG"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/rag/004_ragflow/" data-title="RAGFlow 详解：架构、数据层级与检索流程"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/rag/004_ragflow/" data-title="RAGFlow 详解：架构、数据层级与检索流程"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/rag/004_ragflow/" data-title="RAGFlow 详解：架构、数据层级与检索流程" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/rag/">RAG</a>,&nbsp;<a href="/tags/ragflow/">RAGFlow</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/workflow/004_langgraph_stream/" class="prev" rel="prev" title="LangGraph 的流式输出与中断恢复"><i class="fas fa-angle-left fa-fw"></i>LangGraph 的流式输出与中断恢复</a>
+            <a href="/posts/hugo/loveit_shortcodes/" class="next" rel="next" title="Loveit 内置 Shortcodes">Loveit 内置 Shortcodes<i class="fas fa-angle-right fa-fw"></i></a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2026-08-15T12:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"RAGFlow 详解：架构、数据层级与检索流程"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
