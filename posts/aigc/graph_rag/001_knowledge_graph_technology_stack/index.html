@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+        <title>知识图谱、本体与语义检索：技术栈与源码学习路线 - LoveIt</title><meta name="Description" content="从 RDF、本体和 SPARQL 出发，逐步学习语义检索、图数据库与 GraphRAG 的框架和源码"><meta property="og:url" content="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/">
+	<meta property="og:site_name" content="LoveIt">
+	<meta property="og:title" content="知识图谱、本体与语义检索：技术栈与源码学习路线">
+	<meta property="og:description" content="从 RDF、本体和 SPARQL 出发，逐步学习语义检索、图数据库与 GraphRAG 的框架和源码">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-08-17T12:00:00+08:00">
+		<meta property="article:modified_time" content="2026-08-19T09:43:57+08:00">
+		<meta property="article:tag" content="GraphRAG">
+		<meta property="og:image" content="https://hotttao.github.io/logo.png">
+
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://hotttao.github.io/logo.png">
+	<meta name="twitter:title" content="知识图谱、本体与语义检索：技术栈与源码学习路线">
+	<meta name="twitter:description" content="从 RDF、本体和 SPARQL 出发，逐步学习语义检索、图数据库与 GraphRAG 的框架和源码">
+<meta name="application-name" content="宋涛的个人博客">
+<meta name="apple-mobile-web-app-title" content="宋涛的个人博客"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" /><link rel="prev" href="https://hotttao.github.io/posts/aigc/agent_platform/001_platform_infra/" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css"><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.7.2/animate.min.css"><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "知识图谱、本体与语义检索：技术栈与源码学习路线",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/graph_rag\/001_knowledge_graph_technology_stack\/"
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "GraphRAG","wordcount":  4160 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/graph_rag\/001_knowledge_graph_technology_stack\/","datePublished": "2026-08-17T12:00:00+08:00","dateModified": "2026-08-19T09:43:57+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "xxxx","logo": {
+                    "@type": "ImageObject",
+                    "url": "https:\/\/hotttao.github.io\/images\/hugo\/avatar.png",
+                    "width":  528 ,
+                    "height":  560 
+                }},"author": {
+                "@type": "Person",
+                "name": "宋涛"
+            },"description": "从 RDF、本体和 SPARQL 出发，逐步学习语义检索、图数据库与 GraphRAG 的框架和源码"
+    }
+    </script></head>
+    <body header-desktop="fixed" header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/categories/go/"> Go </a><a class="menu-item" href="/categories/linux/"> Linux </a><a class="menu-item" href="/categories/distributed/"> 分布式 </a><a class="menu-item" href="/categories/architecture/"> 架构 </a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="LoveIt"><span class="header-title-pre"><i class='far fa-kiss-wink-heart fa-fw'></i></span>宋涛的博客</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/categories/go/" title="">Go</a><a class="menu-item" href="/categories/linux/" title="">Linux</a><a class="menu-item" href="/categories/distributed/" title="">分布式</a><a class="menu-item" href="/categories/architecture/" title="">架构</a><a class="menu-item" href="https://github.com/hotttao/" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw"></i>
+            </a></div>
+    </div>
+</header>
+<div class="search-dropdown desktop">
+    <div id="search-dropdown-desktop"></div>
+</div>
+<div class="search-dropdown mobile">
+    <div id="search-dropdown-mobile"></div>
+</div>
+<main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><style>
+    .docs-shell {
+        width: min(1320px, calc(100vw - 3rem));
+        margin-left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 2.75rem;
+        align-items: start;
+    }
+    .docs-sidebar {
+        position: sticky;
+        top: 4.5rem;
+        max-height: calc(100vh - 5.5rem);
+        overflow: auto;
+        padding: .25rem 1.1rem .75rem 0;
+        border-right: 1px solid #f0f0f0;
+        background: transparent;
+    }
+    .docs-sidebar-title {
+        display: block;
+        margin: 0 0 .75rem;
+        color: #a0a0a0;
+        font-size: .78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    a.docs-sidebar-title:hover {
+        color: #2d96bd;
+    }
+    .docs-sidebar-actions {
+        display: flex;
+        gap: .8rem;
+        margin: 0 0 .75rem;
+        padding-left: .75rem;
+        font-size: .76rem;
+    }
+    .docs-sidebar-action {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #8a8a8a;
+        cursor: pointer;
+    }
+    .docs-sidebar-action:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-group {
+        margin: .1rem 0;
+    }
+    .docs-tree-toggle {
+        width: 100%;
+        display: block;
+        padding: .22rem 0 .22rem .75rem;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #5f5f5f;
+        font-size: .94rem;
+        font-weight: 600;
+        line-height: 1.45;
+        text-align: left;
+        cursor: pointer;
+    }
+    .docs-tree-toggle:hover {
+        color: #2d96bd;
+    }
+    .docs-tree-toggle::before {
+        content: "▾";
+        display: inline-block;
+        width: .95rem;
+        color: #b0b0b0;
+    }
+    .docs-tree-group.is-collapsed .docs-tree-toggle::before {
+        content: "▸";
+    }
+    .docs-tree-group.is-collapsed .docs-tree {
+        display: none;
+    }
+    .docs-tree {
+        margin: .12rem 0 .5rem;
+        padding: 0;
+        list-style: none;
+    }
+    .docs-tree li {
+        margin: 0;
+        padding: 0;
+        line-height: 1.35;
+    }
+    .docs-tree a {
+        display: block;
+        padding: .24rem 0 .24rem 1.7rem;
+        border-left: 2px solid transparent;
+        color: #777;
+        font-size: .9rem;
+        text-decoration: none;
+    }
+    .docs-tree a:hover {
+        color: #2d96bd;
+    }
+    .docs-tree a.active {
+        border-left-color: #2d96bd;
+        color: #2d96bd;
+        font-weight: 600;
+    }
+    .docs-main,
+    .docs-main.page,
+    .docs-main.page.single {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+    }
+    .docs-main .single-title {
+        margin-top: 0;
+    }
+    .docs-main .post-meta {
+        color: #8a8a8a;
+        font-size: .875rem;
+        margin: -.5rem 0 1.5rem;
+    }
+    [theme=dark] .docs-sidebar {
+        border-right-color: #2b2b2b;
+    }
+    [theme=dark] .docs-sidebar-title,
+    [theme=dark] .docs-sidebar-action {
+        color: #8a8a8a;
+    }
+    [theme=dark] .docs-tree-toggle {
+        color: #b8b8b8;
+    }
+    [theme=dark] .docs-tree a {
+        color: #9f9f9f;
+    }
+    [theme=dark] .docs-tree-toggle:hover,
+    [theme=dark] .docs-sidebar-action:hover,
+    [theme=dark] .docs-tree a:hover,
+    [theme=dark] .docs-tree a.active {
+        color: #2d96bd;
+    }
+    @media (max-width: 900px) {
+        .docs-shell {
+            width: 100%;
+            margin-left: 0;
+            transform: none;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .docs-sidebar {
+            position: static;
+            max-height: none;
+            padding: .75rem 0;
+            border-right: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    }
+</style>
+
+    <div class="article-docs docs-shell"><aside class="article-docs-sidebar docs-sidebar">
+                <a class="article-docs-sidebar-title docs-sidebar-title" href="/categories/agent/"><i class="far fa-folder-open fa-fw"></i>&nbsp;Agent</a>
+                <section>
+                    <h3 class="article-docs-tag-name docs-tree-tag">GraphRAG</h3>
+                    <ol class="article-docs-list docs-tree"><li><a href="/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" class="active">知识图谱、本体与语义检索：技术栈与源码学习路线</a></li></ol>
+                </section>
+            </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">知识图谱、本体与语义检索：技术栈与源码学习路线</h1><div class="post-meta">
+                <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-08-17">2026-08-17</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4160 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
+            </div><div class="details toc" id="toc-static"  kept="">
+                    <div class="details-summary toc-title">
+                        <span>目录</span>
+                        <span><i class="details-icon fas fa-angle-right"></i></span>
+                    </div>
+                    <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-三个核心概念">1. 三个核心概念</a>
+      <ul>
+        <li><a href="#11-知识图谱">1.1 知识图谱</a></li>
+        <li><a href="#12-本体-ontology">1.2 本体 Ontology</a></li>
+        <li><a href="#13-semantic-ir">1.3 Semantic IR</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-必须掌握的基础标准">2. 必须掌握的基础标准</a></li>
+    <li><a href="#3-rdflib理解-rdf-图与-sparql">3. RDFLib：理解 RDF 图与 SPARQL</a></li>
+    <li><a href="#4-pyshacl理解本体约束">4. pySHACL：理解本体约束</a></li>
+    <li><a href="#5-pyterrier系统学习信息检索">5. PyTerrier：系统学习信息检索</a></li>
+    <li><a href="#6-sentence-transformers理解-dense-retrieval">6. Sentence Transformers：理解 Dense Retrieval</a></li>
+    <li><a href="#7-搜索引擎源码">7. 搜索引擎源码</a>
+      <ul>
+        <li><a href="#71-apache-lucene">7.1 Apache Lucene</a></li>
+        <li><a href="#72-vespa">7.2 Vespa</a></li>
+      </ul>
+    </li>
+    <li><a href="#8-图数据库与-sparql-引擎">8. 图数据库与 SPARQL 引擎</a>
+      <ul>
+        <li><a href="#81-oxigraph">8.1 Oxigraph</a></li>
+        <li><a href="#82-apache-jena">8.2 Apache Jena</a></li>
+        <li><a href="#83-owlapi">8.3 OWLAPI</a></li>
+      </ul>
+    </li>
+    <li><a href="#9-neo4j-与-rdf-的区别">9. Neo4j 与 RDF 的区别</a></li>
+    <li><a href="#10-最后学习-graphrag">10. 最后学习 GraphRAG</a></li>
+    <li><a href="#11-基于科技周报的练手项目">11. 基于科技周报的练手项目</a>
+      <ul>
+        <li><a href="#111-第一版rdf-知识图谱">11.1 第一版：RDF 知识图谱</a></li>
+        <li><a href="#112-第二版shacl-数据质量检查">11.2 第二版：SHACL 数据质量检查</a></li>
+        <li><a href="#113-第三版sparql-查询">11.3 第三版：SPARQL 查询</a></li>
+        <li><a href="#114-第四版混合语义检索">11.4 第四版：混合语义检索</a></li>
+        <li><a href="#115-第五版graphrag">11.5 第五版：GraphRAG</a></li>
+      </ul>
+    </li>
+    <li><a href="#12-推荐阅读优先级">12. 推荐阅读优先级</a></li>
+  </ul>
+</nav></div>
+                </div><div class="content" id="content"><p>知识图谱、本体和语义检索都在解决同一个问题：如何让计算机不仅存储文字，还能表示事物、概念以及它们之间的关系。</p>
+<p>从工程角度学习这套技术，推荐按以下顺序推进：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">RDFLib → pySHACL → SPARQL
+</span></span><span class="line"><span class="cl">       ↓
+</span></span><span class="line"><span class="cl">PyTerrier + Sentence Transformers
+</span></span><span class="line"><span class="cl">       ↓
+</span></span><span class="line"><span class="cl">Oxigraph / Apache Jena
+</span></span><span class="line"><span class="cl">       ↓
+</span></span><span class="line"><span class="cl">Neo4j GraphRAG / Microsoft GraphRAG
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>不要一开始就进入 GraphRAG 或 LangChain 的高级封装。先理解 RDF、本体约束、召回和排序，才能看懂后续框架为什么这样设计，而不只是学会调用 API。</p>
+<!-- more -->
+<blockquote>
+<p>本文中的 Semantic IR 指 Semantic Information Retrieval，即语义信息检索。如果它出现在编译器领域，IR 也可能指 Intermediate Representation，那是另一条技术路线。</p>
+</blockquote>
+<h2 id="1-三个核心概念">1. 三个核心概念</h2>
+<h3 id="11-知识图谱">1.1 知识图谱</h3>
+<p>知识图谱使用“实体—关系—实体”的形式组织事实：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">DeepSeek V4 ──开发者──&gt; DeepSeek
+</span></span><span class="line"><span class="cl">DeepSeek V4 ──类型────&gt; 大语言模型
+</span></span><span class="line"><span class="cl">DeepSeek V4 ──采用────&gt; MoE 架构
+</span></span><span class="line"><span class="cl">MoE         ──属于────&gt; 神经网络架构
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中包含：</p>
+<ul>
+<li>实体：DeepSeek、DeepSeek V4、MoE；</li>
+<li>关系：开发者、类型、采用、属于；</li>
+<li>属性：发布日期、参数量、官网地址；</li>
+<li>事实：<code>DeepSeek V4 --采用--&gt; MoE</code>。</li>
+</ul>
+<p>知识图谱强调以关系为核心连接不同来源的数据，并支持沿关系执行多跳查询。</p>
+<h3 id="12-本体-ontology">1.2 本体 Ontology</h3>
+<p>本体定义某个领域中允许存在哪些概念、关系和规则。知识图谱保存具体事实，本体规定这些事实应该如何表达。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">概念：
+</span></span><span class="line"><span class="cl">  视频、工具、开源项目、AI 模型、公司、技术架构
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">关系：
+</span></span><span class="line"><span class="cl">  视频 --介绍--&gt; 工具
+</span></span><span class="line"><span class="cl">  公司 --开发--&gt; 工具
+</span></span><span class="line"><span class="cl">  工具 --采用--&gt; 技术架构
+</span></span><span class="line"><span class="cl">  工具 --属于--&gt; 工具分类
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">规则：
+</span></span><span class="line"><span class="cl">  AI 模型 是一种 软件工具
+</span></span><span class="line"><span class="cl">  MoE 模型 是一种 AI 模型
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当图中记录“DeepSeek V4 是一种 MoE 模型”时，推理系统可以继续得出“DeepSeek V4 是一种 AI 模型”和“DeepSeek V4 是一种软件工具”。</p>
+<p>本体不只是数据库 Schema。数据库 Schema 主要约束表、字段和类型；本体还可以表达概念继承、关系语义和逻辑约束。</p>
+<h3 id="13-semantic-ir">1.3 Semantic IR</h3>
+<p>传统信息检索主要通过关键词匹配文档。语义检索关注用户真正要找的含义，即使查询与原文没有使用相同词汇，也应该找到相关内容。</p>
+<p>例如用户搜索“低内存运行大模型”，字幕原文可能是“从 SSD 流式加载专家权重，只需要约 2 GB 内存”。两段文字没有完全相同的关键词，但语义检索仍应找到 TurboFieldfare。</p>
+<p>现代语义检索通常采用混合架构：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart LR
+</span></span><span class="line"><span class="cl">    Q[用户问题] --&gt; B[BM25 关键词召回]
+</span></span><span class="line"><span class="cl">    Q --&gt; V[Embedding 向量召回]
+</span></span><span class="line"><span class="cl">    B --&gt; M[候选结果合并]
+</span></span><span class="line"><span class="cl">    V --&gt; M
+</span></span><span class="line"><span class="cl">    M --&gt; R[Cross-Encoder / LLM 重排]
+</span></span><span class="line"><span class="cl">    R --&gt; O[最终结果]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>知识图谱可以提供另一条检索路径：识别问题中的实体和关系，通过 SPARQL 或图遍历找到结构化事实，再和文本检索结果一起交给 LLM。</p>
+<h2 id="2-必须掌握的基础标准">2. 必须掌握的基础标准</h2>
+<p>阅读框架源码前，至少需要理解：</p>
+<table>
+	<thead>
+			<tr>
+					<th>技术</th>
+					<th>需要理解的内容</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>RDF</td>
+					<td>三元组、IRI、Literal、Blank Node、Named Graph</td>
+			</tr>
+			<tr>
+					<td>Turtle / JSON-LD</td>
+					<td>RDF 的常用序列化方式</td>
+			</tr>
+			<tr>
+					<td>RDFS</td>
+					<td>类、属性、继承、domain、range</td>
+			</tr>
+			<tr>
+					<td>OWL</td>
+					<td>等价类、限制、逻辑推理、开放世界假设</td>
+			</tr>
+			<tr>
+					<td>SHACL</td>
+					<td>数据形状、基数、类型和约束验证</td>
+			</tr>
+			<tr>
+					<td>SPARQL</td>
+					<td>图模式、FILTER、OPTIONAL、聚合、属性路径</td>
+			</tr>
+			<tr>
+					<td>传统 IR</td>
+					<td>倒排索引、TF-IDF、BM25、召回和排序</td>
+			</tr>
+			<tr>
+					<td>Semantic IR</td>
+					<td>Embedding、ANN、混合检索和重排序</td>
+			</tr>
+			<tr>
+					<td>IR 评估</td>
+					<td>Recall@K、MRR、MAP、nDCG</td>
+			</tr>
+	</tbody>
+</table>
+<p>标准层建议先学习稳定的 RDF 1.1、SPARQL 1.1 和 SHACL，再了解正在演进的 1.2 版本：</p>
+<ul>
+<li><a href="https://www.w3.org/TR/rdf-concepts/all/" target="_blank" rel="noopener noreffer">W3C RDF Concepts</a></li>
+<li><a href="https://www.w3.org/TR/sparql-query/all/" target="_blank" rel="noopener noreffer">W3C SPARQL Query</a></li>
+<li><a href="https://www.w3.org/TR/shacl/" target="_blank" rel="noopener noreffer">W3C SHACL</a></li>
+</ul>
+<h2 id="3-rdflib理解-rdf-图与-sparql">3. RDFLib：理解 RDF 图与 SPARQL</h2>
+<p><a href="https://github.com/RDFLib/rdflib" target="_blank" rel="noopener noreffer">RDFLib</a> 是最适合 Python 开发者入门的 RDF 框架，支持 RDF 解析、序列化、图操作和 SPARQL。</p>
+<p>建议重点阅读：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">rdflib/
+</span></span><span class="line"><span class="cl">├── term.py              # URIRef、Literal、BNode 等 RDF 类型
+</span></span><span class="line"><span class="cl">├── graph.py             # Graph、Dataset、三元组增删查
+</span></span><span class="line"><span class="cl">├── namespace/           # RDF、RDFS、OWL 等词汇表
+</span></span><span class="line"><span class="cl">├── plugins/parsers/     # Turtle、JSON-LD 等解析器
+</span></span><span class="line"><span class="cl">├── plugins/serializers/ # RDF 序列化
+</span></span><span class="line"><span class="cl">└── plugins/sparql/      # SPARQL 解析、代数转换和执行
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>阅读时重点理解：</p>
+<ol>
+<li>三元组在内存中如何表示；</li>
+<li><code>Graph.triples()</code> 如何进行模式匹配；</li>
+<li>Turtle 如何解析成三元组；</li>
+<li>SPARQL 如何从语法树转换为查询代数；</li>
+<li>查询代数如何在 Graph 上执行。</li>
+</ol>
+<p>如果只选一个项目开始阅读，应当选择 RDFLib。</p>
+<h2 id="4-pyshacl理解本体约束">4. pySHACL：理解本体约束</h2>
+<p><a href="https://github.com/RDFLib/pySHACL" target="_blank" rel="noopener noreffer">pySHACL</a> 是基于 RDFLib 的纯 Python SHACL 验证器。</p>
+<p>重点阅读：</p>
+<ul>
+<li><a href="https://github.com/RDFLib/pySHACL/blob/master/pyshacl/validator.py" target="_blank" rel="noopener noreffer"><code>validator.py</code></a> 中的完整验证流程；</li>
+<li>Shape 如何选择目标节点；</li>
+<li>Constraint Component 如何验证节点；</li>
+<li>Validation Report 如何构造；</li>
+<li>RDFS 和 OWL-RL 推理如何在验证前展开数据图。</li>
+</ul>
+<p>科技周报知识图谱可以定义以下约束：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-turtle" data-lang="turtle"><span class="line"><span class="cl"><span class="nn">:</span><span class="nt">ToolShape</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kt">a</span><span class="w"> </span><span class="nn">sh:</span><span class="nt">NodeShape</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nn">sh:</span><span class="nt">targetClass</span><span class="w"> </span><span class="nn">:</span><span class="nt">Tool</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nn">sh:</span><span class="nt">property</span><span class="w"> </span><span class="p">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">path</span><span class="w"> </span><span class="nn">:</span><span class="nt">name</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">minCount</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">maxCount</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">]</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nn">sh:</span><span class="nt">property</span><span class="w"> </span><span class="p">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">path</span><span class="w"> </span><span class="nn">:</span><span class="nt">projectUrl</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">minCount</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">nodeKind</span><span class="w"> </span><span class="nn">sh:</span><span class="nt">IRI</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">]</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nn">sh:</span><span class="nt">property</span><span class="w"> </span><span class="p">[</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">path</span><span class="w"> </span><span class="nn">:</span><span class="nt">introducedBy</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">minCount</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nn">sh:</span><span class="nt">class</span><span class="w"> </span><span class="nn">:</span><span class="nt">Video</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">]</span><span class="w"> </span><span class="p">.</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样可以自动发现工具没有官网、关联了不存在的视频、发布时间格式错误或名称冲突等问题。</p>
+<h2 id="5-pyterrier系统学习信息检索">5. PyTerrier：系统学习信息检索</h2>
+<p><a href="https://pyterrier.readthedocs.io/en/latest/" target="_blank" rel="noopener noreffer">PyTerrier</a> 是面向信息检索研究和实验的 Python 框架。它把检索过程建模为可组合的 Transformer：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Query
+</span></span><span class="line"><span class="cl">  → Query Rewrite
+</span></span><span class="line"><span class="cl">  → BM25 Recall
+</span></span><span class="line"><span class="cl">  → 获取文档正文
+</span></span><span class="line"><span class="cl">  → Neural Reranker
+</span></span><span class="line"><span class="cl">  → Evaluation
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>重点理解：</p>
+<ul>
+<li><code>Transformer</code> 数据模型；</li>
+<li><code>&gt;&gt;</code> 如何组合检索流水线；</li>
+<li>BM25 Retriever；</li>
+<li>Query Expansion；</li>
+<li>Learning to Rank；</li>
+<li><code>pt.Experiment()</code> 如何利用 qrels 比较不同流水线。</li>
+</ul>
+<p><a href="https://pyterrier.readthedocs.io/en/latest/experiments.html" target="_blank" rel="noopener noreffer">PyTerrier 实验接口</a>能够在相同数据上比较 BM25、FAISS、学习型稀疏检索和神经重排，并计算标准 IR 指标。</p>
+<p>推荐至少实现三组实验：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Baseline 1：BM25
+</span></span><span class="line"><span class="cl">Baseline 2：Embedding 向量检索
+</span></span><span class="line"><span class="cl">Baseline 3：BM25 + 向量召回 + Cross-Encoder 重排
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用相同问题和 qrels 比较 <code>Recall@10</code>、<code>MRR</code> 和 <code>nDCG@10</code>，不要只凭肉眼判断检索效果。</p>
+<h2 id="6-sentence-transformers理解-dense-retrieval">6. Sentence Transformers：理解 Dense Retrieval</h2>
+<p><a href="https://www.sbert.net/examples/sentence_transformer/applications/semantic-search/README.html" target="_blank" rel="noopener noreffer">Sentence Transformers 的语义搜索示例</a>适合学习向量语义检索。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">文档 → Encoder → Document Embedding
+</span></span><span class="line"><span class="cl">问题 → Encoder → Query Embedding
+</span></span><span class="line"><span class="cl">                   ↓
+</span></span><span class="line"><span class="cl">             Cosine Similarity
+</span></span><span class="line"><span class="cl">                   ↓
+</span></span><span class="line"><span class="cl">                 Top-K
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>需要理解：</p>
+<ul>
+<li>Bi-Encoder 为什么适合大规模召回；</li>
+<li>Cross-Encoder 为什么更准确但更慢；</li>
+<li>Query 和 Document 是否使用相同 Encoder；</li>
+<li>Embedding 归一化；</li>
+<li>Cosine、Dot Product 和 Euclidean Distance 的区别；</li>
+<li>Chunk 大小对召回率的影响；</li>
+<li>Hard Negative 对训练效果的影响。</li>
+</ul>
+<p>标准系统通常不是只使用向量数据库，而是把 BM25 与向量召回合并，再用更昂贵的模型重排。</p>
+<h2 id="7-搜索引擎源码">7. 搜索引擎源码</h2>
+<h3 id="71-apache-lucene">7.1 Apache Lucene</h3>
+<p><a href="https://lucene.apache.org/" target="_blank" rel="noopener noreffer">Apache Lucene</a> 是 Elasticsearch、Solr 和 OpenSearch 的底层搜索核心。</p>
+<p>建议研究：</p>
+<ul>
+<li>Analyzer、Tokenizer、TokenFilter；</li>
+<li>倒排索引和 Posting List；</li>
+<li>Segment 与 Merge；</li>
+<li>BM25Similarity；</li>
+<li>Query、Weight、Scorer；</li>
+<li>Collector 与 Top-K；</li>
+<li>HNSW 向量索引。</li>
+</ul>
+<p>Lucene 源码很大，不适合作为第一站。先通过 PyTerrier 理解检索模型，再研究 Lucene 的工程实现。</p>
+<h3 id="72-vespa">7.2 Vespa</h3>
+<p>如果想学习生产级混合检索、分阶段排序和模型推理，可以阅读 <a href="https://docs.vespa.ai/" target="_blank" rel="noopener noreffer">Vespa 文档</a>及其<a href="https://docs.vespa.ai/en/learn/tutorials/hybrid-search" target="_blank" rel="noopener noreffer">混合检索教程</a>。</p>
+<p>Vespa 将召回与排序明确分开：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">第一阶段：BM25 / ANN，低成本筛选候选
+</span></span><span class="line"><span class="cl">第二阶段：Embedding、业务特征
+</span></span><span class="line"><span class="cl">最终阶段：Cross-Encoder 或机器学习模型
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Vespa 更适合研究生产搜索架构，不适合作为 IR 入门框架。</p>
+<h2 id="8-图数据库与-sparql-引擎">8. 图数据库与 SPARQL 引擎</h2>
+<h3 id="81-oxigraph">8.1 Oxigraph</h3>
+<p>熟悉 Rust 时，推荐阅读 <a href="https://github.com/oxigraph/oxigraph" target="_blank" rel="noopener noreffer">Oxigraph</a>。它同时是 RDF/SPARQL 工具包和基于 RocksDB 的图数据库。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">oxrdf       # RDF 数据类型
+</span></span><span class="line"><span class="cl">oxttl       # Turtle、N-Triples、TriG 解析
+</span></span><span class="line"><span class="cl">spargebra   # SPARQL 解析和查询代数
+</span></span><span class="line"><span class="cl">sparopt     # 查询优化
+</span></span><span class="line"><span class="cl">spareval    # SPARQL 执行
+</span></span><span class="line"><span class="cl">oxigraph    # RocksDB 存储和事务
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以沿以下链路阅读：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">SPARQL 字符串
+</span></span><span class="line"><span class="cl">→ Parser
+</span></span><span class="line"><span class="cl">→ SPARQL Algebra
+</span></span><span class="line"><span class="cl">→ Query Optimizer
+</span></span><span class="line"><span class="cl">→ Join / Filter / Project
+</span></span><span class="line"><span class="cl">→ RocksDB 索引扫描
+</span></span><span class="line"><span class="cl">→ Result Binding
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>配合 <a href="https://github.com/oxigraph/oxigraph/wiki/Architecture" target="_blank" rel="noopener noreffer">Oxigraph 架构说明</a>阅读会更容易理解。</p>
+<h3 id="82-apache-jena">8.2 Apache Jena</h3>
+<p>Java 技术栈优先选择 <a href="https://jena.apache.org/" target="_blank" rel="noopener noreffer">Apache Jena</a>。它覆盖 RDF、OWL、推理、SPARQL、持久化和 HTTP 服务。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">jena-core    # RDF Model、Graph、Triple
+</span></span><span class="line"><span class="cl">jena-arq     # SPARQL parser、algebra、query engine
+</span></span><span class="line"><span class="cl">jena-tdb2    # 持久化三元组存储
+</span></span><span class="line"><span class="cl">jena-fuseki  # SPARQL HTTP Server
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>推荐配合 <a href="https://jena.apache.org/about_jena/architecture.html" target="_blank" rel="noopener noreffer">Jena 架构文档</a>和 <a href="https://jena.apache.org/documentation/query/architecture.html" target="_blank" rel="noopener noreffer">ARQ 内部设计</a>阅读源码。</p>
+<h3 id="83-owlapi">8.3 OWLAPI</h3>
+<p>需要深入形式化本体、描述逻辑和 Reasoner 集成时，再阅读 <a href="https://github.com/owlcs/owlapi" target="_blank" rel="noopener noreffer">OWLAPI</a>：</p>
+<ul>
+<li>Axiom 对象模型；</li>
+<li>Ontology Manager；</li>
+<li>Class Expression；</li>
+<li>Manchester Syntax；</li>
+<li>Reasoner 接口；</li>
+<li>Ontology Import。</li>
+</ul>
+<h2 id="9-neo4j-与-rdf-的区别">9. Neo4j 与 RDF 的区别</h2>
+<p>Neo4j 使用属性图模型，不等同于 RDF/OWL 本体系统。</p>
+<table>
+	<thead>
+			<tr>
+					<th>RDF / OWL</th>
+					<th>Neo4j 属性图</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>三元组模型</td>
+					<td>节点、边和属性</td>
+			</tr>
+			<tr>
+					<td>SPARQL</td>
+					<td>Cypher</td>
+			</tr>
+			<tr>
+					<td>标准化语义</td>
+					<td>灵活的应用数据模型</td>
+			</tr>
+			<tr>
+					<td>支持形式化推理</td>
+					<td>擅长路径和图遍历</td>
+			</tr>
+			<tr>
+					<td>开放世界假设</td>
+					<td>通常按照应用中的现有数据查询</td>
+			</tr>
+	</tbody>
+</table>
+<p>需要在 Neo4j 中导入和映射 RDF、本体时，可以研究 <a href="https://neo4j.com/labs/neosemantics/" target="_blank" rel="noopener noreffer">neosemantics</a>。但应先理解 RDFLib 和 SPARQL，避免把知识图谱简单理解为“把数据放进图数据库”。</p>
+<h2 id="10-最后学习-graphrag">10. 最后学习 GraphRAG</h2>
+<p>推荐研究：</p>
+<ol>
+<li><a href="https://github.com/microsoft/graphrag" target="_blank" rel="noopener noreffer">Microsoft GraphRAG</a>：重点理解从非结构化文本抽取实体关系、构建社区、生成社区摘要，以及 Local Search 和 Global Search。</li>
+<li><a href="https://github.com/neo4j/neo4j-graphrag-python" target="_blank" rel="noopener noreffer">Neo4j GraphRAG Python</a>：重点理解 Vector Retriever、Hybrid Retriever、Graph Traversal、Text2Cypher 和知识图谱构建 Pipeline。</li>
+</ol>
+<p>阅读时将系统拆成以下阶段：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flowchart LR
+</span></span><span class="line"><span class="cl">    D[文档切分] --&gt; E[实体与关系抽取]
+</span></span><span class="line"><span class="cl">    E --&gt; R[实体消歧与合并]
+</span></span><span class="line"><span class="cl">    R --&gt; G[图存储]
+</span></span><span class="line"><span class="cl">    G --&gt; V[向量索引]
+</span></span><span class="line"><span class="cl">    V --&gt; Q[查询实体识别]
+</span></span><span class="line"><span class="cl">    Q --&gt; T[图遍历与向量召回]
+</span></span><span class="line"><span class="cl">    T --&gt; RR[重排]
+</span></span><span class="line"><span class="cl">    RR --&gt; A[生成答案]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>GraphRAG 索引通常需要调用模型抽取实体、关系和摘要，成本明显高于普通向量 RAG。它适合在掌握数据模型和检索评估后学习，而不是作为知识图谱的入门项目。</p>
+<h2 id="11-基于科技周报的练手项目">11. 基于科技周报的练手项目</h2>
+<p>已经下载的 Koala 科技周报字幕非常适合用来实现一套完整系统。</p>
+<h3 id="111-第一版rdf-知识图谱">11.1 第一版：RDF 知识图谱</h3>
+<p>定义以下概念：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Video
+</span></span><span class="line"><span class="cl">Tool
+</span></span><span class="line"><span class="cl">Category
+</span></span><span class="line"><span class="cl">Organization
+</span></span><span class="line"><span class="cl">Technology
+</span></span><span class="line"><span class="cl">ProjectRelease
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>定义关系：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Video       --introduces--&gt; Tool
+</span></span><span class="line"><span class="cl">Tool        --belongsTo----&gt; Category
+</span></span><span class="line"><span class="cl">Organization --develops----&gt; Tool
+</span></span><span class="line"><span class="cl">Tool        --uses----------&gt; Technology
+</span></span><span class="line"><span class="cl">Tool        --releasedAt----&gt; Date
+</span></span><span class="line"><span class="cl">Tool        --projectUrl----&gt; URL
+</span></span><span class="line"><span class="cl">Video       --koalaSays-----&gt; Evaluation
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用 RDFLib 从 <code>bilibili/data/state.db</code> 和 <code>posts/tool/anything.md</code> 生成 Turtle。</p>
+<h3 id="112-第二版shacl-数据质量检查">11.2 第二版：SHACL 数据质量检查</h3>
+<p>验证每个工具必须包含：</p>
+<ul>
+<li>官方名称；</li>
+<li>项目地址；</li>
+<li>发布时间；</li>
+<li>日期证据；</li>
+<li>对应 BVID；</li>
+<li>Koala 评价；</li>
+<li>工具分类。</li>
+</ul>
+<h3 id="113-第三版sparql-查询">11.3 第三版：SPARQL 查询</h3>
+<p>实现以下查询：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">找出 Koala 介绍过的所有自托管工具
+</span></span><span class="line"><span class="cl">找出使用 MoE 架构的模型
+</span></span><span class="line"><span class="cl">找出 2026 年发布且有 GitHub 仓库的项目
+</span></span><span class="line"><span class="cl">找出同一个组织开发的多个工具
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="114-第四版混合语义检索">11.4 第四版：混合语义检索</h3>
+<p>对字幕分段并比较：</p>
+<ul>
+<li>BM25；</li>
+<li>Sentence Transformers；</li>
+<li>BM25 + Embedding；</li>
+<li>BM25 + Embedding + Reranker。</li>
+</ul>
+<p>自己编写 20～50 个问题和相关性标注，使用 PyTerrier 或 <a href="https://github.com/beir-cellar/beir" target="_blank" rel="noopener noreffer">BEIR</a>的评估方式比较效果。</p>
+<h3 id="115-第五版graphrag">11.5 第五版：GraphRAG</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">问题
+</span></span><span class="line"><span class="cl">→ 混合检索字幕
+</span></span><span class="line"><span class="cl">→ 识别工具实体
+</span></span><span class="line"><span class="cl">→ 查询一至两跳图邻居
+</span></span><span class="line"><span class="cl">→ 合并文本与结构化证据
+</span></span><span class="line"><span class="cl">→ LLM 生成带来源的回答
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="12-推荐阅读优先级">12. 推荐阅读优先级</h2>
+<p>如果只选择五个代码库：</p>
+<ol>
+<li><a href="https://github.com/RDFLib/rdflib" target="_blank" rel="noopener noreffer">RDFLib</a>：理解 RDF 图和 SPARQL。</li>
+<li><a href="https://github.com/RDFLib/pySHACL" target="_blank" rel="noopener noreffer">pySHACL</a>：理解本体约束和验证。</li>
+<li><a href="https://pyterrier.readthedocs.io/en/latest/" target="_blank" rel="noopener noreffer">PyTerrier</a>：理解完整 IR 实验方法。</li>
+<li><a href="https://github.com/oxigraph/oxigraph" target="_blank" rel="noopener noreffer">Oxigraph</a>：理解图数据库和 SPARQL 引擎内部。</li>
+<li><a href="https://github.com/microsoft/graphrag" target="_blank" rel="noopener noreffer">Microsoft GraphRAG</a>：理解知识图谱与 LLM 检索的结合方式。</li>
+</ol>
+<p>这条路线比直接学习 LangChain、LlamaIndex 或某个向量数据库更加扎实，因为它能够把数据模型、约束、召回、排序、评估和图查询分别解决什么问题解释清楚。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2026-08-19&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/09e855d6d06a02d01afc3a9f07107218d8f52a31" target="_blank" title="commit by tao(tao@example.com) 09e855d6d06a02d01afc3a9f07107218d8f52a31: 重新归类agent 标签">
+                                    <i class="fas fa-hashtag fa-fw"></i>09e855d</a></span>
+            </div>
+            <div class="post-info-license"></div>
+        </div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" data-title="知识图谱、本体与语义检索：技术栈与源码学习路线" data-hashtags="GraphRAG"><i class="fab fa-twitter fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" data-hashtag="GraphRAG"><i class="fab fa-facebook-square fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" data-title="知识图谱、本体与语义检索：技术栈与源码学习路线"><i class="fab fa-hacker-news fa-fw"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" data-title="知识图谱、本体与语义检索：技术栈与源码学习路线"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/line.svg"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://hotttao.github.io/posts/aigc/graph_rag/001_knowledge_graph_technology_stack/" data-title="知识图谱、本体与语义检索：技术栈与源码学习路线" data-ralateuid="xxxx"><i class="fab fa-weibo fa-fw"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/graphrag/">GraphRAG</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/aigc/agent_platform/001_platform_infra/" class="prev" rel="prev" title="Agent Platform 架构设计"><i class="fas fa-angle-left fa-fw"></i>Agent Platform 架构设计</a></div>
+</div>
+<div id="comments"><div id="gitalk" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://github.com/gitalk/gitalk"></a>Gitalk</a>.
+            </noscript></div></article>
+    </div></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.164.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.10"><i class="far fa-kiss-wink-heart fa-fw"></i> LoveIt</a>
+                </div><div class="footer-line"><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">宋涛</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw"></i>
+            </a>
+        </div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/css/lightgallery.min.css"><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/smooth-scroll@16.1.3/dist/smooth-scroll.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/autocomplete.js@0.37.1/dist/autocomplete.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lunr@2.3.8/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lazysizes@5.2.2/lazysizes.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lightgallery.js@1.2.0/dist/js/lightgallery.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-thumbnail.js@1.2.0/dist/lg-thumbnail.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/lg-zoom.js@1.2.0/dist/lg-zoom.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script><script type="text/javascript" src="https://cdn.jsdelivr.net/npm/sharer.js@0.4.0/sharer.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":30},"comment":{"gitalk":{"admin":["hotttao"],"clientID":"7b48df1b81d23057c798","clientSecret":"65c6f9e6ca6ae4d8105f757578b6b594e3668e61","id":"2026-08-17T12:00:00+08:00","owner":"hotttao","repo":"hotttao.github.io","title":"知识图谱、本体与语义检索：技术栈与源码学习路线"}},"lightGallery":{"actualSize":false,"exThumbImage":"data-thumbnail","hideBarsDelay":2000,"selector":".lightgallery","speed":400,"thumbContHeight":80,"thumbWidth":80,"thumbnail":true},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
