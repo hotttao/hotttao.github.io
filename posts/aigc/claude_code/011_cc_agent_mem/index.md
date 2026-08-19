@@ -76,76 +76,23 @@ Agent 是否会读取某一个记忆条路，完全由agent自己来驱动了:
 #### System Prompt
 [System Prompt](https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1)
 
-<h4>Memory / 记忆</h4>
+``````md
+# Memory
 
-<table>
-  <thead>
-    <tr>
-      <th>English</th>
-      <th>中文</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><pre><code>&lt;!--
-name: "System Prompt: Memory instructions"
-description: "Instructions for using persistent file-based memory, including memory file format, scope, indexing, and stale-memory handling"
-ccVersion: "2.1.227"
-variables:
-  - "MEMORY_LOCATION_CONTEXT"
-  - "MEMORY_LINKING_INSTRUCTIONS"
-  - "MEMORY_TYPE_DESCRIPTIONS"
-  - "TEAM_MEMORY_SCOPE_NOTE"
-  - "MEMORY_INDEX_POINTER_INSTRUCTIONS"
-  - "MEMORY_SAVE_EXCLUSIONS"
-  - "RECALLED_MEMORY_VERIFICATION_GUIDANCE"
-  - "MEMORY_CITATION_INSTRUCTIONS"
-  - "HAS_PROJECT_SKILL_UPKEEP_INSTRUCTIONS_FN"
-  - "PROJECT_SKILL_UPKEEP_INSTRUCTIONS"
---&gt;</code></pre></td>
-      <td><pre><code>&lt;!--
-名称：系统提示词——记忆说明
-描述：关于使用基于文件的持久化记忆的说明，包括记忆文件格式、作用域、索引和过期记忆处理
-Claude Code 版本：2.1.227
-变量：
-  - "MEMORY_LOCATION_CONTEXT"：记忆存储位置上下文
-  - "MEMORY_LINKING_INSTRUCTIONS"：记忆关联说明
-  - "MEMORY_TYPE_DESCRIPTIONS"：记忆类型说明
-  - "TEAM_MEMORY_SCOPE_NOTE"：团队记忆作用域说明
-  - "MEMORY_INDEX_POINTER_INSTRUCTIONS"：记忆索引指针说明
-  - "MEMORY_SAVE_EXCLUSIONS"：不应保存为记忆的内容
-  - "RECALLED_MEMORY_VERIFICATION_GUIDANCE"：召回记忆的验证指南
-  - "MEMORY_CITATION_INSTRUCTIONS"：记忆引用说明
-  - "HAS_PROJECT_SKILL_UPKEEP_INSTRUCTIONS_FN"：判断是否包含项目技能维护说明的函数
-  - "PROJECT_SKILL_UPKEEP_INSTRUCTIONS"：项目技能维护说明
---&gt;</code></pre></td>
-    </tr>
-    <tr>
-      <td>You have a persistent file-based memory <code>&#36;{MEMORY_LOCATION_CONTEXT}</code>. Each memory is one file holding one fact, with the following frontmatter:</td>
-      <td>你拥有基于文件的持久化记忆 <code>&#36;{MEMORY_LOCATION_CONTEXT}</code>。每条记忆对应一个文件，其中只保存一个事实，并包含以下 frontmatter：</td>
-    </tr>
-    <tr>
-      <td><pre><code>---
-name: &lt;short-kebab-case-slug&gt;
-description: &lt;one-line summary, used to decide relevance during recall&gt;
+You have a persistent file-based memory ${MEMORY_LOCATION_CONTEXT} Each memory is one file holding one fact, with frontmatter:
+
+```markdown
+---
+name: <short-kebab-case-slug>
+description: <one-line summary, used to decide relevance during recall>
 metadata:
   type: user | feedback | project | reference
 ---
 
-&lt;the fact; for feedback/project, follow with **Why:** and **How to apply:** lines. Link related memories with [[their-name]].&gt;</code></pre></td>
-      <td><pre><code>---
-name: &lt;使用 kebab-case 的简短名称&gt;
-description: &lt;单行摘要，用于在召回时判断相关性&gt;
-metadata:
-  type: user | feedback | project | reference
----
+<the fact; for feedback/project, follow with **Why:** and **How to apply:** lines. Link related memories with [[their-name]].>
+```
 
-&lt;记忆所记录的事实；对于 feedback/project 类型，后面需要添加 **Why:** 和 **How to apply:**。使用 [[记忆名称]] 链接相关记忆。&gt;</code></pre></td>
-    </tr>
-    
-  </tbody>
-</table>
-
+``````
 
 #### 索引文件的维护
 对于索引文件:
