@@ -13,7 +13,7 @@
 	<meta property="og:type" content="article">
 		<meta property="article:section" content="posts">
 		<meta property="article:published_time" content="2026-04-03T22:00:00+08:00">
-		<meta property="article:modified_time" content="2026-08-19T10:50:59+08:00">
+		<meta property="article:modified_time" content="2026-08-24T21:22:55+08:00">
 		<meta property="article:tag" content="Claude Code">
 		<meta property="og:image" content="https://hotttao.github.io/logo.png">
 
@@ -33,8 +33,8 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/hotttao.github.io\/posts\/aigc\/claude_code\/011_cc_agent_mem\/"
-        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Claude Code","wordcount":  3670 ,
-        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/claude_code\/011_cc_agent_mem\/","datePublished": "2026-04-03T22:00:00+08:00","dateModified": "2026-08-19T10:50:59+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+        },"image": ["https:\/\/hotttao.github.io\/images\/Apple-Devices-Preview.png"],"genre": "posts","keywords": "Claude Code","wordcount":  4389 ,
+        "url": "https:\/\/hotttao.github.io\/posts\/aigc\/claude_code\/011_cc_agent_mem\/","datePublished": "2026-04-03T22:00:00+08:00","dateModified": "2026-08-24T21:22:55+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "xxxx","logo": {
                     "@type": "ImageObject",
@@ -280,8 +280,8 @@
                 </section>
             </aside><article class="page single article-docs-main docs-main"><h1 class="single-title animated flipInX">Cluade 云上 Agent 记忆系统</h1><div class="post-meta">
                 <div class="post-meta-line"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent_core/"><i class="far fa-folder fa-fw"></i>Agent_core</a></span></div>
-                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-04-03">2026-04-03</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 3670 字&nbsp;
-                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
+                <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw"></i>&nbsp;<time datetime="2026-04-03">2026-04-03</time>&nbsp;<i class="fas fa-pencil-alt fa-fw"></i>&nbsp;约 4389 字&nbsp;
+                    <i class="far fa-clock fa-fw"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
             </div><div class="details toc" id="toc-static"  kept="">
                     <div class="details-summary toc-title">
                         <span>目录</span>
@@ -305,6 +305,14 @@
         <li>
           <ul>
             <li><a href="#system-prompt">System Prompt</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#type-user--feedback--project--reference">&lt;the fact; for feedback/project, follow with <strong>Why:</strong> and <strong>How to apply:</strong> lines. Link related memories with [[their-name]].&gt;</code> <code>— name: &lt;使用 kebab-case 的简短名称&gt; description: &lt;单行摘要，用于在召回时判断相关性&gt; metadata: type: user | feedback | project | reference</a>
+      <ul>
+        <li>
+          <ul>
             <li><a href="#索引文件的维护">索引文件的维护</a></li>
             <li><a href="#记忆文件格式">记忆文件格式</a></li>
           </ul>
@@ -402,41 +410,71 @@
 <p><strong>索引文件的机制，从 skills 开始就被广泛使用</strong></p>
 <h4 id="system-prompt">System Prompt</h4>
 <p><a href="https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/system-prompt-memory-instructions.md?plain=1" target="_blank" rel="noopener noreffer">System Prompt</a></p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-md" data-lang="md"><span class="line"><span class="cl"><span class="gh"># Memory
-</span></span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">You have a persistent file-based memory ${MEMORY_LOCATION_CONTEXT} Each memory is one file holding one fact, with frontmatter:
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="s">```markdown
-</span></span></span><span class="line"><span class="cl"><span class="nn">---</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;short-kebab-case-slug&gt;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;one-line summary, used to decide relevance during recall&gt;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">user | feedback | project | reference</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="nn">---</span><span class="w">
-</span></span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">&lt;the fact; for feedback/project, follow with <span class="gs">**Why:**</span> and <span class="gs">**How to apply:**</span> lines. Link related memories with [[their-name]].&gt;
-</span></span><span class="line"><span class="cl"><span class="s">```</span>
-</span></span></code></pre></td></tr></table>
-</div>
-</div><h4 id="索引文件的维护">索引文件的维护</h4>
+<h4>Memory / 记忆</h4>
+<table>
+  <thead>
+    <tr>
+      <th>English</th>
+      <th>中文</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><pre><code>&lt;!--
+name: "System Prompt: Memory instructions"
+description: "Instructions for using persistent file-based memory, including memory file format, scope, indexing, and stale-memory handling"
+ccVersion: "2.1.227"
+variables:
+  - "MEMORY_LOCATION_CONTEXT"
+  - "MEMORY_LINKING_INSTRUCTIONS"
+  - "MEMORY_TYPE_DESCRIPTIONS"
+  - "TEAM_MEMORY_SCOPE_NOTE"
+  - "MEMORY_INDEX_POINTER_INSTRUCTIONS"
+  - "MEMORY_SAVE_EXCLUSIONS"
+  - "RECALLED_MEMORY_VERIFICATION_GUIDANCE"
+  - "MEMORY_CITATION_INSTRUCTIONS"
+  - "HAS_PROJECT_SKILL_UPKEEP_INSTRUCTIONS_FN"
+  - "PROJECT_SKILL_UPKEEP_INSTRUCTIONS"
+--&gt;</code></pre></td>
+      <td><pre><code>&lt;!--
+名称：系统提示词——记忆说明
+描述：关于使用基于文件的持久化记忆的说明，包括记忆文件格式、作用域、索引和过期记忆处理
+Claude Code 版本：2.1.227
+变量：
+  - "MEMORY_LOCATION_CONTEXT"：记忆存储位置上下文
+  - "MEMORY_LINKING_INSTRUCTIONS"：记忆关联说明
+  - "MEMORY_TYPE_DESCRIPTIONS"：记忆类型说明
+  - "TEAM_MEMORY_SCOPE_NOTE"：团队记忆作用域说明
+  - "MEMORY_INDEX_POINTER_INSTRUCTIONS"：记忆索引指针说明
+  - "MEMORY_SAVE_EXCLUSIONS"：不应保存为记忆的内容
+  - "RECALLED_MEMORY_VERIFICATION_GUIDANCE"：召回记忆的验证指南
+  - "MEMORY_CITATION_INSTRUCTIONS"：记忆引用说明
+  - "HAS_PROJECT_SKILL_UPKEEP_INSTRUCTIONS_FN"：判断是否包含项目技能维护说明的函数
+  - "PROJECT_SKILL_UPKEEP_INSTRUCTIONS"：项目技能维护说明
+--&gt;</code></pre></td>
+    </tr>
+    <tr>
+      <td>You have a persistent file-based memory <code>&#36;{MEMORY_LOCATION_CONTEXT}</code>. Each memory is one file holding one fact, with the following frontmatter:</td>
+      <td>你拥有基于文件的持久化记忆 <code>&#36;{MEMORY_LOCATION_CONTEXT}</code>。每条记忆对应一个文件，其中只保存一个事实，并包含以下 frontmatter：</td>
+    </tr>
+    <tr>
+      <td><pre><code>---
+name: &lt;short-kebab-case-slug&gt;
+description: &lt;one-line summary, used to decide relevance during recall&gt;
+metadata:
+  type: user | feedback | project | reference
+---
+<h2 id="type-user--feedback--project--reference">&lt;the fact; for feedback/project, follow with <strong>Why:</strong> and <strong>How to apply:</strong> lines. Link related memories with [[their-name]].&gt;</code></pre></td>
+<td><pre><code>&mdash;
+name: &lt;使用 kebab-case 的简短名称&gt;
+description: &lt;单行摘要，用于在召回时判断相关性&gt;
+metadata:
+type: user | feedback | project | reference</h2>
+<p>&lt;记忆所记录的事实；对于 feedback/project 类型，后面需要添加 <strong>Why:</strong> 和 <strong>How to apply:</strong>。使用 [[记忆名称]] 链接相关记忆。&gt;</code></pre></td>
+</tr></p>
+  </tbody>
+</table>
+<h4 id="索引文件的维护">索引文件的维护</h4>
 <p>对于索引文件:</p>
 <ol>
 <li>索引文件在CMA里完全由 agent 维护，当agent每新增一个记忆去写入的时候，CMA的提示词都会要求它必须要同步地来刷新一下这个索引文件，来保持两者的一致性。</li>
@@ -553,8 +591,8 @@
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>更新于 2026-08-19&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/de2d559e86bcab341cc09f21805fbf179c1fd5ea" target="_blank" title="commit by tao(tao@example.com) de2d559e86bcab341cc09f21805fbf179c1fd5ea: 格式错误修复">
-                                    <i class="fas fa-hashtag fa-fw"></i>de2d559</a></span>
+                <span>更新于 2026-08-24&nbsp;<a class="git-hash" href="https://github.com/dillonzq/LoveIt/commit/0e5684455ba37bb46378c20a00295ffc021e6906" target="_blank" title="commit by tao(tao@example.com) 0e5684455ba37bb46378c20a00295ffc021e6906: llm 评估">
+                                    <i class="fas fa-hashtag fa-fw"></i>0e56844</a></span>
             </div>
             <div class="post-info-license"></div>
         </div>

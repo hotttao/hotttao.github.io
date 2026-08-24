@@ -104,73 +104,818 @@
         alt="/images/hugo/avatar.png"
         title="/images/hugo/avatar.png" /></a></div><h2 class="home-subtitle"><div id="id-1" class="typeit"></div></h2><div class="links"><a href="https://github.com/hotttao" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github-alt fa-fw"></i></a><a href="https://weibo.com/xxxx" title="微博" target="_blank" rel="noopener noreffer me"><i class="fab fa-weibo fa-fw"></i></a><a href="https://steamcommunity.com/id/xxxx" title="Steam" target="_blank" rel="noopener noreffer me"><i class="fab fa-steam fa-fw"></i></a><a href="https://www.zhihu.com/people/xxxx" title="知乎" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/zhihu.svg"></i></a><a href="https://www.douban.com/people/xxxx" title="豆瓣" target="_blank" rel="noopener noreffer me"><i data-svg-src="https://cdn.jsdelivr.net/npm/simple-icons@2.14.0/icons/douban.svg"></i></a><a href="https://dev.to/xxxx" title="Dev.To" target="_blank" rel="noopener noreffer me"><i class="fab fa-dev fa-fw"></i></a><a href="https://space.bilibili.com/xxxx" title="bilibili" target="_blank" rel="noopener noreffer me"><i data-svg-src="/svg/icons/bilibili.min.svg"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel=" me"><i class="far fa-envelope fa-fw"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/aigc/agent_design/004_skills/">Agent Skills 设计</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>本节我们主要来了解 <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills" target="_blank" rel="noopener noreffer">Skills</a> 的核心机制。</p>
+<!-- more -->
+<h2 id="1-skills">1. Skills</h2>
+<h3 id="11-skills-包含的内容">1.1 Skills 包含的内容</h3>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/aigc/agent_design/where_skills.png"
+        data-srcset="/images/aigc/agent_design/where_skills.png, /images/aigc/agent_design/where_skills.png 1.5x, /images/aigc/agent_design/where_skills.png 2x"
+        data-sizes="auto"
+        alt="/images/aigc/agent_design/where_skills.png"
+        title="skills 在什么位置" /></p>
+<p>从图中可以看到一个 Skills 其实包含两部分内容:</p>
+<ol>
+<li>右侧 Skills 内容本身</li>
+<li>左边蓝色的部分是 skills 的元数据，即 skills 的名称和一个非常简短的描述，他们位于 System Prompt 里面，用于指导 Agent 如何使用Skills</li>
+</ol>
+<h3 id="12-skills-spec">1.2 Skills Spec</h3>
+<p>Skills 的唯一约束就是 Skills 目录下要包含一个 SKILL.md 的文件。这个文件有两个部分组成:</p></div><div class="post-footer">
+        <a href="/posts/aigc/agent_design/004_skills/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/aigc/agent_design/004_agent_tools/">Agent Tools 设计</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>本节我们来介绍如何为 Agent 设计准确且省钱的工具。</p>
+<!-- more -->
+<h2 id="1-tools-设计">1. Tools 设计</h2>
+<p>Tools 设计遵循一些基本原则:</p>
+<ol>
+<li>效率和准确性:
+<ul>
+<li>什么时候选择开发一个专用工具，还是选择使用已有的通用工具。</li>
+<li>当 agent 需要处理一些深度复杂的业务逻辑的时候，可以考虑开发一个专用 tools，而不是使用通用 tools</li>
+</ul>
+</li>
+<li>功能独立:
+<ul>
+<li>Tools定义需要做到 <strong>意图清晰，工具功能之间没有重叠</strong></li>
+<li>工具本质上就是一个可调用的函数，可以通过扩展工具的参数来增强工具的功能</li>
+</ul>
+</li>
+<li>成本效益:
+<ul>
+<li>提供批量化工具</li>
+<li>提供 save 工具，其他工具内部使用 save 的数据集进行过滤，避免重复</li>
+</ul>
+</li>
+</ol>
+<h2 id="2-通用-thinking-tools">2. 通用 thinking tools</h2>
+<h3 id="21-为什么需要-thinking-tools">2.1 为什么需要 thinking tools</h3>
+<p>大多数时候，我们会提供一个通用的 thinking tools，会有如下好处:</p></div><div class="post-footer">
+        <a href="/posts/aigc/agent_design/004_agent_tools/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/aigc/agent_design/003_multi_agent/">Multi-Agent</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>今天我们来介绍 Multi-Agent 相关概念，目的有如下几个:</p>
+<ol>
+<li>理解 Single-Agent 的核心架构、核心组成以及每个部分可能遇到的问题</li>
+<li>Multi-Agent 能否解决 Single-Agent 所遇到的问题以及是否会带来新的问题。</li>
+</ol>
+<p>分析的目的不仅仅是了解这些概念本身。而是梳理构建 Agent 所需要关心的各个层面。
+在我们梳理清楚 Agent 的架构之后，我们就可以快速的、公式化的分析很多开源 Agent 产品。也能更好的指导我们实现自己的 Agent。</p></div><div class="post-footer">
+        <a href="/posts/aigc/agent_design/003_multi_agent/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/aigc/agent_design/005_source_check/">精确的文本切分和 Source Check</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-03">2026-06-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><h2 id="soucecheck-spec">SouceCheck Spec</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-md" data-lang="md"><span class="line"><span class="cl"><span class="gu">## Goal
+</span></span></span><span class="line"><span class="cl">SourceCheck defines a machine‑readable format for attaching source citations to LLM output. It lets consumers programmatically check which parts of an answer are grounded in which document spans, without embedding full quoted text inside annotations.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## Session Model
+</span></span></span><span class="line"><span class="cl">A session is the top‑level container. It holds a set of documents and a list of annotations.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A session contains:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> an array of <span class="sb">`documents`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> an array of <span class="sb">`annotations`</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;documents&#34;</span><span class="p">:</span> <span class="p">[</span> <span class="err">...</span> <span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">[</span> <span class="err">...</span> <span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Session rules
+</span></span></span><span class="line"><span class="cl"><span class="k">-</span> Within a session, every document has a unique <span class="sb">`path`</span>.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> References (<span class="sb">`ref`</span>) are resolved against documents inside the same session.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> Documents are immutable within a session.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## Document Model
+</span></span></span><span class="line"><span class="cl">A document is:
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;a&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;content&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Before being added to a session, <span class="gs">**content MUST**</span> be normalized to use LF (<span class="sb">`\n`</span>) line endings. CRLF and CR inputs are the caller&#39;s responsibility to convert. The resolver assumes LF‑only input.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">For reference resolution, content is interpreted as ordered lines.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Example:
+</span></span><span class="line"><span class="cl"><span class="s">```
+</span></span></span><span class="line"><span class="cl">1 | Hello, I am GPT
+</span></span><span class="line"><span class="cl">2 | How are you feeling today?
+</span></span><span class="line"><span class="cl">3 | We can talk now.
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## Ref Model
+</span></span></span><span class="line"><span class="cl">A ref identifies an exact text span inside a document.
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;a&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;I&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;end&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;T&#34;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.line`</span> and <span class="sb">`end.line`</span> are 1‑based.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.str`</span> and <span class="sb">`end.str`</span> are boundary strings, not comments and not hints. They are part of the coordinate system.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Ref Semantics
+</span></span></span><span class="line"><span class="cl">A ref resolves to a closed text span:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the span starts at the first character of <span class="sb">`start.str`</span> on <span class="sb">`start.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the span ends at the last character of <span class="sb">`end.str`</span> on <span class="sb">`end.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the resolved span includes both boundary strings
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">For the example above:
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;a&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;I&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;end&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;T&#34;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">resolves to:
+</span></span><span class="line"><span class="cl"><span class="s">```
+</span></span></span><span class="line"><span class="cl">I am GPT
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">#### Resolution Rules
+</span></span></span><span class="line"><span class="cl">A resolver must:
+</span></span><span class="line"><span class="cl"><span class="k">1.</span> look up the document in the current session by path
+</span></span><span class="line"><span class="cl"><span class="k">2.</span> find <span class="sb">`start.str`</span> within <span class="sb">`start.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">3.</span> find <span class="sb">`end.str`</span> within <span class="sb">`end.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">4.</span> extract the span from the start boundary to the end boundary, inclusive
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Multi‑line refs are allowed if <span class="sb">`start.line ≤ end.line`</span>.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Validity
+</span></span></span><span class="line"><span class="cl">A ref is valid if:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`path`</span> exists in the current session
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.line`</span> exists
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`end.line`</span> exists
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.str`</span> occurs in <span class="sb">`start.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`end.str`</span> occurs in <span class="sb">`end.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.line ≤ end.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the resolved start boundary does not come after the resolved end boundary
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the span can be determined uniquely
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Otherwise the ref is invalid.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">#### Uniqueness
+</span></span></span><span class="line"><span class="cl">If a boundary string appears multiple times and the resolver cannot determine a unique span, the ref is invalid.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">SourceCheck does not define extra disambiguation fields. Ambiguous refs should fail instead of guessing.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gs">**The only way to disambiguate is to extend str until it is unique on its line.**</span> SourceCheck intentionally provides no occurrence index, no surrounding‑context field, and no other disambiguation mechanism. If a boundary is not unique, the ref author must choose a longer boundary string.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## Annotation
+</span></span></span><span class="line"><span class="cl">An annotation attaches evidence to a specific span of text. Both the annotated span and the evidence are expressed as refs into documents in the session — the annotation itself never repeats text.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;claim&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;output&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;result&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;end&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;positive&#34;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;sources&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;report&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;outcome&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;end&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;positive&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;polarity&#34;</span><span class="p">:</span> <span class="s2">&#34;supports&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;confidence&#34;</span><span class="p">:</span> <span class="mf">0.9</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`claim`</span> is a ref. It points at the span of text being annotated.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`sources`</span> is a non‑empty list of source refs. Each entry is a regular ref plus two required metadata fields:
+</span></span><span class="line"><span class="cl">  <span class="k">-</span> <span class="sb">`polarity`</span> — <span class="sb">`&#34;supports&#34;`</span> or <span class="sb">`&#34;refutes&#34;`</span>
+</span></span><span class="line"><span class="cl">  <span class="k">-</span> <span class="sb">`confidence`</span> — a number in <span class="sb">`[0, 1]`</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">-</span> The resolver treats <span class="sb">`claim`</span> and the spatial part of each source uniformly. <span class="sb">`polarity`</span> and <span class="sb">`confidence`</span> are not interpreted by the resolver — they are signals to consumers.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Annotation Rules
+</span></span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`sources`</span> <span class="gs">**MUST**</span> contain at least one entry. An annotation with no sources is invalid — the way to express “this region is unsourced” is to not annotate it at all.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> The same claim span <span class="gs">**MAY**</span> appear in multiple annotations (for example, when independently supported by multiple evidence sets). SourceCheck does not merge them; that is left to the caller.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`claim.path`</span> <span class="gs">**MAY**</span> refer to any document in the session. SourceCheck does not distinguish “output” documents from “source‑of‑truth” documents — that role is decided by the caller.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A model’s output is a list of annotations. The annotated text itself lives in the session as a document; it is never reproduced in the annotation payload. If a region of a document carries no annotations, that absence is a meaningful signal — it means the region is unsourced — and should not be silently treated as sourced.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Polarity
+</span></span></span><span class="line"><span class="cl">Each source declares its relationship to the claim:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`&#34;supports&#34;`</span> — the cited span, read on its own, evidences the claim.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`&#34;refutes&#34;`</span> — the cited span contradicts the claim.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A source that is merely topically related but does neither <span class="gs">**MUST NOT**</span> be cited. SourceCheck has no “loosely related” role; topic match is not evidence.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Multiple polarities for the same claim are explicit, not exceptional: a claim’s annotation may carry both supports and refutes sources. Aggregating these into a verdict (“net supported”, “contested”, “refuted”) is the consumer’s responsibility.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Confidence
+</span></span></span><span class="line"><span class="cl"><span class="sb">`confidence`</span> is the citing party’s assessment of how authoritative the source is for this claim, in <span class="sb">`[0, 1]`</span>. The resolver enforces only the type and range; the meaning is conventional:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **0.9‑1.0** — primary / authoritative source: official spec, peer‑reviewed paper, primary data, the entity being described.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **0.6‑0.8** — reputable secondary source: mainstream press, named‑author technical post.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **0.3‑0.5** — anecdotal / forum / unverified source.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **&lt;0.3** — weak; usually omit instead of citing.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Confidence is per‑source, not per‑claim. A claim may be supported by a primary source at 0.95 and a forum post at 0.4 in the same annotation; consumers can weigh them.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## Design Principle
+</span></span></span><span class="line"><span class="cl">SourceCheck follows a DRI (**Do Not Repeat Input**) rule:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the model should output minimal reference metadata
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the model should not repeat document text in order to cite it — not even the text it has just produced
+</span></span><span class="line"><span class="cl"><span class="k">-</span> the external program resolves and verifies refs against the original document content
+</span></span><span class="line"><span class="cl"><span class="k">
+</span></span></span><span class="line"><span class="cl"><span class="k">&gt; </span><span class="ge">The model’s job is to point at text. The resolver’s job is to produce it.
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="整体概念总结">整体概念总结</h2>
+<ol>
+<li><strong>Session会话</strong>：顶层容器，存放一批Document文档 + Annotation注解，文档不可变更，ref引用全部在会话内解析。</li>
+<li><strong>Document文档</strong>：path唯一标识，content强制LF换行，按行组织文本。</li>
+<li><strong>Ref引用定位</strong>：<code>path + 行号(1开始) + 行内边界字符串str</code>定位文本片段，<strong>不用字符偏移</strong>；边界字符串必须在行内唯一，出现多次直接判定ref无效，通过加长str消除歧义；支持跨行。</li>
+<li><strong>Annotation注解</strong>：把claim（待核验的文本片段ref）绑定多个source证据ref；
+<ul>
+<li>sources数组不能为空，<strong>无来源则直接不加注解，禁止空数组</strong>；</li>
+<li>polarity只允许<code>supports</code>/<code>refutes</code>，仅话题相关不能引用；</li>
+<li>confidence置信度作用于单条source，不是作用于claim；同一个claim可以同时有支持/反驳证据，结果聚合交给上层业务。</li>
+</ul>
+</li>
+<li><strong>DRI核心设计原则</strong>：模型只输出索引元数据，<strong>绝不拷贝原文</strong>；外部Resolver负责根据ref回原始文档解析、提取、校验文本。</li>
+</ol>
+<h2 id="sourcecheck-skills">SourceCheck Skills</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span><span class="lnt">178
+</span><span class="lnt">179
+</span><span class="lnt">180
+</span><span class="lnt">181
+</span><span class="lnt">182
+</span><span class="lnt">183
+</span><span class="lnt">184
+</span><span class="lnt">185
+</span><span class="lnt">186
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-md" data-lang="md"><span class="line"><span class="cl"><span class="gh"># SourceCheck
+</span></span></span><span class="line"><span class="cl">name: <span class="sb">`sourcecheck`</span>
+</span></span><span class="line"><span class="cl"><span class="k">&gt; </span><span class="ge">Yanzhen Yu, 2 weeks ago
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">description: Produce machine‑verifiable source‑span citations for LLM output using the SourceCheck protocol.
+</span></span><span class="line"><span class="cl">Use when a task requires attaching references that point at exact text in source documents (fact‑checking, grounded generation, citation emission).
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## SourceCheck
+</span></span></span><span class="line"><span class="cl">A protocol for pointing at exact text spans in source documents and declaring whether each source <span class="gs">**supports**</span> or <span class="gs">**refutes**</span> a specific claim. SourceCheck is about <span class="gs">**coordinates plus polarity**</span>, not quotes — annotations never repeat the cited text.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Core model
+</span></span></span><span class="line"><span class="cl"><span class="s">```ts
+</span></span></span><span class="line"><span class="cl"><span class="nx">Document</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">path</span>: <span class="kt">string</span><span class="p">,</span> <span class="nx">content</span>: <span class="kt">string</span> <span class="p">}</span>      <span class="c1">// content is LF‑separated
+</span></span></span><span class="line"><span class="cl"><span class="nx">Session</span>  <span class="o">=</span> <span class="p">{</span> <span class="nx">documents</span>: <span class="kt">Document</span><span class="p">[]</span> <span class="p">}</span>              <span class="c1">// paths unique within a session
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">RefBoundary</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">line</span>: <span class="kt">number</span><span class="p">,</span> <span class="nx">str</span>: <span class="kt">string</span> <span class="p">}</span>       <span class="c1">// str must occur exactly once on its line
+</span></span></span><span class="line"><span class="cl"><span class="nx">Ref</span>         <span class="o">=</span> <span class="p">{</span> <span class="nx">path</span>: <span class="kt">string</span><span class="p">,</span> <span class="nx">start</span>: <span class="kt">RefBoundary</span><span class="p">,</span> <span class="nx">end</span>: <span class="kt">RefBoundary</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">SourceRef</span> <span class="o">=</span> <span class="nx">Ref</span> <span class="o">&amp;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">polarity</span><span class="o">:</span> <span class="s2">&#34;supports&#34;</span> <span class="o">|</span> <span class="s2">&#34;refutes&#34;</span>              <span class="c1">// required
+</span></span></span><span class="line"><span class="cl">    <span class="nx">confidence</span>: <span class="kt">number</span>                            <span class="c1">// required, in [0, 1]
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">Annotation</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">claim</span>: <span class="kt">Ref</span><span class="p">,</span> <span class="nx">sources</span>: <span class="kt">SourceRef</span><span class="p">[]</span> <span class="p">}</span>  <span class="c1">// sources non‑empty
+</span></span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">The resolved span starts at the first character of <span class="sb">`start.str`</span> on <span class="sb">`start.line`</span> and ends at the last character of <span class="sb">`end.str`</span> on <span class="sb">`end.line`</span>, inclusive. Multi‑line spans are allowed if <span class="sb">`start.line ≤ end.line`</span>.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">The resolver does not interpret <span class="sb">`polarity`</span> or <span class="sb">`confidence`</span>. Both are signals for the consumer (e.g. a UI, a downstream verifier, an aggregating script).
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### What counts as a source
+</span></span></span><span class="line"><span class="cl">A source is <span class="gs">**evidence the claim is true or false**</span>. It is <span class="gs">**not**</span> topically related material.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A span qualifies as <span class="sb">`supports`</span> only if a careful reader, reading <span class="gs">**only that span**</span>, would conclude that the specific factual claim is correct. Echoing the same topic, naming the same entity, or asserting an unrelated fact about the same domain does not qualify.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A span qualifies as <span class="sb">`refutes`</span> only if it directly contradicts the claim. &#34;The source doesn&#39;t mention this&#34; is not refutation; it is absence of evidence — leave the claim unannotated.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">If you cannot find evidence in either direction, <span class="gs">**do not annotate**</span>. The empty annotation set for a region is a meaningful signal: &#34;I looked and could not substantiate this.&#34; Filling in citations to look thorough is the failure mode this protocol exists to prevent.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">#### Anti‑patterns (do NOT cite)
+</span></span></span><span class="line"><span class="cl"><span class="k">-</span> **Topic match.** Article says &#34;Kubernetes 2.0 introduces …&#34;, source mentions &#34;Kubernetes 1.36 release&#34;. Same project, different fact. ❌
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Negation match without polarity flag.** Article says &#34;no YAML anywhere&#34;, source says &#34;objects are configured in YAML or JSON&#34;. This is contradictory evidence — cite it as <span class="sb">`refutes`</span>, not <span class="sb">`supports`</span>. ❌ when emitted as supports.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Vague endorsement.** Article: &#34;79% of outages from YAML, per 2025 CNCF report&#34;. Source: a 2025 CNCF report that discusses Kubernetes adoption but never gives that number. The report exists; the number is not in it. ❌
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Self‑quote.** Article quotes itself, or quotes a press release that the article is summarizing, as if the press release independently confirms it. Tautological – cite the underlying primary source, not the restatement.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Polarity
+</span></span></span><span class="line"><span class="cl">| polarity | meaning |
+</span></span><span class="line"><span class="cl">|---|---|
+</span></span><span class="line"><span class="cl">| <span class="sb">`supports`</span> | The cited span, read alone, evidences the claim. |
+</span></span><span class="line"><span class="cl">| <span class="sb">`refutes`</span> | The cited span directly contradicts the claim. |
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A claim may be supported by some sources and refuted by others in the same annotation. That is expressive, not a contradiction in the data — record both.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Confidence
+</span></span></span><span class="line"><span class="cl"><span class="sb">`confidence`</span> is your assessment of how authoritative this source is <span class="gs">**for this claim**</span>, in <span class="sb">`[0, 1]`</span>. Use these bands:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">| band | tier | examples |
+</span></span><span class="line"><span class="cl">|---|---|---|
+</span></span><span class="line"><span class="cl">| 0.9‑1.0 | primary / authoritative | the entity being described, official spec / standard, peer‑reviewed paper, primary dataset, original release notes |
+</span></span><span class="line"><span class="cl">| 0.6‑0.8 | reputable secondary | mainstream press, named‑author technical post, well‑maintained docs by a third party |
+</span></span><span class="line"><span class="cl">| 0.3‑0.5 | anecdotal / unverified | forum, social media, blog without attribution |
+</span></span><span class="line"><span class="cl">| &lt; 0.3 | weak | usually OMIT instead of citing |
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A primary source is one that <span class="gs">**originated**</span> the fact (e.g. a release note for a release, the paper for a research result). Secondary sources reference it. If you can find the primary source, prefer it.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">The same source may have different confidence for different claims. A vendor&#39;s marketing page is 0.9 for &#34;what the vendor says about itself&#34; but 0.4 for &#34;how the product compares to competitors&#34;.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Self‑check rubric
+</span></span></span><span class="line"><span class="cl">Before emitting any annotation, ask:
+</span></span><span class="line"><span class="cl"><span class="k">1.</span> <span class="gs">**Standalone test.**</span> If a reader saw only the source span (no surrounding context, no other sources), would they conclude the claim is true (or false, for <span class="sb">`refutes`</span>)? If unsure → don&#39;t cite.
+</span></span><span class="line"><span class="cl"><span class="k">2.</span> <span class="gs">**Specificity test.**</span> Does the source span assert the <span class="gs">**same fact**</span>, not just touch the same topic? A span that mentions &#34;Kubernetes&#34; doesn&#39;t support every Kubernetes claim.
+</span></span><span class="line"><span class="cl"><span class="k">3.</span> <span class="gs">**Authority test.**</span> Is this source authoritative for this kind of claim? If you wouldn&#39;t trust this source on this question, lower confidence — or omit.
+</span></span><span class="line"><span class="cl"><span class="k">4.</span> <span class="gs">**Primary check.**</span> Is there a more primary source? If yes, swap or add it.
+</span></span><span class="line"><span class="cl"><span class="k">5.</span> <span class="gs">**Contradiction check.**</span> Did you find evidence that contradicts the claim? Cite it as <span class="sb">`refutes`</span>, not silence.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">If a claim survives this rubric with no qualifying sources, leave it unannotated.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">#### How to produce annotations
+</span></span></span><span class="line"><span class="cl">Given a session containing the text to verify (let&#39;s call its path <span class="sb">`output`</span> or <span class="sb">`article`</span>) and one or more source documents:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">1.</span> Walk one factual claim at a time. For each:
+</span></span><span class="line"><span class="cl">    <span class="k">-</span> Locate the span in the article that expresses the claim. That&#39;s <span class="sb">`claim`</span>.
+</span></span><span class="line"><span class="cl">    <span class="k">-</span> Search the sources. Apply the rubric above to each candidate.
+</span></span><span class="line"><span class="cl">    <span class="k">-</span> For each candidate that survives, emit a <span class="sb">`SourceRef`</span> with <span class="sb">`polarity`</span> and <span class="sb">`confidence`</span> set explicitly.
+</span></span><span class="line"><span class="cl"><span class="k">2.</span> For <span class="sb">`start.str`</span> / <span class="sb">`end.str`</span>: pick the <span class="gs">**shortest substring that is unique on its line**</span>. If ambiguous, extend it. There is no occurrence‑index field.
+</span></span><span class="line"><span class="cl"><span class="k">3.</span> Skip claims with no qualifying evidence. Coverage gaps are correct, not failure.
+</span></span><span class="line"><span class="cl"><span class="k">4.</span> Validate via <span class="sb">`sourcecheck --json`</span>. Iterate until exit 0.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Uniqueness, spelled out
+</span></span></span><span class="line"><span class="cl">The only disambiguation mechanism is extending <span class="sb">`str`</span>. If the word &#34;the&#34; appears five times on a line and you want the fourth one, choose a longer boundary like <span class="sb">`&#34;the report&#34;`</span> that occurs once. If every candidate is ambiguous, pick a longer boundary on adjacent words.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Validity checklist
+</span></span></span><span class="line"><span class="cl">A <span class="sb">`Ref`</span> is valid iff:
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`path`</span> exists in the session (and is unique within it)
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.line`</span> and <span class="sb">`end.line`</span> are within the document
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.str`</span> occurs exactly once on <span class="sb">`start.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`end.str`</span> occurs exactly once on <span class="sb">`end.line`</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`start.line ≤ end.line`</span>, and on a single‑line span, the start boundary does not come after the end boundary
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">A <span class="sb">`SourceRef`</span> is valid iff its <span class="sb">`Ref`</span> part is valid AND <span class="sb">`polarity ∈ {&#34;supports&#34;, &#34;refutes&#34;}`</span> AND <span class="sb">`confidence ∈ [0, 1]`</span>.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">An <span class="sb">`Annotation`</span> is valid iff <span class="sb">`claim`</span> is valid, every <span class="sb">`SourceRef`</span> is valid, and <span class="sb">`sources`</span> has at least one entry.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### CLI
+</span></span></span><span class="line"><span class="cl"><span class="s">```bash
+</span></span></span><span class="line"><span class="cl">sourcecheck input.json          <span class="c1"># human‑readable</span>
+</span></span><span class="line"><span class="cl">sourcecheck --json input.json   <span class="c1"># machine‑readable</span>
+</span></span><span class="line"><span class="cl">cat input.json <span class="p">|</span> sourcecheck    <span class="c1"># stdin</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Input shape — check a batch of annotations:
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;session&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;documents&#34;</span><span class="p">:</span> <span class="p">[</span> <span class="err">...</span> <span class="p">]</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;claim&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;article&#34;</span><span class="p">,</span> <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span> <span class="nt">&#34;end&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">}</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;sources&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">          <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;report&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">          <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span> <span class="nt">&#34;end&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">          <span class="nt">&#34;polarity&#34;</span><span class="p">:</span> <span class="s2">&#34;supports&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">          <span class="nt">&#34;confidence&#34;</span><span class="p">:</span> <span class="mf">0.9</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gs">**Exit codes:**</span>
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`0`</span> = all refs resolved
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`1`</span> = at least one resolution failure
+</span></span><span class="line"><span class="cl"><span class="k">-</span> <span class="sb">`2`</span> = invalid JSON or schema (missing/invalid polarity, confidence out of range, etc.)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">After emitting annotations, <span class="gs">**always run `sourcecheck --json`**</span> before returning. If anything fails, fix the coordinates or metadata — do not guess.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### Common mistakes
+</span></span></span><span class="line"><span class="cl"><span class="k">-</span> **Citing a topically related span as <span class="sb">`supports`</span>.** This is the dominant failure mode. Apply the standalone test.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Treating contradictory evidence as <span class="sb">`supports`</span>.** If the source says the opposite of the claim, the polarity is <span class="sb">`refutes`</span>.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Omitting <span class="sb">`polarity`</span> or <span class="sb">`confidence`</span>.** Both are required. Schema validation will reject the annotation.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Over‑citing weak sources.** A forum post at confidence 0.4 may be honest, but if it&#39;s the only thing you have for a strong claim, the strong claim is unsourced — omit the annotation.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Repeating cited text in the annotation.** Forbidden. Metadata is coordinates only.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Empty <span class="sb">`sources`</span> array.** Invalid. To express &#34;unsourced&#34;, do not annotate that region.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Ambiguous boundary.** Extend <span class="sb">`str`</span> until unique. There is no occurrence index.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Off‑by‑one line number.** Lines are 1‑based and split on LF. Blank lines count.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **CRLF input.** The resolver assumes LF. Normalize before adding to the session.
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **Path not in session.** Every ref&#39;s <span class="sb">`path`</span> must match a document in the session. Quoting an external URL is not a valid ref.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">#### Tiny worked example
+</span></span></span><span class="line"><span class="cl">Session:
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;documents&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span><span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;article&#34;</span><span class="p">,</span> <span class="nt">&#34;content&#34;</span><span class="p">:</span> <span class="s2">&#34;# Orbit 2.4\n\nOrbit 2.4 improves cold‑start latency by 37%.&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span><span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;bench&#34;</span><span class="p">,</span> <span class="nt">&#34;content&#34;</span><span class="p">:</span> <span class="s2">&#34;2.3.0: 820ms\n2.4.0: 517ms\ndelta: -37%&#34;</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Annotation — the &#34;37%&#34; claim, supported by primary benchmark data:
+</span></span><span class="line"><span class="cl"><span class="s">```json
+</span></span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;claim&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;article&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;37%&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;end&#34;</span><span class="p">:</span>   <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;37%&#34;</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;sources&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;bench&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;start&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;delta&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;end&#34;</span><span class="p">:</span>   <span class="p">{</span> <span class="nt">&#34;line&#34;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="nt">&#34;str&#34;</span><span class="p">:</span> <span class="s2">&#34;-37%&#34;</span> <span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;polarity&#34;</span><span class="p">:</span> <span class="s2">&#34;supports&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;confidence&#34;</span><span class="p">:</span> <span class="mf">0.95</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="s">```</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">The benchmark file is the primary source for the number → confidence 0.95. The article and the annotation never restate the text &#34;‑37%&#34;; the resolver reconstructs it from coordinates.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">#### Authority
+</span></span></span><span class="line"><span class="cl">This skill is a working summary. The normative definition lives in <span class="sb">`SPEC.md`</span>. When in doubt, defer to SPEC.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">`````
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer">
+        <a href="/posts/aigc/agent_design/005_source_check/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/posts/aigc/agent_design/002_copilot/">Agent Copilot</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-02">2026-06-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>这一个章节我们重点介绍 Agent 设计中 Agent 和 用户交互的部分。为什么要这么关注交互的部分，主要原因有两个:</p>
+<ol>
+<li>当下 Agent 最好的形态就是人机交互，Agent 可以链接人、以及传统的应用，并可以让人参与到 Agent 决策并且影响 Agent 的决策过程。</li>
+<li>Copilot 会影响 Agent 的设计</li>
+</ol>
+<p>接下来我们会介绍几个不同的框架实现的 Agent Copilot，目的有两个:</p></div><div class="post-footer">
+        <a href="/posts/aigc/agent_design/002_copilot/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/posts/aigc/agent_design/001_agent_kind/">Agent 的分类</a>
     </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-06-01">2026-06-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>市面上现在已经有很多 AI 开发框架和通用 Agent(类似 codex、claude code)，当我们需要开发一个 Agent 的时候，第一步就是选型。选型的前提是我们需要弄清楚，我们要开发的是一个什么 Agent，这些 AI 开发框架和通用 Agent 都提供了什么能力，适合开发什么样的 Agent。</p></div><div class="post-footer">
         <a href="/posts/aigc/agent_design/001_agent_kind/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/agent-%E8%AE%BE%E8%AE%A1/">Agent 设计</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/aigc/project/002_deep_wiki/">Pocket Flow 实现 Deep Wiki</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-05-01">2026-05-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>今天我们来介绍基于 Pocket Flow 实现的第二项目 - 类似 DeepWiki 的代码阅读工具。</p>
-<p>我们将学习:</p>
-<ol>
-<li>如何扩展 Pocket Flow 的功能，实现状态存储和异常恢复</li>
-<li>如何实现一个 Agentic Node</li>
-<li>如何实现 Agent 的 memroy 及一层</li>
-</ol>
-<!-- more -->
-<h2 id="1-deep-wiki-简介">1. Deep Wiki 简介</h2>
-<p>未完成。</p></div><div class="post-footer">
-        <a href="/posts/aigc/project/002_deep_wiki/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/">工程实践</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/aigc/project/001_deep_coder/">Pocket Flow 实现 Deep Coder</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-05-01">2026-05-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent/"><i class="far fa-folder fa-fw"></i>Agent</a></span></div><div class="content"><p>前面我们介绍了 Pocket Flow 这个 Agent Framework。今天我们来介绍一个基于 Pocket Flow 实现的工具 Deep Coder。</p>
-<p>目的有如下几个:</p>
-<ol>
-<li>学习 Pocket Flow 的使用</li>
-<li>学习如何设计和实现一个 Workflow</li>
-<li>学习提示词的设计</li>
-</ol>
-<!-- more -->
-<h2 id="1-deep-coder-简介">1. Deep Coder 简介</h2>
-<p>Deep Coder 是一个基于 OpenAPI 生成通用代码的工具。这个 Workflow 遵循跟人类 Coder 一样的开发流程</p></div><div class="post-footer">
-        <a href="/posts/aigc/project/001_deep_coder/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/">工程实践</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/aigc/workflow/001_pocket_flow/">Pocket Flow</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-05-01">2026-05-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent_core/"><i class="far fa-folder fa-fw"></i>Agent_core</a></span></div><div class="content"><p>今天我们来介绍第一个 Agent Framework <a href="https://github.com/The-Pocket/PocketFlow/blob/main/cookbook/pocketflow-batch/translations/README_CHINESE.md" target="_blank" rel="noopener noreffer">Pocket Flow</a></p>
-<!-- more -->
-<h2 id="1-workflow-的抽象-graph">1. Workflow 的抽象: Graph</h2>
-<p>个人认为，大多数 AI Framework 最大的价值就是提供了对 Workflow 的抽象，这个抽象基本上就是 Grap。因为 Grap 表达能力最强，能够支持很多流行的 <a href="https://the-pocket.github.io/PocketFlow/" target="_blank" rel="noopener noreffer">Agent 设计模式</a>。</p></div><div class="post-footer">
-        <a href="/posts/aigc/workflow/001_pocket_flow/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/workflow/">Workflow</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/aigc/claude_code/011_cc_agent_mem/">Cluade 云上 Agent 记忆系统</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-04-03">2026-04-03</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent_core/"><i class="far fa-folder fa-fw"></i>Agent_core</a></span></div><div class="content"><p>今天我们来学习 Claude Code 最新实现的记忆系统。内容来自: <a href="https://app.koala-oss.club/videos/6f968f84-cb35-4243-a0cb-eebc136d7ae9" target="_blank" rel="noopener noreffer">深度拆解 Cluade 云上 Agent 记忆系统</a></p>
-<!-- more -->
-<p>我个人觉得这篇内容是非常值得反复学习的，里面对如何实现记忆系统有非常深入的理解。接下来我们将详细介绍以下内容:</p></div><div class="post-footer">
-        <a href="/posts/aigc/claude_code/011_cc_agent_mem/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/claude-code/">Claude Code</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/posts/aigc/claude_code/003_cc/">Claude Code Context Compact</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="https://hotttao.github.io/" title="Author" target="_blank" rel="noopener noreffer author" class="author"><i class="fas fa-user-circle fa-fw"></i>宋涛</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2026-04-02">2026-04-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/agent_core/"><i class="far fa-folder fa-fw"></i>Agent_core</a></span></div><div class="content"><p>这一节我们来学习 Claude Code 里 Context Compact。</p>
-<!-- more -->
-<style>
-table { table-layout: fixed; width: 100%; margin: 1em 0; border-collapse: collapse; }
-td, th { word-break: break-word; overflow-wrap: break-word; vertical-align: top; padding: 0.5em; }
-td pre { overflow-x: auto; max-width: 100%; }
-td code { white-space: pre-wrap; word-wrap: break-word; }
-</style>
-<h2 id="1-compact">1. Compact</h2>
-<p>Compact 的提示词分成了两段:</p>
-<ol>
-<li>身份的提示词</li>
-<li>指令的提示词</li>
-</ol>
-<h3 id="11-身份的提示词">1.1 身份的提示词</h3>
-<p><code>You are a helpful AI assistant tasked with summarizing conversations.</code></p></div><div class="post-footer">
-        <a href="/posts/aigc/claude_code/003_cc/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw"></i>&nbsp;<a href="/tags/claude-code/">Claude Code</a></div></div>
 </article><ul class="pagination"><li class="page-item ">
                     <span class="page-link">
                         <a href="/">1</a>
@@ -195,7 +940,7 @@ td code { white-space: pre-wrap; word-wrap: break-word; }
                     <span class="page-link" aria-hidden="true">&hellip;</span>
                 </li><li class="page-item ">
                     <span class="page-link">
-                        <a href="/page/68/">68</a>
+                        <a href="/page/69/">69</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">
